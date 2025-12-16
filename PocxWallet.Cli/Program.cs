@@ -22,14 +22,7 @@ class Program
             return;
         }
 
-        // Check if running in interactive terminal
-        if (!Console.IsInputRedirected && Console.KeyAvailable == false)
-        {
-            Console.WriteLine("PoCX Wallet requires an interactive terminal.");
-            Console.WriteLine("Run with --demo flag to see a feature demonstration:");
-            Console.WriteLine("  dotnet run -- --demo");
-            return;
-        }
+        // Run in interactive mode by default (no argument check needed)
 
         // Display banner
         ShowBanner();
@@ -181,13 +174,13 @@ class Program
                 WalletCommands.ShowAddresses();
                 break;
             case "Check Balance":
-                TransactionCommands.CheckBalance();
+                await TransactionCommands.CheckBalance();
                 break;
             case "Send Funds":
-                TransactionCommands.SendFunds();
+                await TransactionCommands.SendFunds();
                 break;
             case "Transaction History":
-                TransactionCommands.ShowTransactionHistory();
+                await TransactionCommands.ShowTransactionHistory();
                 break;
         }
 
@@ -201,7 +194,6 @@ class Program
                 .Title("[bold green]Plotting[/]")
                 .AddChoices(
                     "Create Plot",
-                    "Verify Plot",
                     "Back to Main Menu"
                 ));
 
@@ -209,9 +201,6 @@ class Program
         {
             case "Create Plot":
                 await PlottingCommands.CreatePlotAsync(_settings.PoCXBinariesPath);
-                break;
-            case "Verify Plot":
-                await PlottingCommands.VerifyPlotAsync(_settings.PoCXBinariesPath);
                 break;
         }
     }
@@ -261,14 +250,17 @@ class Program
         switch (choice)
         {
             case "Start Node":
-                AnsiConsole.MarkupLine("[yellow]Starting Bitcoin-PoCX node...[/]");
-                AnsiConsole.MarkupLine("[dim]Node management coming soon[/]");
+                var dataDir = AnsiConsole.Ask<string>("Data directory (or press Enter for default):", "");
+                NodeCommands.StartNode(
+                    _settings.BitcoinBinariesPath,
+                    string.IsNullOrWhiteSpace(dataDir) ? null : dataDir,
+                    _settings.BitcoinNodePort);
                 break;
             case "Stop Node":
-                AnsiConsole.MarkupLine("[yellow]Stopping Bitcoin-PoCX node...[/]");
+                NodeCommands.StopNode();
                 break;
             case "Show Node Status":
-                AnsiConsole.MarkupLine("[dim]No node currently running[/]");
+                NodeCommands.ShowNodeStatus();
                 break;
         }
     }

@@ -1,6 +1,6 @@
 # PoCX Wallet
 
-A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)](https://github.com/PoC-Consortium/pocx) with plotting, mining, and vanity address generation capabilities.
+A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)](https://github.com/PoC-Consortium/pocx) with full node integration, plotting, mining, and transaction capabilities.
 
 ## Features
 
@@ -17,13 +17,26 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
   - Wrapper for `pocx_plotter` binary
   - Create plot files for PoCX mining
   - Configurable plot sizes
-  - Plot verification support
+  - Background service support
 
 - ⛏️ **Mining**
   - Wrapper for `pocx_miner` binary
   - Easy mining configuration
   - Pool mining support
-  - Real-time mining status
+  - Background service with status monitoring
+
+- 🔗 **Bitcoin-PoCX Node Integration**
+  - Full `bitcoind` node wrapper
+  - `bitcoin-cli` integration for RPC commands
+  - Background service management
+  - Start/stop node from CLI
+  - Real-time blockchain synchronization
+
+- 💰 **Transaction Features**
+  - Check wallet balance via node RPC
+  - Send funds to other addresses
+  - View transaction history
+  - Integrated with Bitcoin-PoCX node
 
 - 🎯 **Vanity Address Generator**
   - Generate pocx1q... addresses with custom patterns
@@ -34,12 +47,10 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
 - 💻 **CLI Interface**
   - Beautiful console UI with Spectre.Console
   - Interactive menu system
-  - Easy-to-use commands
+  - Keyboard navigation
+  - Background service monitoring
   - Configuration management
-
-- 🔗 **Bitcoin-PoCX Node Integration**
-  - Submodule integration with bitcoin-pocx node
-  - Full node support (ready for wrapper implementation)
+  - Cross-platform compatible (Windows, Linux, macOS)
 
 ## Prerequisites
 
@@ -56,15 +67,22 @@ git clone --recursive https://github.com/ev1ls33d/pocx-wallet.git
 cd pocx-wallet
 ```
 
-### 2. Build PoCX Binaries
+### 2. Build Dependencies
+
+Run the automated build script to build PoCX binaries:
 
 ```bash
-cd pocx
-rustup toolchain install nightly
-rustup override set nightly
-cargo build --release
-cd ..
+# Linux/Mac
+./build-dependencies.sh
+
+# Windows
+./build-dependencies.ps1
 ```
+
+This will:
+- Check for and install Rust nightly if needed
+- Build `pocx_plotter` and `pocx_miner` binaries
+- Prepare the environment for the wallet
 
 ### 3. Build the Wallet
 
@@ -74,9 +92,25 @@ dotnet build
 
 ### 4. Run the Wallet
 
+The wallet runs in interactive mode by default:
+
 ```bash
 cd PocxWallet.Cli
 dotnet run
+```
+
+Or run the compiled binary directly:
+
+```bash
+./bin/Debug/net9.0/pocxwallet
+```
+
+For demo mode:
+
+```bash
+dotnet run -- --demo
+# or
+./bin/Debug/net9.0/pocxwallet --demo
 ```
 
 ## Project Structure
@@ -219,22 +253,32 @@ dotnet test
 
 - [NBitcoin](https://github.com/MetacoSA/NBitcoin) - Bitcoin library for .NET
 - [Spectre.Console](https://spectreconsole.net/) - Beautiful console applications
-- [PoCX](https://github.com/PoC-Consortium/pocx) - Proof of Capacity X framework
-- [Bitcoin-PoCX](https://github.com/PoC-Consortium/bitcoin) - Bitcoin node with PoCX support
+- [PoCX](https://github.com/PoC-Consortium/pocx) - Proof of Capacity X framework (branch: master)
+- [Bitcoin-PoCX](https://github.com/PoC-Consortium/bitcoin) - Bitcoin node with PoCX support (branch: pocx-v30-RC2)
 
 ## Roadmap
 
+### Completed ✅
 - [x] HD wallet with BIP39/BIP32/BIP44
-- [x] PoCX binary wrappers (plotter, miner, verifier)
+- [x] PoCX binary wrappers (plotter, miner)
 - [x] CLI interface with Spectre.Console
 - [x] Vanity address generation (CPU)
+- [x] Bitcoin-PoCX node wrapper and integration
+- [x] Background service management
+- [x] Transaction signing and broadcasting
+- [x] Balance checking via node RPC
+- [x] Transaction history
+- [x] Cross-platform compatibility
+
+### In Progress 🚧
 - [ ] GPU-accelerated vanity address generation (OpenCL/CUDA)
-- [ ] Bitcoin-PoCX node wrapper and integration
 - [ ] Avalonia cross-platform GUI
-- [ ] Transaction signing and broadcasting
+
+### Planned 📋
 - [ ] Address book
 - [ ] QR code generation
 - [ ] Hardware wallet support
+- [ ] Multi-signature support
 
 ## Contributing
 

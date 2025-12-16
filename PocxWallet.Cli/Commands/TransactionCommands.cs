@@ -8,7 +8,7 @@ namespace PocxWallet.Cli.Commands;
 /// </summary>
 public static class TransactionCommands
 {
-    public static void CheckBalance()
+    public static async Task CheckBalance()
     {
         AnsiConsole.MarkupLine("[bold green]Check Balance[/]");
         
@@ -39,12 +39,16 @@ public static class TransactionCommands
             AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{address}[/]");
             AnsiConsole.WriteLine();
 
-            // Note: Actual balance checking requires connection to a node
-            AnsiConsole.MarkupLine("[yellow]Note:[/] Balance checking requires a connection to a Bitcoin-PoCX node.");
-            AnsiConsole.MarkupLine("[dim]Feature implementation in progress - node connection needed[/]");
-            
-            // Placeholder for future implementation
-            AnsiConsole.MarkupLine($"[dim]Balance: [To be implemented - requires node RPC connection][/]");
+            // Check if node is running
+            if (NodeCommands.IsNodeRunning())
+            {
+                await NodeCommands.CheckAddressBalanceAsync(address);
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[yellow]Note:[/] Balance checking requires a running Bitcoin-PoCX node.");
+                AnsiConsole.MarkupLine("[dim]Start the node from [Node] Bitcoin-PoCX Node menu[/]");
+            }
         }
         catch (Exception ex)
         {
@@ -52,7 +56,7 @@ public static class TransactionCommands
         }
     }
 
-    public static void SendFunds()
+    public static async Task SendFunds()
     {
         AnsiConsole.MarkupLine("[bold green]Send Funds[/]");
         
@@ -86,20 +90,17 @@ public static class TransactionCommands
             var toAddress = AnsiConsole.Ask<string>("Enter recipient [green]address[/]:");
             var amount = AnsiConsole.Ask<decimal>("Enter [green]amount[/] to send:");
 
-            if (!AnsiConsole.Confirm($"Send {amount} PoCX to {toAddress}?", false))
+            // Check if node is running
+            if (NodeCommands.IsNodeRunning())
             {
-                AnsiConsole.MarkupLine("[yellow]Transaction cancelled[/]");
-                return;
+                await NodeCommands.SendTransactionAsync(toAddress, amount);
             }
-
-            // Note: Actual transaction sending requires connection to a node
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction broadcasting requires a connection to a Bitcoin-PoCX node.");
-            AnsiConsole.MarkupLine("[dim]Feature implementation in progress - node RPC connection needed[/]");
-            
-            // Placeholder for future implementation
-            AnsiConsole.MarkupLine($"[dim]Would send: {amount} PoCX from {fromAddress} to {toAddress}[/]");
-            AnsiConsole.MarkupLine($"[dim]Transaction signing and broadcasting requires node connection[/]");
+            else
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction broadcasting requires a running Bitcoin-PoCX node.");
+                AnsiConsole.MarkupLine("[dim]Start the node from [Node] Bitcoin-PoCX Node menu[/]");
+            }
         }
         catch (Exception ex)
         {
@@ -107,7 +108,7 @@ public static class TransactionCommands
         }
     }
 
-    public static void ShowTransactionHistory()
+    public static async Task ShowTransactionHistory()
     {
         AnsiConsole.MarkupLine("[bold green]Transaction History[/]");
         
@@ -138,9 +139,34 @@ public static class TransactionCommands
             AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{address}[/]");
             AnsiConsole.WriteLine();
 
-            // Note: Transaction history requires connection to a node
-            AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction history requires a connection to a Bitcoin-PoCX node.");
-            AnsiConsole.MarkupLine("[dim]Feature implementation in progress - node RPC connection needed[/]");
+            // Check if node is running
+            if (NodeCommands.IsNodeRunning())
+            {
+                var cli = NodeCommands.GetCliWrapper();
+                if (cli != null)
+                {
+                    try
+                    {
+                        await AnsiConsole.Status()
+                            .StartAsync("Fetching transactions...", async ctx =>
+                            {
+                                var txs = await cli.ListTransactionsAsync(10);
+                                AnsiConsole.WriteLine();
+                                AnsiConsole.MarkupLine("[bold]Recent Transactions:[/]");
+                                AnsiConsole.WriteLine(txs);
+                            });
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+                    }
+                }
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction history requires a running Bitcoin-PoCX node.");
+                AnsiConsole.MarkupLine("[dim]Start the node from [Node] Bitcoin-PoCX Node menu[/]");
+            }
         }
         catch (Exception ex)
         {

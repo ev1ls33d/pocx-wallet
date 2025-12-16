@@ -68,53 +68,5 @@ public static class PlottingCommands
         }
     }
 
-    public static async Task VerifyPlotAsync(string binariesPath)
-    {
-        AnsiConsole.MarkupLine("[bold green]Verify plot file[/]");
 
-        var plotFile = AnsiConsole.Ask<string>("Enter [green]plot file path[/]:");
-
-        if (!File.Exists(plotFile))
-        {
-            AnsiConsole.MarkupLine("[red]Plot file not found![/]");
-            return;
-        }
-
-        var verifierPath = Path.Combine(binariesPath, "pocx_verifier");
-        if (!File.Exists(verifierPath))
-        {
-            AnsiConsole.MarkupLine($"[red]Verifier binary not found at: {verifierPath}[/]");
-            return;
-        }
-
-        using var verifier = new VerifierWrapper(verifierPath);
-
-        try
-        {
-            await AnsiConsole.Status()
-                .StartAsync("Verifying plot...", async ctx =>
-                {
-                    var progress = new Progress<string>(output =>
-                    {
-                        AnsiConsole.MarkupLine($"[dim]{output}[/]");
-                    });
-
-                    var result = await verifier.VerifyPlotAsync(plotFile, progress);
-
-                    if (result.IsSuccess)
-                    {
-                        AnsiConsole.MarkupLine("[green]✓[/] Plot verification successful!");
-                        AnsiConsole.MarkupLine($"[dim]{result.Output}[/]");
-                    }
-                    else
-                    {
-                        AnsiConsole.MarkupLine($"[red]✗ Verification failed:[/] {result.Error}");
-                    }
-                });
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
-        }
-    }
 }

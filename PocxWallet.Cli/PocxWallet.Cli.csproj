@@ -18,6 +18,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>pocxwallet</AssemblyName>
   </PropertyGroup>
 
   <!-- Pre-build target to build PoCX dependencies -->
