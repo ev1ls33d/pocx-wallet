@@ -1,5 +1,6 @@
 using NBitcoin;
 using System.Diagnostics;
+using PocxWallet.Core.Wallet;
 
 namespace PocxWallet.Core.VanityAddress;
 
@@ -27,7 +28,7 @@ public class VanityAddressGenerator
     /// <param name="progress">Progress callback (current attempts)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>A tuple containing the mnemonic and matching address</returns>
-    public async Task<(string Mnemonic, string Address, ulong AccountId)> GenerateAsync(
+    public async Task<(string Mnemonic, string Address)> GenerateAsync(
         IProgress<long>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -44,7 +45,7 @@ public class VanityAddressGenerator
         return await Task.Run(() => GenerateCpu(progress, token), token);
     }
 
-    private (string Mnemonic, string Address, ulong AccountId) GenerateCpu(
+    private (string Mnemonic, string Address) GenerateCpu(
         IProgress<long>? progress,
         CancellationToken cancellationToken)
     {
@@ -56,20 +57,16 @@ public class VanityAddressGenerator
         {
             attempts++;
 
-            // Generate a new wallet
-            var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
-            var masterKey = mnemonic.DeriveExtKey();
-            var key = masterKey.Derive(new KeyPath("m/44'/0'/0'/0/0"));
+            // Generate a new HD wallet
+            var wallet = HDWallet.CreateNew(WordCount.Twelve);
             
-            // Generate PoCX account ID
-            var pubKeyHash = key.PrivateKey.PubKey.Hash.ToBytes();
-            var accountId = BitConverter.ToUInt64(pubKeyHash, 0);
-            var address = accountId.ToString();
+            // Get the pocx1q bech32 address
+            var address = wallet.GetPoCXAddress(0, 0);
 
             // Check if it matches the pattern
             if (address.Contains(_pattern, StringComparison.OrdinalIgnoreCase))
             {
-                return (mnemonic.ToString(), address, accountId);
+                return (wallet.MnemonicPhrase, address);
             }
 
             // Report progress every second

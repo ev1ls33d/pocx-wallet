@@ -1,5 +1,7 @@
 using NBitcoin;
 using System.Text;
+using System.Security.Cryptography;
+using PocxWallet.Core.Address;
 
 namespace PocxWallet.Core.Wallet;
 
@@ -90,19 +92,23 @@ public class HDWallet
     }
 
     /// <summary>
-    /// Generate a PoCX address from the derived key
+    /// Generate a PoCX bech32 address from the derived key
+    /// Format: pocx1q... (witness version 0, P2WPKH)
     /// </summary>
     /// <param name="account">Account number</param>
     /// <param name="index">Address index</param>
-    /// <returns>A PoCX-compatible address string</returns>
+    /// <returns>A PoCX bech32 address string starting with "pocx1q"</returns>
     public string GetPoCXAddress(uint account = 0, uint index = 0)
     {
         var key = DeriveKeyForPoCX(account, index);
-        // PoCX uses a numeric account ID derived from the public key
-        // We'll convert the public key hash to a numeric ID
-        var pubKeyHash = key.PrivateKey.PubKey.Hash.ToBytes();
-        var accountId = GeneratePoCXAccountId(pubKeyHash);
-        return accountId.ToString();
+        // Get the compressed public key
+        var pubKey = key.PrivateKey.PubKey.ToBytes();
+        
+        // Calculate Hash160 (RIPEMD160(SHA256(pubkey))) - standard 20-byte payload
+        var payload = CalculateHash160(pubKey);
+        
+        // Encode as Bech32 with "pocx" HRP and witness version 0
+        return Bech32Encoder.Encode("pocx", 0, payload);
     }
 
     /// <summary>
@@ -130,17 +136,14 @@ public class HDWallet
     }
 
     /// <summary>
-    /// Generate a PoCX account ID from a public key hash
-    /// PoCX uses numeric account IDs similar to Burst/Signum
+    /// Calculate Hash160 (RIPEMD160(SHA256(data)))
+    /// This is the standard Bitcoin-compatible hash used for addresses
     /// </summary>
-    private static ulong GeneratePoCXAccountId(byte[] pubKeyHash)
+    private static byte[] CalculateHash160(byte[] data)
     {
-        // Use first 8 bytes of the public key hash to create a numeric ID
-        if (pubKeyHash.Length < 8)
-            throw new ArgumentException("Public key hash must be at least 8 bytes");
-
-        // Convert first 8 bytes to ulong (little-endian)
-        return BitConverter.ToUInt64(pubKeyHash, 0);
+        // Use NBitcoin's built-in Hash160 calculation
+        var hash160 = NBitcoin.Crypto.Hashes.Hash160(data);
+        return hash160.ToBytes();
     }
 
     /// <summary>

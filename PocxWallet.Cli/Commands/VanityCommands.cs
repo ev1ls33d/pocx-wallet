@@ -59,8 +59,8 @@ public static class VanityCommands
                     AnsiConsole.Write(panel);
 
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine($"[bold]Account ID:[/] [green]{result.AccountId}[/]");
                     AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{result.Address}[/]");
+                    AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
                     
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[bold red]⚠ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
@@ -72,7 +72,6 @@ public static class VanityCommands
                         var walletData = new
                         {
                             mnemonic = result.Mnemonic,
-                            accountId = result.AccountId,
                             address = result.Address,
                             pattern = pattern,
                             created = DateTime.UtcNow.ToString("o")
