@@ -9,6 +9,8 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
   - Restore wallets from existing mnemonic phrases
   - BIP32 hierarchical key derivation
   - BIP44-compliant address generation
+  - **Proper pocx1q... Bech32 address format** (witness version 0, P2WPKH)
+  - Bitcoin-compatible Hash160 (RIPEMD160(SHA256(pubkey))) payload
   - Secure passphrase support
 
 - 📊 **Plot Generation**
@@ -24,8 +26,9 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
   - Real-time mining status
 
 - 🎯 **Vanity Address Generator**
-  - Generate addresses with custom patterns
+  - Generate pocx1q... addresses with custom patterns
   - Multi-threaded CPU implementation
+  - Pattern matching on Bech32 encoded addresses
   - GPU acceleration support (planned)
 
 - 💻 **CLI Interface**
@@ -93,6 +96,22 @@ pocx-wallet/
 ├── bitcoin-pocx/             # Bitcoin-PoCX node submodule
 └── PocxWallet.sln            # Solution file
 ```
+
+## PoCX Address Format
+
+This wallet generates **proper Bech32 addresses** following the PoCX specification:
+
+- **Format**: `pocx1q...` (lowercase)
+- **Encoding**: Bech32 (BIP-173)
+- **Witness Version**: 0 (P2WPKH)
+- **Payload**: 20 bytes (Hash160 = RIPEMD160(SHA256(public key)))
+- **Example**: `pocx1q20kypkuljzp8ulujfw67ryuwnh5h2d2ygadj23`
+
+These addresses are:
+- Bitcoin-compatible in structure
+- Human-readable with error detection
+- Lowercase for better readability
+- Checksum-protected against typos
 
 ## Usage
 

@@ -119,11 +119,14 @@ Want an address with a specific pattern? Use the vanity generator:
 
 ### Example Times (CPU-based estimates)
 
-- 2 digits: seconds
-- 3 digits: minutes
-- 4 digits: tens of minutes
-- 5 digits: hours
-- 6+ digits: days to weeks
+Pattern matching works on the Bech32-encoded address (after "pocx1q"):
+
+- 2 characters: seconds to minutes
+- 3 characters: minutes to hours
+- 4 characters: hours to days
+- 5+ characters: days to weeks
+
+**Note**: Bech32 uses a specific character set (qpzry9x8gf2tvdw0s3jn54khce6mua7l), so not all patterns are possible.
 
 ## Verifying Plot Files
 
