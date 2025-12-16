@@ -1,8 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "KCxhJWHEe3U=",
+  "dgSpecHash": "HKaSgMVrxL4=",
   "success": true,
   "projectFilePath": "/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Mining/PocxWallet.Mining.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/home/runner/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/9.0.0/microsoft.extensions.dependencyinjection.abstractions.9.0.0.nupkg.sha512",
+    "/home/runner/.nuget/packages/microsoft.extensions.logging.abstractions/9.0.0/microsoft.extensions.logging.abstractions.9.0.0.nupkg.sha512",
+    "/home/runner/.nuget/packages/nbitcoin/7.0.37/nbitcoin.7.0.37.nupkg.sha512",
+    "/home/runner/.nuget/packages/newtonsoft.json/13.0.1/newtonsoft.json.13.0.1.nupkg.sha512"
+  ],
   "logs": []
 }

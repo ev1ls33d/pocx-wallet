@@ -1,0 +1,6 @@
+{
+  "PoCXBinariesPath": "./pocx/target/release",
+  "PlotDirectory": "./plots",
+  "WalletFilePath": "./wallet.json",
+  "MinerConfigPath": "./config.yaml"
+}
