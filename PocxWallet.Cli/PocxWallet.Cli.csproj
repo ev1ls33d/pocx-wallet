@@ -20,4 +20,21 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Pre-build target to build PoCX dependencies -->
+  <!-- Note: Enable this if you want automatic builds on every compilation -->
+  <!-- For now, run ./build-dependencies.sh (or .ps1) manually before first use -->
+  <!--
+  <Target Name="BuildPoCXDependencies" BeforeTargets="PreBuildEvent">
+    <Message Text="Checking PoCX dependencies..." Importance="high" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" 
+          Command="bash $(ProjectDir)../build-dependencies.sh" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" 
+          Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)../build-dependencies.ps1" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+  </Target>
+  -->
+
 </Project>

@@ -24,4 +24,19 @@ public class AppSettings
     /// Path to miner configuration
     /// </summary>
     public string MinerConfigPath { get; set; } = "./config.yaml";
+
+    /// <summary>
+    /// Bitcoin-PoCX node RPC host
+    /// </summary>
+    public string BitcoinNodeHost { get; set; } = "localhost";
+
+    /// <summary>
+    /// Bitcoin-PoCX node RPC port (default: 18883)
+    /// </summary>
+    public int BitcoinNodePort { get; set; } = 18883;
+
+    /// <summary>
+    /// Path to Bitcoin-PoCX binaries
+    /// </summary>
+    public string BitcoinBinariesPath { get; set; } = "./bitcoin-pocx/src";
 }

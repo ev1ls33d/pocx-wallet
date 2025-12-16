@@ -1,5 +1,7 @@
 using PocxWallet.Protocol.Wrappers;
+using PocxWallet.Cli.Services;
 using Spectre.Console;
+using System.Diagnostics;
 
 namespace PocxWallet.Cli.Commands;
 
@@ -9,6 +11,7 @@ namespace PocxWallet.Cli.Commands;
 public static class MiningCommands
 {
     private static MinerWrapper? _activeMiner;
+    private const string SERVICE_ID = "miner";
 
     public static void StartMining(string binariesPath, string configPath)
     {
@@ -36,17 +39,20 @@ public static class MiningCommands
         {
             _activeMiner = new MinerWrapper(minerPath);
 
-            AnsiConsole.MarkupLine("[bold green]Starting miner...[/]");
+            AnsiConsole.MarkupLine("[bold green]Starting miner as background service...[/]");
             AnsiConsole.MarkupLine($"[dim]Config: {configPath}[/]");
             AnsiConsole.WriteLine();
 
             _activeMiner.StartMining(
                 configPath,
-                onOutput: output => AnsiConsole.MarkupLine($"[green]MINER:[/] {output}"),
-                onError: error => AnsiConsole.MarkupLine($"[red]ERROR:[/] {error}"));
+                onOutput: output => { }, // Silent in background
+                onError: error => { });
 
-            AnsiConsole.MarkupLine("[green]✓[/] Miner started successfully!");
-            AnsiConsole.MarkupLine("[dim]Press Ctrl+C to stop mining[/]");
+            // Register as background service
+            BackgroundServiceManager.RegisterService(SERVICE_ID, "PoCX Miner");
+
+            AnsiConsole.MarkupLine("[green][OK][/] Miner started as background service!");
+            AnsiConsole.MarkupLine("[dim]Check 'Background Services' section in main menu[/]");
         }
         catch (Exception ex)
         {
@@ -68,9 +74,12 @@ public static class MiningCommands
                 _activeMiner.StopProcess();
                 _activeMiner.Dispose();
                 _activeMiner = null;
+                
+                // Remove from background services
+                BackgroundServiceManager.RemoveService(SERVICE_ID);
             });
 
-        AnsiConsole.MarkupLine("[green]✓[/] Miner stopped");
+        AnsiConsole.MarkupLine("[green][OK][/] Miner stopped");
     }
 
     public static void ShowMiningStatus()

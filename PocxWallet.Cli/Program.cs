@@ -1,5 +1,6 @@
 ﻿using PocxWallet.Cli.Commands;
 using PocxWallet.Cli.Configuration;
+using PocxWallet.Cli.Services;
 using Spectre.Console;
 
 namespace PocxWallet.Cli;
@@ -10,6 +11,10 @@ class Program
 
     static async Task Main(string[] args)
     {
+        // Set UTF-8 encoding for better compatibility
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.InputEncoding = System.Text.Encoding.UTF8;
+
         // Check if demo mode is requested
         if (args.Length > 0 && args[0] == "--demo")
         {
@@ -41,12 +46,13 @@ class Program
                     .Title("[bold green]PoCX Wallet - Main Menu[/]")
                     .PageSize(10)
                     .AddChoices(
-                        "💰 Wallet Management",
-                        "📊 Plotting",
-                        "⛏️  Mining",
-                        "✨ Vanity Address Generator",
-                        "⚙️  Settings",
-                        "🚪 Exit"
+                        "[Wallet] Wallet Management",
+                        "[Plot] Plotting",
+                        "[Mine] Mining",
+                        "[Vanity] Vanity Address Generator",
+                        "[Node] Bitcoin-PoCX Node",
+                        "[Settings] Settings",
+                        "[Exit] Exit"
                     ));
 
             AnsiConsole.Clear();
@@ -54,22 +60,25 @@ class Program
 
             switch (choice)
             {
-                case "💰 Wallet Management":
+                case "[Wallet] Wallet Management":
                     await HandleWalletMenuAsync();
                     break;
-                case "📊 Plotting":
+                case "[Plot] Plotting":
                     await HandlePlottingMenuAsync();
                     break;
-                case "⛏️  Mining":
+                case "[Mine] Mining":
                     HandleMiningMenu();
                     break;
-                case "✨ Vanity Address Generator":
+                case "[Vanity] Vanity Address Generator":
                     await VanityCommands.GenerateVanityAddressAsync();
                     break;
-                case "⚙️  Settings":
+                case "[Node] Bitcoin-PoCX Node":
+                    HandleNodeMenu();
+                    break;
+                case "[Settings] Settings":
                     HandleSettingsMenu();
                     break;
-                case "🚪 Exit":
+                case "[Exit] Exit":
                     exit = true;
                     AnsiConsole.MarkupLine("[bold yellow]Goodbye![/]");
                     break;
@@ -78,12 +87,25 @@ class Program
             if (!exit)
             {
                 AnsiConsole.WriteLine();
+                
+                // Show background services status
+                if (BackgroundServiceManager.HasRunningServices())
+                {
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[bold]Background Services:[/]");
+                    BackgroundServiceManager.DisplayServices();
+                }
+                
+                AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[dim]Press any key to continue...[/]");
                 Console.ReadKey(true);
                 AnsiConsole.Clear();
                 ShowBanner();
             }
         }
+        
+        // Stop all background services on exit
+        BackgroundServiceManager.StopAllServices();
     }
 
     static void ShowBanner()
@@ -141,6 +163,9 @@ class Program
                     "Create New Wallet",
                     "Restore Wallet from Mnemonic",
                     "Show Addresses",
+                    "Check Balance",
+                    "Send Funds",
+                    "Transaction History",
                     "Back to Main Menu"
                 ));
 
@@ -154,6 +179,15 @@ class Program
                 break;
             case "Show Addresses":
                 WalletCommands.ShowAddresses();
+                break;
+            case "Check Balance":
+                TransactionCommands.CheckBalance();
+                break;
+            case "Send Funds":
+                TransactionCommands.SendFunds();
+                break;
+            case "Transaction History":
+                TransactionCommands.ShowTransactionHistory();
                 break;
         }
 
@@ -208,6 +242,33 @@ class Program
                 break;
             case "Create Miner Config":
                 MiningCommands.CreateMinerConfig(_settings.MinerConfigPath);
+                break;
+        }
+    }
+
+    static void HandleNodeMenu()
+    {
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold green]Bitcoin-PoCX Node[/]")
+                .AddChoices(
+                    "Start Node",
+                    "Stop Node",
+                    "Show Node Status",
+                    "Back to Main Menu"
+                ));
+
+        switch (choice)
+        {
+            case "Start Node":
+                AnsiConsole.MarkupLine("[yellow]Starting Bitcoin-PoCX node...[/]");
+                AnsiConsole.MarkupLine("[dim]Node management coming soon[/]");
+                break;
+            case "Stop Node":
+                AnsiConsole.MarkupLine("[yellow]Stopping Bitcoin-PoCX node...[/]");
+                break;
+            case "Show Node Status":
+                AnsiConsole.MarkupLine("[dim]No node currently running[/]");
                 break;
         }
     }

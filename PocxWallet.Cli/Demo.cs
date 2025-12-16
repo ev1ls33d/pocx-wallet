@@ -16,17 +16,17 @@ public static class Demo
         Console.WriteLine();
 
         // Demo 1: Create a new wallet
-        Console.WriteLine("📝 Demo 1: Creating a new HD wallet");
+        Console.WriteLine("[Demo 1] Creating a new HD wallet");
         Console.WriteLine("-".PadRight(80, '-'));
         
         var wallet = HDWallet.CreateNew(WordCount.Twelve);
-        Console.WriteLine($"✓ Wallet created successfully!");
+        Console.WriteLine($"[OK] Wallet created successfully!");
         Console.WriteLine($"  Mnemonic: {wallet.MnemonicPhrase}");
         Console.WriteLine($"  Master Public Key: {wallet.MasterPublicKey[..40]}...");
         Console.WriteLine();
 
         // Demo 2: Generate addresses
-        Console.WriteLine("📍 Demo 2: Generating PoCX addresses");
+        Console.WriteLine("[Demo 2] Generating PoCX addresses");
         Console.WriteLine("-".PadRight(80, '-'));
         
         for (uint i = 0; i < 5; i++)
@@ -39,7 +39,7 @@ public static class Demo
         Console.WriteLine();
 
         // Demo 3: Restore wallet from mnemonic
-        Console.WriteLine("🔄 Demo 3: Restoring wallet from mnemonic");
+        Console.WriteLine("[Demo 3] Restoring wallet from mnemonic");
         Console.WriteLine("-".PadRight(80, '-'));
         
         var restoredWallet = HDWallet.FromMnemonic(wallet.MnemonicPhrase);
@@ -48,11 +48,11 @@ public static class Demo
         
         Console.WriteLine($"  Original Address: {originalAddress}");
         Console.WriteLine($"  Restored Address: {restoredAddress}");
-        Console.WriteLine($"  Match: {originalAddress == restoredAddress} ✓");
+        Console.WriteLine($"  Match: {originalAddress == restoredAddress} [OK]");
         Console.WriteLine();
 
         // Demo 4: Different accounts
-        Console.WriteLine("👥 Demo 4: Multiple accounts from same seed");
+        Console.WriteLine("[Demo 4] Multiple accounts from same seed");
         Console.WriteLine("-".PadRight(80, '-'));
         
         for (uint account = 0; account < 3; account++)
@@ -63,7 +63,7 @@ public static class Demo
         Console.WriteLine();
 
         // Demo 5: Export wallet
-        Console.WriteLine("💾 Demo 5: Exporting wallet to JSON");
+        Console.WriteLine("[Demo 5] Exporting wallet to JSON");
         Console.WriteLine("-".PadRight(80, '-'));
         
         var json = wallet.ExportToJson();
@@ -71,20 +71,20 @@ public static class Demo
         Console.WriteLine();
 
         // Demo 6: Using passphrase
-        Console.WriteLine("🔐 Demo 6: Creating wallet with passphrase");
+        Console.WriteLine("[Demo 6] Creating wallet with passphrase");
         Console.WriteLine("-".PadRight(80, '-'));
         
         var walletWithPassphrase = HDWallet.CreateNew(WordCount.Twelve, "super-secret-passphrase");
-        Console.WriteLine($"✓ Wallet with passphrase created");
+        Console.WriteLine($"[OK] Wallet with passphrase created");
         Console.WriteLine($"  Address: {walletWithPassphrase.GetPoCXAddress(0, 0)}");
         Console.WriteLine($"  Note: Same mnemonic + different passphrase = different addresses");
         Console.WriteLine();
 
         Console.WriteLine("=".PadRight(80, '='));
-        Console.WriteLine("Demo completed successfully! ✓");
+        Console.WriteLine("Demo completed successfully! [OK]");
         Console.WriteLine("=".PadRight(80, '='));
         Console.WriteLine();
-        Console.WriteLine("⚠️  SECURITY WARNING:");
+        Console.WriteLine("[WARNING] SECURITY WARNING:");
         Console.WriteLine("   The mnemonic phrases shown above are for DEMONSTRATION ONLY.");
         Console.WriteLine("   Never share your real mnemonic phrase with anyone!");
         Console.WriteLine("   Always store it securely offline.");
