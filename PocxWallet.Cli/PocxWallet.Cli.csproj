@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PocxWallet.Core\PocxWallet.Core.csproj" />
+    <ProjectReference Include="..\PocxWallet.Protocol\PocxWallet.Protocol.csproj" />
+    <ProjectReference Include="..\PocxWallet.Mining\PocxWallet.Mining.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+    <PackageReference Include="Spectre.Console" Version="0.49.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>pocxwallet</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Pre-build target to build PoCX dependencies -->
+  <!-- Note: Enable this if you want automatic builds on every compilation -->
+  <!-- For now, run ./build-dependencies.sh (or .ps1) manually before first use -->
+  <!--
+  <Target Name="BuildPoCXDependencies" BeforeTargets="PreBuildEvent">
+    <Message Text="Checking PoCX dependencies..." Importance="high" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" 
+          Command="bash $(ProjectDir)../build-dependencies.sh" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" 
+          Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)../build-dependencies.ps1" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+  </Target>
+  -->
+
+</Project>

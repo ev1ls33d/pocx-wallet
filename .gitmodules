@@ -1,0 +1,6 @@
+[submodule "pocx"]
+	path = pocx
+	url = https://github.com/PoC-Consortium/pocx.git
+[submodule "bitcoin-pocx"]
+	path = bitcoin-pocx
+	url = https://github.com/PoC-Consortium/bitcoin.git

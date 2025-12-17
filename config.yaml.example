@@ -1,0 +1,21 @@
+# PoCX Miner Configuration Example
+# Copy this file to config.yaml and update with your settings
+
+# Mining pools configuration
+chains:
+  - name: "primary_pool"
+    base_url: "http://pool.example.com:8080"
+    api_path: "/pocx"
+    accounts:
+      - account: "YOUR_ACCOUNT_ID_HERE"
+
+# Plot file directories
+# Add all directories containing your plot files
+plot_dirs:
+  - "./plots"
+  - "/path/to/additional/plots"
+
+# Performance settings
+cpu_threads: 8           # Number of CPU threads to use
+hdd_use_direct_io: true  # Use direct I/O for better performance
+show_progress: true       # Show mining progress
