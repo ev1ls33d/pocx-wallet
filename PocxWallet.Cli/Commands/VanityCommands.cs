@@ -113,8 +113,8 @@ public static class VanityCommands
                 var restoredWallet = HDWallet.FromMnemonic(result.Mnemonic);
                 var wifMainnet = restoredWallet.GetWIFMainnet(0, 0);
                 var wifTestnet = restoredWallet.GetWIFTestnet(0, 0);
-                var descriptorMainnet = restoredWallet.GetDescriptorMainnet(0, 0);
-                var descriptorTestnet = restoredWallet.GetDescriptorTestnet(0, 0);
+                var descriptorMainnet = restoredWallet.GetDescriptor(false, 0, 0);
+                var descriptorTestnet = restoredWallet.GetDescriptor(true, 0, 0);
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine($"[bold]WIF Mainnet:[/] [dim]{wifMainnet}[/]");

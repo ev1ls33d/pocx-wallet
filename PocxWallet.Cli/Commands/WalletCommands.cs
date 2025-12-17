@@ -57,8 +57,8 @@ public static class WalletCommands
         AnsiConsole.MarkupLine("[bold]WIF Testnet:[/] [dim]{0}[/]", wallet.GetWIFTestnet());
         
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[bold]Descriptor (Mainnet):[/] [dim]{0}[/]", wallet.GetDescriptorMainnet());
-        AnsiConsole.MarkupLine("[bold]Descriptor (Testnet):[/] [dim]{0}[/]", wallet.GetDescriptorTestnet());
+        AnsiConsole.MarkupLine("[bold]Descriptor (Mainnet):[/] [dim]{0}[/]", wallet.GetDescriptor());
+        AnsiConsole.MarkupLine("[bold]Descriptor (Testnet):[/] [dim]{0}[/]", wallet.GetDescriptor(true));
 
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
@@ -115,8 +115,8 @@ public static class WalletCommands
             AnsiConsole.MarkupLine("[bold]WIF Testnet:[/] [dim]{0}[/]", wallet.GetWIFTestnet());
             
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[bold]Descriptor (Mainnet):[/] [dim]{0}[/]", wallet.GetDescriptorMainnet());
-            AnsiConsole.MarkupLine("[bold]Descriptor (Testnet):[/] [dim]{0}[/]", wallet.GetDescriptorTestnet());
+            AnsiConsole.MarkupLine("[bold]Descriptor (Mainnet):[/] [dim]{0}[/]", wallet.GetDescriptor());
+            AnsiConsole.MarkupLine("[bold]Descriptor (Testnet):[/] [dim]{0}[/]", wallet.GetDescriptor(true));
 
             if (AnsiConsole.Confirm("Save wallet to file?", true))
             {

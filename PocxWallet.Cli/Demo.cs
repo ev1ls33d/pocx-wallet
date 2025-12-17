@@ -22,13 +22,13 @@ public static class Demo
         var wallet = HDWallet.CreateNew(WordCount.Twelve);
         Console.WriteLine($"√ Wallet created successfully!");
         Console.WriteLine($"  Mnemonic: {wallet.MnemonicPhrase}");
-        Console.WriteLine($"  Address: {wallet.GetPoCXAddress(0, 0)}");
+        Console.WriteLine($"  Address: {wallet.GetPoCXAddress(0, 0, true)}");
         Console.WriteLine();
         Console.WriteLine($"  WIF Mainnet: {wallet.GetWIFMainnet(0, 0)}");
         Console.WriteLine($"  WIF Testnet: {wallet.GetWIFTestnet(0, 0)}");
         Console.WriteLine();
-        Console.WriteLine($"  Descriptor (Mainnet): {wallet.GetDescriptorMainnet(0, 0)}");
-        Console.WriteLine($"  Descriptor (Testnet): {wallet.GetDescriptorTestnet(0, 0)}");
+        Console.WriteLine($"  Descriptor (Mainnet): {wallet.GetDescriptor(false, 0, 0)}");
+        Console.WriteLine($"  Descriptor (Testnet): {wallet.GetDescriptor(true, 0, 0)}");
         Console.WriteLine();
 
         // Demo 2: Generate addresses
@@ -37,8 +37,8 @@ public static class Demo
         
         for (uint i = 0; i < 5; i++)
         {
-            var address = wallet.GetPoCXAddress(0, i);
-            var pubKey = wallet.GetPublicKey(0, i);
+            var address = wallet.GetPoCXAddress(0, i, true);
+            var pubKey = wallet.GetPublicKey(0, i, true);
             Console.WriteLine($"  Address {i}: {address}");
             Console.WriteLine($"  Public Key: {pubKey[..32]}...");
         }

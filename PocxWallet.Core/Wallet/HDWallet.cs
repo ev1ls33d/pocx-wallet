@@ -20,9 +20,14 @@ public class HDWallet
     public string MnemonicPhrase => _mnemonic.ToString();
 
     /// <summary>
-    /// Gets the master extended public key
+    /// Gets the master extended public key (mainnet)
     /// </summary>
     public string MasterPublicKey => _masterKey.Neuter().ToString(Network.Main);
+
+    /// <summary>
+    /// Gets the master extended public key (testnet)
+    /// </summary>
+    public string TestnetPublicKey => _masterKey.Neuter().ToString(Network.TestNet);
 
     private HDWallet(Mnemonic mnemonic, Network network, string? passphrase = null)
     {
@@ -61,7 +66,7 @@ public class HDWallet
     /// <summary>
     /// Derive a key at the specified path
     /// </summary>
-    /// <param name="path">BIP32 derivation path (e.g., "m/44'/0'/0'/0/0")</param>
+    /// <param name="path">BIP32 derivation path (e.g., "m/84'/0'/0'/0/0")</param>
     /// <returns>The derived extended key</returns>
     public ExtKey DeriveKey(string path)
     {
@@ -74,20 +79,22 @@ public class HDWallet
 
     /// <summary>
     /// Derive a key at the specified account and index for PoCX
-    /// Uses derivation path: m/44'/0'/account'/0/index
+    /// Uses derivation path: m/84'/coin'/account'/chain/index (BIP84 P2WPKH)
     /// </summary>
     /// <param name="account">Account number (default: 0)</param>
     /// <param name="index">Address index (default: 0)</param>
+    /// <param name="testnet">True to use testnet coin type (1) otherwise mainnet (0)</param>
+    /// <param name="change">True to derive change chain (1) otherwise external chain (0)</param>
     /// <returns>The derived extended key</returns>
-    public ExtKey DeriveKeyForPoCX(uint account = 0, uint index = 0)
+    public ExtKey DeriveKeyForPoCX(uint account = 0, uint index = 0, bool testnet = false, bool change = false)
     {
-        // Using BIP44 path for PoCX: m/44'/0'/account'/0/index
-        // 44' = BIP44 purpose
-        // 0' = Bitcoin coin type (PoCX uses Bitcoin-compatible addresses)
+        // Using BIP84 path for PoCX: m/84'/coin'/account'/chain/index
+        // 84' = BIP84 purpose (native segwit P2WPKH)
+        // coin' = 0' for mainnet, 1' for testnet
         // account' = account number (hardened)
-        // 0 = external chain (non-hardened)
+        // chain = 0 external, 1 internal/change (non-hardened)
         // index = address index (non-hardened)
-        var path = new KeyPath($"m/44'/0'/{account}'/0/{index}");
+        var path = new KeyPath($"m/84'/{(testnet ? "1" : "0")}'/{account}'/{(change ? "1" : "0")}/{index}");
         return _masterKey.Derive(path);
     }
 
@@ -97,18 +104,20 @@ public class HDWallet
     /// </summary>
     /// <param name="account">Account number</param>
     /// <param name="index">Address index</param>
-    /// <returns>A PoCX bech32 address string starting with "pocx1q"</returns>
-    public string GetPoCXAddress(uint account = 0, uint index = 0)
+    /// <param name="testnet">Set to true to generate a testnet address (tpocx...)</param>
+    /// <param name="change">Set to true to use the change chain</param>
+    /// <returns>A PoCX bech32 address string starting with "pocx1q" or "tpocx1q" for testnet</returns>
+    public string GetPoCXAddress(uint account = 0, uint index = 0, bool testnet = false, bool change = false)
     {
-        var key = DeriveKeyForPoCX(account, index);
+        var key = DeriveKeyForPoCX(account, index, testnet, change);
         // Get the compressed public key
         var pubKey = key.PrivateKey.PubKey.ToBytes();
-        
+
         // Calculate Hash160 (RIPEMD160(SHA256(pubkey))) - standard 20-byte payload
         var payload = CalculateHash160(pubKey);
-        
+
         // Encode as Bech32 with "pocx" HRP and witness version 0
-        return Bech32Encoder.Encode("pocx", 0, payload);
+        return Bech32Encoder.Encode(testnet ? "tpocx" : "pocx", 0, payload);
     }
 
     /// <summary>
@@ -148,30 +157,17 @@ public class HDWallet
     }
 
     /// <summary>
-    /// Get the descriptor with checksum for mainnet
-    /// Format: wpkh(WIF)#checksum
+    /// Get a descriptor with checksum for the specified network.
+    /// Note: This builds a single-key descriptor from a WIF for compatibility with previous demo output.
+    /// For wallet imports into Bitcoin Core prefer account-level descriptors using extpub (tpub/xpub) with origin and wildcard.
     /// </summary>
+    /// <param name="testnet">True for testnet descriptor, false for mainnet</param>
     /// <param name="account">Account number</param>
     /// <param name="index">Address index</param>
-    /// <returns>Complete descriptor with BIP-380 checksum for mainnet</returns>
-    public string GetDescriptorMainnet(uint account = 0, uint index = 0)
+    /// <returns>Complete descriptor with BIP-380 checksum</returns>
+    public string GetDescriptor(bool testnet = false, uint account = 0, uint index = 0)
     {
-        var wif = GetWIFMainnet(account, index);
-        var descriptorWithoutChecksum = $"wpkh({wif})";
-        var checksum = CalculateDescriptorChecksum(descriptorWithoutChecksum);
-        return $"{descriptorWithoutChecksum}#{checksum}";
-    }
-
-    /// <summary>
-    /// Get the descriptor with checksum for testnet
-    /// Format: wpkh(WIF)#checksum
-    /// </summary>
-    /// <param name="account">Account number</param>
-    /// <param name="index">Address index</param>
-    /// <returns>Complete descriptor with BIP-380 checksum for testnet</returns>
-    public string GetDescriptorTestnet(uint account = 0, uint index = 0)
-    {
-        var wif = GetWIFTestnet(account, index);
+        var wif = testnet ? GetWIFTestnet(account, index) : GetWIFMainnet(account, index);
         var descriptorWithoutChecksum = $"wpkh({wif})";
         var checksum = CalculateDescriptorChecksum(descriptorWithoutChecksum);
         return $"{descriptorWithoutChecksum}#{checksum}";
@@ -184,26 +180,26 @@ public class HDWallet
     {
         // Descriptor checksum uses a modified Bech32 charset
         const string CHECKSUM_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-        
+
         // Input characters mapping for descriptor
         const string INPUT_CHARSET = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`#\"\\ ";
-        
+
         // Polymod constants for descriptor checksum
         ulong[] GENERATOR = { 0xf5dee51989, 0xa9fdca3312, 0x1bab10e32d, 0x3706b1677a, 0x644d626ffd };
-        
+
         // Expand the descriptor
         ulong c = 1;
         int cls = 0;
         int clscount = 0;
-        
+
         foreach (char ch in descriptor)
         {
             int pos = INPUT_CHARSET.IndexOf(ch);
             if (pos == -1) continue;
-            
+
             // Emit a symbol for the position inside the group, for every character.
             c = PolyMod(c, pos & 31, GENERATOR);
-            
+
             // Accumulate the group numbers
             cls = cls * 3 + (pos >> 5);
             if (++clscount == 3)
@@ -214,31 +210,31 @@ public class HDWallet
                 clscount = 0;
             }
         }
-        
+
         if (clscount > 0)
         {
             c = PolyMod(c, cls, GENERATOR);
         }
-        
+
         // Shift further to determine the checksum
         for (int j = 0; j < 8; ++j)
         {
             c = PolyMod(c, 0, GENERATOR);
         }
-        
+
         // XOR with final constant
         c ^= 1;
-        
+
         // Extract 8 5-bit groups for the checksum
         var checksum = new char[8];
         for (int j = 0; j < 8; ++j)
         {
             checksum[j] = CHECKSUM_CHARSET[(int)((c >> (5 * (7 - j))) & 31)];
         }
-        
+
         return new string(checksum);
     }
-    
+
     /// <summary>
     /// Polymod function for descriptor checksum calculation
     /// </summary>
@@ -246,7 +242,7 @@ public class HDWallet
     {
         ulong c0 = c >> 35;
         c = ((c & 0x7ffffffff) << 5) ^ (ulong)val;
-        
+
         for (int i = 0; i < 5; i++)
         {
             if (((c0 >> i) & 1) != 0)
@@ -254,7 +250,7 @@ public class HDWallet
                 c ^= generator[i];
             }
         }
-        
+
         return c;
     }
 
@@ -263,10 +259,12 @@ public class HDWallet
     /// </summary>
     /// <param name="account">Account number</param>
     /// <param name="index">Address index</param>
+    /// <param name="testnet">True to derive testnet pubkey</param>
+    /// <param name="change">True to derive change chain</param>
     /// <returns>The public key as a hex string</returns>
-    public string GetPublicKey(uint account = 0, uint index = 0)
+    public string GetPublicKey(uint account = 0, uint index = 0, bool testnet = false, bool change = false)
     {
-        var key = DeriveKeyForPoCX(account, index);
+        var key = DeriveKeyForPoCX(account, index, testnet, change);
         return key.PrivateKey.PubKey.ToHex();
     }
 
@@ -291,6 +289,9 @@ public class HDWallet
         {
             mnemonic = MnemonicPhrase,
             masterPublicKey = MasterPublicKey,
+            testnetPublicKey = TestnetPublicKey,
+            mainnetDescriptor = GetDescriptor(false),
+            testnetDescriptor = GetDescriptor(true),
             created = DateTime.UtcNow.ToString("o")
         };
         return System.Text.Json.JsonSerializer.Serialize(walletData, new System.Text.Json.JsonSerializerOptions
