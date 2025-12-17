@@ -341,7 +341,7 @@ class Program
             WriteIndented = true
         });
         File.WriteAllText(configPath, json);
-        AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: {configPath}");
+        AnsiConsole.MarkupLine($"[green][OK][/] Configuration saved to: {configPath}");
     }
 
     /// <summary>

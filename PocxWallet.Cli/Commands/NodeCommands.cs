@@ -57,7 +57,7 @@ public static class NodeCommands
             // Register as background service
             BackgroundServiceManager.RegisterService(SERVICE_ID, "Bitcoin-PoCX Node");
 
-            AnsiConsole.MarkupLine("[green]√[/] Bitcoin-PoCX node started as background service!");
+            AnsiConsole.MarkupLine("[green][OK][/] Bitcoin-PoCX node started as background service!");
             AnsiConsole.MarkupLine("[dim]Check 'Background Services' section in main menu[/]");
             AnsiConsole.MarkupLine($"[dim]RPC available at localhost:{rpcPort}[/]");
         }
@@ -98,7 +98,7 @@ public static class NodeCommands
                 BackgroundServiceManager.RemoveService(SERVICE_ID);
             });
 
-        AnsiConsole.MarkupLine("[green]√[/] Bitcoin-PoCX node stopped");
+        AnsiConsole.MarkupLine("[green][OK][/] Bitcoin-PoCX node stopped");
     }
 
     public static void ShowNodeStatus()
@@ -109,7 +109,7 @@ public static class NodeCommands
             return;
         }
 
-        AnsiConsole.MarkupLine("[green]√[/] Bitcoin-PoCX node is running");
+        AnsiConsole.MarkupLine("[green][OK][/] Bitcoin-PoCX node is running");
 
         if (_cliWrapper != null)
         {
@@ -187,7 +187,7 @@ public static class NodeCommands
                 {
                     var txid = await _cliWrapper.SendToAddressAsync(toAddress, amount);
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[green]√[/] Transaction sent!");
+                    AnsiConsole.MarkupLine("[green][OK][/] Transaction sent!");
                     AnsiConsole.MarkupLine($"[bold]Transaction ID:[/] {txid}");
                 });
         }
