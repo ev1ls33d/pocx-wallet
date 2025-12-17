@@ -53,14 +53,14 @@ public static class WalletCommands
         AnsiConsole.MarkupLine($"[bold]Default Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[bold red][WARNING] IMPORTANT: Save your mnemonic phrase in a secure location![/]");
+        AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
         AnsiConsole.MarkupLine("[dim]This is the only way to recover your wallet if you lose access.[/]");
 
         if (AnsiConsole.Confirm("Save wallet to file?", true))
         {
             var filePath = AnsiConsole.Ask<string>("Enter file path:", "./wallet.json");
             File.WriteAllText(filePath, wallet.ExportToJson());
-            AnsiConsole.MarkupLine($"[green][OK][/] Wallet saved to: {filePath}");
+            AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
         }
     }
 
@@ -98,7 +98,7 @@ public static class WalletCommands
             var wallet = HDWallet.FromMnemonic(mnemonic, passphrase);
             
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[green][OK][/] Wallet restored successfully!");
+            AnsiConsole.MarkupLine("[green]√[/] Wallet restored successfully!");
             AnsiConsole.MarkupLine($"[bold]Master Public Key:[/] [dim]{wallet.MasterPublicKey}[/]");
             AnsiConsole.MarkupLine($"[bold]Default Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
 
@@ -106,7 +106,7 @@ public static class WalletCommands
             {
                 var filePath = AnsiConsole.Ask<string>("Enter file path:", "./wallet.json");
                 File.WriteAllText(filePath, wallet.ExportToJson());
-                AnsiConsole.MarkupLine($"[green][OK][/] Wallet saved to: {filePath}");
+                AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
             }
         }
         catch (Exception ex)

@@ -54,7 +54,7 @@ public static class PlottingCommands
 
                     if (result.IsSuccess)
                     {
-                        AnsiConsole.MarkupLine("[green][OK][/] Plot created successfully!");
+                        AnsiConsole.MarkupLine("[green]√[/] Plot created successfully!");
                     }
                     else
                     {

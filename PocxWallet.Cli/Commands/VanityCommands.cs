@@ -96,7 +96,7 @@ public static class VanityCommands
             if (!string.IsNullOrEmpty(result.Mnemonic) && !string.IsNullOrEmpty(result.Address))
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[green][OK][/] Vanity address found!");
+                AnsiConsole.MarkupLine("[green]√[/] Vanity address found!");
 
                 var panel = new Panel(new Markup($"[yellow]{result.Mnemonic}[/]"))
                 {
@@ -122,7 +122,7 @@ public static class VanityCommands
                 AnsiConsole.MarkupLine($"[bold]Descriptor:[/] [dim]{descriptor}[/]");
 
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[bold red][WARNING] IMPORTANT: Save your mnemonic phrase in a secure location![/]");
+                AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
 
                 if (AnsiConsole.Confirm("Save to wallet file?", true))
                 {
@@ -144,7 +144,7 @@ public static class VanityCommands
                     });
 
                     File.WriteAllText(filePath, json);
-                    AnsiConsole.MarkupLine($"[green][OK][/] Wallet saved to: {filePath}");
+                    AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
                 }
             }
             else

@@ -51,7 +51,7 @@ public static class MiningCommands
             // Register as background service
             BackgroundServiceManager.RegisterService(SERVICE_ID, "PoCX Miner");
 
-            AnsiConsole.MarkupLine("[green][OK][/] Miner started as background service!");
+            AnsiConsole.MarkupLine("[green]√[/] Miner started as background service!");
             AnsiConsole.MarkupLine("[dim]Check 'Background Services' section in main menu[/]");
         }
         catch (Exception ex)
@@ -79,14 +79,14 @@ public static class MiningCommands
                 BackgroundServiceManager.RemoveService(SERVICE_ID);
             });
 
-        AnsiConsole.MarkupLine("[green][OK][/] Miner stopped");
+        AnsiConsole.MarkupLine("[green]√[/] Miner stopped");
     }
 
     public static void ShowMiningStatus()
     {
         if (_activeMiner?.IsRunning == true)
         {
-            AnsiConsole.MarkupLine("[green][OK][/] Miner is running");
+            AnsiConsole.MarkupLine("[green]√[/] Miner is running");
         }
         else
         {
@@ -121,6 +121,6 @@ show_progress: true
 ";
 
         File.WriteAllText(configPath, config);
-        AnsiConsole.MarkupLine($"[green][OK][/] Configuration saved to: {configPath}");
+        AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: {configPath}");
     }
 }
