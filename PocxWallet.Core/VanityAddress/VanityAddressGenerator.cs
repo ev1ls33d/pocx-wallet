@@ -12,16 +12,18 @@ public class VanityAddressGenerator
 {
     private readonly string _pattern;
     private readonly bool _useGpu;
+    private readonly bool _testnet;
     private readonly int _threadCount;
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public VanityAddressGenerator(string pattern, bool useGpu = false, int? threadCount = null)
+    public VanityAddressGenerator(string pattern, bool useGpu = false, bool testnet = false, int? threadCount = null)
     {
         if (string.IsNullOrWhiteSpace(pattern))
             throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
 
         _pattern = pattern;
         _useGpu = useGpu;
+        _testnet = testnet;
         _threadCount = threadCount ?? Environment.ProcessorCount;
     }
 
@@ -139,8 +141,8 @@ public class VanityAddressGenerator
             // Generate a new HD wallet
             var wallet = HDWallet.CreateNew(WordCount.Twelve);
             
-            // Get the pocx1q bech32 address
-            var address = wallet.GetPoCXAddress(0, 0);
+            // Get the pocx1q bech32 address (testnet or mainnet based on _testnet flag)
+            var address = wallet.GetPoCXAddress(0, 0, testnet: _testnet);
 
             // Check if it matches the pattern
             if (address.Contains(_pattern, StringComparison.OrdinalIgnoreCase))

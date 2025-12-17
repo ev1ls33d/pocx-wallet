@@ -53,6 +53,7 @@ public static class VanityCommands
             break;
         }
 
+        var useTestnet = AnsiConsole.Confirm("Generate for [green]testnet[/]?", false);
         var useGpu = AnsiConsole.Confirm("Use GPU acceleration?", false);
 
         if (useGpu)
@@ -60,7 +61,7 @@ public static class VanityCommands
             AnsiConsole.MarkupLine("[yellow]Note: GPU acceleration is not yet fully implemented[/]");
         }
 
-        var generator = new VanityAddressGenerator(pattern, useGpu);
+        var generator = new VanityAddressGenerator(pattern, useGpu, useTestnet);
         var cts = new CancellationTokenSource();
 
         try
@@ -106,23 +107,20 @@ public static class VanityCommands
                 AnsiConsole.Write(panel);
 
                 AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"[bold]Network:[/] {(useTestnet ? "[green]Testnet[/]" : "[blue]Mainnet[/]")}");
                 AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{result.Address}[/]");
-                AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
+                AnsiConsole.MarkupLine($"[dim]Format: Bech32 ({(useTestnet ? "tpocx1q..." : "pocx1q...")})[/]");
 
-                // Generate WIF and descriptor for both mainnet and testnet
+                // Generate WIF and descriptor for the selected network
                 var restoredWallet = HDWallet.FromMnemonic(result.Mnemonic);
-                var wifMainnet = restoredWallet.GetWIFMainnet(0, 0);
-                var wifTestnet = restoredWallet.GetWIFTestnet(0, 0);
-                var descriptorMainnet = restoredWallet.GetDescriptor(false, 0, 0);
-                var descriptorTestnet = restoredWallet.GetDescriptor(true, 0, 0);
+                var wif = useTestnet ? restoredWallet.GetWIFTestnet(0, 0) : restoredWallet.GetWIFMainnet(0, 0);
+                var descriptor = restoredWallet.GetDescriptor(useTestnet, 0, 0);
 
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[bold]WIF Mainnet:[/] [dim]{wifMainnet}[/]");
-                AnsiConsole.MarkupLine($"[bold]WIF Testnet:[/] [dim]{wifTestnet}[/]");
+                AnsiConsole.MarkupLine($"[bold]WIF ({(useTestnet ? "Testnet" : "Mainnet")}):[/] [dim]{wif}[/]");
 
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[bold]Descriptor (Mainnet):[/] [dim]{descriptorMainnet}[/]");
-                AnsiConsole.MarkupLine($"[bold]Descriptor (Testnet):[/] [dim]{descriptorTestnet}[/]");
+                AnsiConsole.MarkupLine($"[bold]Descriptor:[/] [dim]{descriptor}[/]");
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
@@ -135,10 +133,9 @@ public static class VanityCommands
                     {
                         mnemonic = result.Mnemonic,
                         address = result.Address,
-                        wifMainnet = wifMainnet,
-                        wifTestnet = wifTestnet,
-                        descriptorMainnet = descriptorMainnet,
-                        descriptorTestnet = descriptorTestnet,
+                        network = useTestnet ? "testnet" : "mainnet",
+                        wif = wif,
+                        descriptor = descriptor,
                         pattern = pattern,
                         created = DateTime.UtcNow.ToString("o")
                     };

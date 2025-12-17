@@ -49,8 +49,8 @@ public static class WalletCommands
         AnsiConsole.Write(panel);
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
-        AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
+        AnsiConsole.MarkupLine("[bold]Mainnet Address:[/] [green]{0}[/]", wallet.GetPoCXAddress(0, 0, testnet: false));
+        AnsiConsole.MarkupLine("[bold]Testnet Address:[/] [green]{0}[/]", wallet.GetPoCXAddress(0, 0, testnet: true));
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[bold]WIF Mainnet:[/] [dim]{0}[/]", wallet.GetWIFMainnet());
@@ -107,8 +107,8 @@ public static class WalletCommands
             
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[green]√[/] Wallet restored successfully!");
-            AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
-            AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
+            AnsiConsole.MarkupLine("[bold]Mainnet Address:[/] [green]{0}[/]", wallet.GetPoCXAddress(0, 0, testnet: false));
+            AnsiConsole.MarkupLine("[bold]Testnet Address:[/] [green]{0}[/]", wallet.GetPoCXAddress(0, 0, testnet: true));
             
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[bold]WIF Mainnet:[/] [dim]{0}[/]", wallet.GetWIFMainnet());
