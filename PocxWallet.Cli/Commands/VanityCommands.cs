@@ -15,12 +15,16 @@ public static class VanityCommands
 {
     // Valid Bech32 characters (excluding '1', 'b', 'i', 'o' as per spec)
     private const string ValidBech32Chars = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+    private const string ValidBech32CharsSorted = "0234567890acdefghjklmnpqrstuvwxyz"; // sorted for display
 
     public static async Task GenerateVanityAddressAsync()
     {
         AnsiConsole.MarkupLine("[bold green]Generate vanity address[/]");
         AnsiConsole.MarkupLine("[dim]Note: This may take a long time depending on the pattern complexity[/]");
-        AnsiConsole.MarkupLine("[dim]Valid characters: qpzry9x8gf2tvdw0s3jn54khce6mua7l (case-insensitive)[/]");
+        
+        // Sort and display valid characters
+        var validCharsSorted = string.Concat(ValidBech32Chars.OrderBy(c => c));
+        AnsiConsole.MarkupLine($"[dim]Valid characters: {validCharsSorted} (case-insensitive)[/]");
         AnsiConsole.WriteLine();
 
         string pattern;
@@ -40,7 +44,7 @@ public static class VanityCommands
             if (!IsValidBech32Pattern(pattern))
             {
                 AnsiConsole.MarkupLine("[red]Invalid pattern![/] Only these characters are allowed:");
-                AnsiConsole.MarkupLine($"[yellow]{ValidBech32Chars}[/]");
+                AnsiConsole.MarkupLine($"[yellow]{validCharsSorted}[/]");
                 AnsiConsole.WriteLine();
                 continue;
             }

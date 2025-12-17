@@ -84,15 +84,22 @@ public class VanityAddressGenerator
         // Progress reporting task
         var progressTask = Task.Run(async () =>
         {
-            var sw = Stopwatch.StartNew();
-            while (!cts.Token.IsCancellationRequested)
+            try
             {
-                await Task.Delay(1000, cts.Token);
-                if (progress != null && attempts.Count > 0)
+                var sw = Stopwatch.StartNew();
+                while (!cts.Token.IsCancellationRequested)
                 {
-                    var total = attempts.Sum();
-                    progress.Report(total);
+                    await Task.Delay(1000, cts.Token);
+                    if (progress != null && attempts.Count > 0)
+                    {
+                        var total = attempts.Sum();
+                        progress.Report(total);
+                    }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancelled
             }
         }, cts.Token);
 
@@ -106,7 +113,15 @@ public class VanityAddressGenerator
         finally
         {
             cts.Cancel();
-            await Task.WhenAll(workers.Concat(new[] { progressTask }).Where(t => !t.IsCompleted));
+            // Wait for all tasks to complete, ignoring cancellation exceptions
+            try
+            {
+                await Task.WhenAll(workers.Concat(new[] { progressTask }));
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when tasks are cancelled
+            }
         }
     }
 
