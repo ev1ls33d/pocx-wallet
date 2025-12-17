@@ -92,6 +92,8 @@ dotnet build
 
 ### 4. Run the Wallet
 
+#### CLI Application
+
 The wallet runs in interactive mode by default:
 
 ```bash
@@ -113,19 +115,46 @@ dotnet run -- --demo
 ./bin/Debug/net9.0/pocxwallet --demo
 ```
 
+#### GUI Application (Avalonia)
+
+Run the cross-platform desktop application:
+
+```bash
+cd PocxWallet.UI/PocxWallet.UI.Desktop
+dotnet run
+```
+
+The GUI provides a modern, user-friendly interface with:
+- Dashboard with balance and network status
+- Wallet management (create/restore)
+- Send and receive transactions
+- Transaction history
+- Multi-account support
+- Contact management
+- Settings and configuration
+
+See [PocxWallet.UI/README.md](PocxWallet.UI/README.md) for more details on the UI.
+
 ## Project Structure
 
 ```
 pocx-wallet/
 ├── PocxWallet.Core/          # Core wallet and cryptography
 │   ├── Wallet/               # HD wallet implementation
-│   └── VanityAddress/        # Vanity address generator
+│   ├── VanityAddress/        # Vanity address generator
+│   └── Services/             # Service interfaces (API layer)
 ├── PocxWallet.Protocol/      # PoCX binary wrappers
 │   └── Wrappers/             # Process wrappers for binaries
 ├── PocxWallet.Mining/        # Mining services (future)
 ├── PocxWallet.Cli/           # CLI application
 │   ├── Commands/             # Command implementations
 │   └── Configuration/        # App settings
+├── PocxWallet.UI/            # Cross-platform GUI (Avalonia)
+│   ├── PocxWallet.UI/        # Shared UI library
+│   ├── Desktop/              # Desktop application
+│   ├── Android/              # Android application
+│   ├── iOS/                  # iOS application
+│   └── Browser/              # WebAssembly browser app
 ├── pocx/                     # PoCX submodule (Rust)
 ├── bitcoin-pocx/             # Bitcoin-PoCX node submodule
 └── PocxWallet.sln            # Solution file
@@ -269,16 +298,27 @@ dotnet test
 - [x] Balance checking via node RPC
 - [x] Transaction history
 - [x] Cross-platform compatibility
+- [x] Avalonia UI foundation with ReactiveUI
+- [x] Service layer interfaces (API architecture)
 
 ### In Progress 🚧
-- [ ] GPU-accelerated vanity address generation (OpenCL/CUDA)
-- [ ] Avalonia cross-platform GUI
+- [ ] Avalonia GUI implementation (views created, needs service integration)
+- [ ] Service layer implementation
+- [ ] Multi-account management
+- [ ] Contact/address book
+- [ ] QR code generation and scanning
 
 ### Planned 📋
-- [ ] Address book
-- [ ] QR code generation
+- [ ] GPU-accelerated vanity address generation (OpenCL/CUDA)
+- [ ] Encrypted messaging with transactions
+- [ ] Multi-output transactions
+- [ ] Alias system
+- [ ] Deep linking support
+- [ ] Internationalization (25+ languages)
 - [ ] Hardware wallet support
 - [ ] Multi-signature support
+- [ ] Mobile optimization (Android/iOS)
+- [ ] Electrs integration for lightweight clients
 
 ## Contributing
 
