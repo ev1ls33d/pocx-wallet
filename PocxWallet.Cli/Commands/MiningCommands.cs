@@ -86,7 +86,7 @@ public static class MiningCommands
     {
         if (_activeMiner?.IsRunning == true)
         {
-            AnsiConsole.MarkupLine("[green]✓ Miner is running[/]");
+            AnsiConsole.MarkupLine("[green][OK] Miner is running[/]");
         }
         else
         {
@@ -121,6 +121,6 @@ show_progress: true
 ";
 
         File.WriteAllText(configPath, config);
-        AnsiConsole.MarkupLine($"[green]✓[/] Configuration saved to: {configPath}");
+        AnsiConsole.MarkupLine($"[green][OK][/] Configuration saved to: {configPath}");
     }
 }

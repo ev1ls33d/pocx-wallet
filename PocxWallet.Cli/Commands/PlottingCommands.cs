@@ -14,7 +14,7 @@ public static class PlottingCommands
 
         var accountId = AnsiConsole.Ask<string>("Enter [green]account ID[/]:");
         var plotPath = AnsiConsole.Ask<string>("Enter [green]plot directory[/]:", "./plots");
-        var warps = AnsiConsole.Ask<int>("Enter number of [green]warps[/] (1 warp ≈ 1GB):", 10);
+        var warps = AnsiConsole.Ask<int>("Enter number of [green]warps[/] (1 warp ~= 1GB):", 10);
 
         var plotterPath = Path.Combine(binariesPath, "pocx_plotter");
         if (!File.Exists(plotterPath))
@@ -54,11 +54,11 @@ public static class PlottingCommands
 
                     if (result.IsSuccess)
                     {
-                        AnsiConsole.MarkupLine("[green]✓[/] Plot created successfully!");
+                        AnsiConsole.MarkupLine("[green][OK][/] Plot created successfully!");
                     }
                     else
                     {
-                        AnsiConsole.MarkupLine($"[red]✗ Plotting failed:[/] {result.Error}");
+                        AnsiConsole.MarkupLine($"[red][FAIL] Plotting failed:[/] {result.Error}");
                     }
                 });
         }

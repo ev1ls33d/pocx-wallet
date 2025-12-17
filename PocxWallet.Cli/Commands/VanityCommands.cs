@@ -1,4 +1,5 @@
 using PocxWallet.Core.VanityAddress;
+using PocxWallet.Core.Wallet;
 using Spectre.Console;
 using System;
 using System.IO;
@@ -12,13 +13,41 @@ namespace PocxWallet.Cli.Commands;
 /// </summary>
 public static class VanityCommands
 {
+    // Valid Bech32 characters (excluding '1', 'b', 'i', 'o' as per spec)
+    private const string ValidBech32Chars = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+
     public static async Task GenerateVanityAddressAsync()
     {
         AnsiConsole.MarkupLine("[bold green]Generate vanity address[/]");
         AnsiConsole.MarkupLine("[dim]Note: This may take a long time depending on the pattern complexity[/]");
+        AnsiConsole.MarkupLine("[dim]Valid characters: qpzry9x8gf2tvdw0s3jn54khce6mua7l (case-insensitive)[/]");
         AnsiConsole.WriteLine();
 
-        var pattern = AnsiConsole.Ask<string>("Enter [green]pattern[/] to search for:");
+        string pattern;
+        while (true)
+        {
+            pattern = AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter [green]pattern[/] to search for (or 'cancel' to exit):")
+                    .AllowEmpty());
+
+            if (pattern.Equals("cancel", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(pattern))
+            {
+                AnsiConsole.MarkupLine("[yellow]Operation cancelled[/]");
+                return;
+            }
+
+            // Validate pattern contains only valid Bech32 characters
+            if (!IsValidBech32Pattern(pattern))
+            {
+                AnsiConsole.MarkupLine("[red]Invalid pattern![/] Only these characters are allowed:");
+                AnsiConsole.MarkupLine($"[yellow]{ValidBech32Chars}[/]");
+                AnsiConsole.WriteLine();
+                continue;
+            }
+
+            break;
+        }
+
         var useGpu = AnsiConsole.Confirm("Use GPU acceleration?", false);
 
         if (useGpu)
@@ -62,7 +91,7 @@ public static class VanityCommands
             if (!string.IsNullOrEmpty(result.Mnemonic) && !string.IsNullOrEmpty(result.Address))
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[green]✓ Vanity address found![/]");
+                AnsiConsole.MarkupLine("[green][OK] Vanity address found![/]");
 
                 var panel = new Panel(new Markup($"[yellow]{result.Mnemonic}[/]"))
                 {
@@ -75,8 +104,18 @@ public static class VanityCommands
                 AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{result.Address}[/]");
                 AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
 
+                // Generate WIF and descriptor for import
+                var restoredWallet = HDWallet.FromMnemonic(result.Mnemonic);
+                var derivedKey = restoredWallet.DeriveKeyForPoCX(0, 0);
+                var wifKey = derivedKey.PrivateKey.GetWif(NBitcoin.Network.Main).ToString();
+                var descriptor = $"wpkh({wifKey})";
+
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[bold red]⚠ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
+                AnsiConsole.MarkupLine($"[bold]WIF (for import):[/] [dim]{wifKey}[/]");
+                AnsiConsole.MarkupLine($"[bold]Descriptor:[/] [dim]{descriptor}[/]");
+
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[bold red][WARNING] IMPORTANT: Save your mnemonic phrase in a secure location![/]");
 
                 if (AnsiConsole.Confirm("Save to wallet file?", true))
                 {
@@ -86,6 +125,8 @@ public static class VanityCommands
                     {
                         mnemonic = result.Mnemonic,
                         address = result.Address,
+                        wif = wifKey,
+                        descriptor = descriptor,
                         pattern = pattern,
                         created = DateTime.UtcNow.ToString("o")
                     };
@@ -96,7 +137,7 @@ public static class VanityCommands
                     });
 
                     File.WriteAllText(filePath, json);
-                    AnsiConsole.MarkupLine($"[green]✓[/] Wallet saved to: {filePath}");
+                    AnsiConsole.MarkupLine($"[green][OK][/] Wallet saved to: {filePath}");
                 }
             }
             else
@@ -112,5 +153,10 @@ public static class VanityCommands
         {
             AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
         }
+    }
+
+    private static bool IsValidBech32Pattern(string pattern)
+    {
+        return pattern.All(c => ValidBech32Chars.Contains(char.ToLower(c)));
     }
 }
