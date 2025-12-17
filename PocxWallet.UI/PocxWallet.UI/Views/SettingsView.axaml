@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  
+  <ScrollViewer>
+    <StackPanel Spacing="20">
+      <TextBlock Text="Settings" FontSize="28" FontWeight="Bold"/>
+      
+      <!-- Node Settings -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Node Configuration" FontSize="16" FontWeight="Bold"/>
+          
+          <CheckBox Content="Auto-select fastest node" 
+                    IsChecked="{Binding AutoSelectNode}"/>
+          
+          <StackPanel Spacing="5">
+            <TextBlock Text="Node URL"/>
+            <TextBox Text="{Binding NodeUrl}" 
+                     IsEnabled="{Binding !AutoSelectNode}"
+                     Watermark="http://localhost:8332"/>
+          </StackPanel>
+          
+          <Button Content="Test Connection" 
+                  Command="{Binding TestNodeConnectionCommand}"
+                  HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Border>
+      
+      <!-- Display Settings -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Display Preferences" FontSize="16" FontWeight="Bold"/>
+          
+          <StackPanel Spacing="5">
+            <TextBlock Text="Language"/>
+            <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                      SelectedItem="{Binding SelectedLanguage}"
+                      MinWidth="200"/>
+          </StackPanel>
+          
+          <CheckBox Content="Use Dark Theme" 
+                    IsChecked="{Binding UseDarkTheme}"/>
+        </StackPanel>
+      </Border>
+      
+      <!-- Security Settings -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Security" FontSize="16" FontWeight="Bold"/>
+          
+          <CheckBox Content="Enable Biometric Authentication" 
+                    IsChecked="{Binding EnableBiometrics}"/>
+        </StackPanel>
+      </Border>
+      
+      <Button Content="Save Settings"
+              Command="{Binding SaveSettingsCommand}"
+              HorizontalAlignment="Left"
+              Classes="accent"/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

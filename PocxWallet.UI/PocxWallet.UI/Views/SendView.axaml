@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.SendView"
+             x:DataType="vm:SendViewModel">
+  
+  <ScrollViewer>
+    <StackPanel Spacing="20">
+      <TextBlock Text="Send PoCX" FontSize="28" FontWeight="Bold"/>
+      
+      <!-- Send Form -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Transaction Details" FontSize="16" FontWeight="Bold"/>
+          
+          <StackPanel Spacing="5">
+            <TextBlock Text="Recipient Address"/>
+            <TextBox Text="{Binding RecipientAddress}" 
+                     Watermark="pocx1q..."/>
+          </StackPanel>
+          
+          <StackPanel Spacing="5">
+            <TextBlock Text="Amount (POCX)"/>
+            <NumericUpDown Value="{Binding Amount}" 
+                          Minimum="0"
+                          Increment="0.00000001"
+                          FormatString="N8"/>
+          </StackPanel>
+          
+          <StackPanel Spacing="5">
+            <TextBlock Text="Message (Optional)"/>
+            <TextBox Text="{Binding Message}" 
+                     Watermark="Add a message..."
+                     Height="60"
+                     AcceptsReturn="True"/>
+            <CheckBox Content="Encrypt Message" 
+                      IsChecked="{Binding EncryptMessage}"/>
+          </StackPanel>
+          
+          <CheckBox Content="Multi-Output Transaction" 
+                    IsChecked="{Binding IsMultiOut}"/>
+          
+          <Button Content="Send Transaction"
+                  Command="{Binding SendCommand}"
+                  HorizontalAlignment="Left"
+                  Classes="accent"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

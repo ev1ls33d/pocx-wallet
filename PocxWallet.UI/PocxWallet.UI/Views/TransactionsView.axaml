@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.TransactionsView"
+             x:DataType="vm:TransactionsViewModel">
+  
+  <StackPanel Spacing="20">
+    <TextBlock Text="Transaction History" FontSize="28" FontWeight="Bold"/>
+    
+    <!-- Transaction List -->
+    <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+      <StackPanel Spacing="15">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Text="Recent Transactions" FontSize="16" FontWeight="Bold"/>
+          <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}"/>
+        </Grid>
+        
+        <DataGrid ItemsSource="{Binding Transactions}"
+                  SelectedItem="{Binding SelectedTransaction}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  Height="400">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Date" Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="150"/>
+            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
+            <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:N8}'}" Width="150"/>
+            <DataGridTextColumn Header="Confirmations" Binding="{Binding Confirmations}" Width="120"/>
+            <DataGridTextColumn Header="TxID" Binding="{Binding TxId}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

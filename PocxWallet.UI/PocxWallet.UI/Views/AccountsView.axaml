@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.AccountsView"
+             x:DataType="vm:AccountsViewModel">
+  
+  <StackPanel Spacing="20">
+    <TextBlock Text="Accounts" FontSize="28" FontWeight="Bold"/>
+    
+    <!-- Account Management -->
+    <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+      <StackPanel Spacing="15">
+        <TextBlock Text="Manage Accounts" FontSize="16" FontWeight="Bold"/>
+        
+        <WrapPanel>
+          <Button Content="Add Account" Command="{Binding AddAccountCommand}" Margin="0,0,10,0"/>
+          <Button Content="Add Watch-Only" Command="{Binding AddWatchOnlyCommand}"/>
+        </WrapPanel>
+        
+        <DataGrid ItemsSource="{Binding Accounts}"
+                  SelectedItem="{Binding SelectedAccount}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  Height="400">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200"/>
+            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="350"/>
+            <DataGridTextColumn Header="Balance" Binding="{Binding Balance, StringFormat='{}{0:N8}'}" Width="150"/>
+            <DataGridCheckBoxColumn Header="Watch Only" Binding="{Binding IsWatchOnly}" Width="100"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

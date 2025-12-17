@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.ReceiveView"
+             x:DataType="vm:ReceiveViewModel">
+  
+  <ScrollViewer>
+    <StackPanel Spacing="20" HorizontalAlignment="Center" MaxWidth="600">
+      <TextBlock Text="Receive PoCX" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+      
+      <!-- Receive Card -->
+      <Border Background="White" CornerRadius="8" Padding="30" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="20" HorizontalAlignment="Center">
+          <TextBlock Text="Your Address" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+          
+          <!-- QR Code Placeholder -->
+          <Border Width="250" Height="250" 
+                  Background="#F8F9FA"
+                  BorderBrush="#DEE2E6"
+                  BorderThickness="2"
+                  CornerRadius="8">
+            <TextBlock Text="QR Code" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"
+                       Foreground="#ADB5BD"/>
+          </Border>
+          
+          <!-- Address Display -->
+          <Border Background="#F8F9FA" 
+                  Padding="15"
+                  CornerRadius="4">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{Binding Address}" 
+                         TextWrapping="Wrap"
+                         HorizontalAlignment="Center"
+                         FontFamily="Consolas,Courier New"/>
+              <Button Content="Copy Address"
+                      Command="{Binding CopyAddressCommand}"
+                      HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          
+          <!-- Optional Amount -->
+          <StackPanel Spacing="5">
+            <TextBlock Text="Request Amount (Optional)"/>
+            <NumericUpDown Value="{Binding RequestAmount}" 
+                          Minimum="0"
+                          Increment="0.00000001"
+                          FormatString="N8"/>
+          </StackPanel>
+          
+          <!-- Optional Message -->
+          <StackPanel Spacing="5">
+            <TextBlock Text="Message (Optional)"/>
+            <TextBox Text="{Binding Message}" 
+                     Watermark="Add a message..."/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

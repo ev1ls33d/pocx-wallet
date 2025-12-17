@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
+             x:Class="PocxWallet.UI.Views.MainView"
+             x:DataType="vm:MainViewModel">
+  <Design.DataContext>
+    <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <Grid ColumnDefinitions="200,*">
+    <!-- Sidebar Navigation -->
+    <Border Grid.Column="0" Background="#2C3E50" Padding="10">
+      <StackPanel Spacing="10">
+        <!-- Logo -->
+        <Image Source="/Assets/phoenix.png" 
+               Width="120" Height="120"
+               Margin="0,10,0,20"/>
+        
+        <TextBlock Text="PoCX Wallet" 
+                   FontSize="20" 
+                   FontWeight="Bold"
+                   Foreground="White"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,20"/>
+        
+        <!-- Navigation Buttons -->
+        <Button Content="📊 Dashboard" 
+                Command="{Binding ShowDashboardCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="💰 Wallet" 
+                Command="{Binding ShowWalletCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="📤 Send" 
+                Command="{Binding ShowSendCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="📥 Receive" 
+                Command="{Binding ShowReceiveCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="📜 Transactions" 
+                Command="{Binding ShowTransactionsCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="👥 Accounts" 
+                Command="{Binding ShowAccountsCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="📇 Contacts" 
+                Command="{Binding ShowContactsCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+        
+        <Button Content="⚙️ Settings" 
+                Command="{Binding ShowSettingsCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Content Area -->
+    <Border Grid.Column="1" Background="#ECF0F1" Padding="20">
+      <ContentControl Content="{Binding CurrentPage}" />
+    </Border>
+  </Grid>
+
+</UserControl>

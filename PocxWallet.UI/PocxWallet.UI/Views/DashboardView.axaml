@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+  
+  <ScrollViewer>
+    <StackPanel Spacing="20">
+      <TextBlock Text="Dashboard" FontSize="28" FontWeight="Bold"/>
+      
+      <!-- Balance Card -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Current Balance" FontSize="14" Foreground="#7F8C8D"/>
+          <TextBlock Text="{Binding Balance, StringFormat='{}{0:N8} POCX'}" 
+                     FontSize="32" FontWeight="Bold"/>
+          <TextBlock Text="{Binding CurrentAddress}" 
+                     FontSize="12" Foreground="#95A5A6"/>
+        </StackPanel>
+      </Border>
+      
+      <!-- Network Status -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="Network Status" FontSize="16" FontWeight="Bold"/>
+          
+          <StackPanel Grid.Row="1" Grid.Column="0" Spacing="5" Margin="0,10,0,0">
+            <TextBlock Text="Node Status"/>
+            <TextBlock Text="{Binding IsNodeConnected, Converter={StaticResource BoolToStatusConverter}}" 
+                       Foreground="{Binding IsNodeConnected, Converter={StaticResource BoolToColorConverter}}"/>
+          </StackPanel>
+          
+          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="5" Margin="0,10,0,0">
+            <TextBlock Text="Block Height"/>
+            <TextBlock Text="{Binding BlockHeight}"/>
+          </StackPanel>
+          
+          <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                  Content="Refresh"
+                  Command="{Binding RefreshCommand}"
+                  HorizontalAlignment="Right"
+                  Margin="0,10,0,0"/>
+        </Grid>
+      </Border>
+      
+      <!-- Quick Actions -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Quick Actions" FontSize="16" FontWeight="Bold"/>
+          <WrapPanel>
+            <Button Content="Send PoCX" MinWidth="120" Margin="0,0,10,0"/>
+            <Button Content="Receive" MinWidth="120" Margin="0,0,10,0"/>
+            <Button Content="View Transactions" MinWidth="120"/>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

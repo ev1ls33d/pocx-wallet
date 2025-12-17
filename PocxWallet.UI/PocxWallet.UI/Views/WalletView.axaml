@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.WalletView"
+             x:DataType="vm:WalletViewModel">
+  
+  <ScrollViewer>
+    <StackPanel Spacing="20">
+      <TextBlock Text="Wallet Management" FontSize="28" FontWeight="Bold"/>
+      
+      <!-- Wallet Actions -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Wallet Actions" FontSize="16" FontWeight="Bold"/>
+          
+          <Button Content="Create New Wallet"
+                  Command="{Binding CreateWalletCommand}"
+                  HorizontalAlignment="Left"/>
+          
+          <Button Content="Restore from Mnemonic"
+                  Command="{Binding RestoreWalletCommand}"
+                  HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Border>
+      
+      <!-- Address List -->
+      <Border Background="White" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #20000000">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Your Addresses" FontSize="16" FontWeight="Bold"/>
+          
+          <DataGrid ItemsSource="{Binding Addresses}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Index" Binding="{Binding Index}" Width="60"/>
+              <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="400"/>
+              <DataGridTextColumn Header="Balance" Binding="{Binding Balance, StringFormat='{}{0:N8}'}" Width="150"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
