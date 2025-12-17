@@ -22,7 +22,13 @@ public static class Demo
         var wallet = HDWallet.CreateNew(WordCount.Twelve);
         Console.WriteLine($"√ Wallet created successfully!");
         Console.WriteLine($"  Mnemonic: {wallet.MnemonicPhrase}");
-        Console.WriteLine($"  Master Public Key: {wallet.MasterPublicKey[..40]}...");
+        Console.WriteLine($"  Address: {wallet.GetPoCXAddress(0, 0)}");
+        Console.WriteLine();
+        Console.WriteLine($"  WIF Mainnet: {wallet.GetWIFMainnet(0, 0)}");
+        Console.WriteLine($"  WIF Testnet: {wallet.GetWIFTestnet(0, 0)}");
+        Console.WriteLine();
+        Console.WriteLine($"  Descriptor (Mainnet): {wallet.GetDescriptorMainnet(0, 0)}");
+        Console.WriteLine($"  Descriptor (Testnet): {wallet.GetDescriptorTestnet(0, 0)}");
         Console.WriteLine();
 
         // Demo 2: Generate addresses

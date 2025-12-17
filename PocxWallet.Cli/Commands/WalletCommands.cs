@@ -49,8 +49,16 @@ public static class WalletCommands
         AnsiConsole.Write(panel);
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]Master Public Key:[/] [dim]{wallet.MasterPublicKey}[/]");
-        AnsiConsole.MarkupLine($"[bold]Default Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
+        AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
+        AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[bold]WIF Mainnet:[/] [dim]{0}[/]", wallet.GetWIFMainnet());
+        AnsiConsole.MarkupLine("[bold]WIF Testnet:[/] [dim]{0}[/]", wallet.GetWIFTestnet());
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[bold]Descriptor (Mainnet):[/] [dim]{0}[/]", wallet.GetDescriptorMainnet());
+        AnsiConsole.MarkupLine("[bold]Descriptor (Testnet):[/] [dim]{0}[/]", wallet.GetDescriptorTestnet());
 
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
@@ -99,8 +107,16 @@ public static class WalletCommands
             
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[green]√[/] Wallet restored successfully!");
-            AnsiConsole.MarkupLine($"[bold]Master Public Key:[/] [dim]{wallet.MasterPublicKey}[/]");
-            AnsiConsole.MarkupLine($"[bold]Default Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
+            AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{wallet.GetPoCXAddress()}[/]");
+            AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
+            
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold]WIF Mainnet:[/] [dim]{0}[/]", wallet.GetWIFMainnet());
+            AnsiConsole.MarkupLine("[bold]WIF Testnet:[/] [dim]{0}[/]", wallet.GetWIFTestnet());
+            
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold]Descriptor (Mainnet):[/] [dim]{0}[/]", wallet.GetDescriptorMainnet());
+            AnsiConsole.MarkupLine("[bold]Descriptor (Testnet):[/] [dim]{0}[/]", wallet.GetDescriptorTestnet());
 
             if (AnsiConsole.Confirm("Save wallet to file?", true))
             {

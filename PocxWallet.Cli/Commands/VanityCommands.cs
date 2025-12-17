@@ -109,17 +109,20 @@ public static class VanityCommands
                 AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{result.Address}[/]");
                 AnsiConsole.MarkupLine($"[dim]Format: Bech32 (pocx1q...)[/]");
 
-                // Generate WIF and descriptor for import
+                // Generate WIF and descriptor for both mainnet and testnet
                 var restoredWallet = HDWallet.FromMnemonic(result.Mnemonic);
-                var derivedKey = restoredWallet.DeriveKeyForPoCX(0, 0);
-                var wifKey = derivedKey.PrivateKey.GetWif(NBitcoin.Network.Main).ToString();
-                var descriptorWithoutChecksum = $"wpkh({wifKey})";
-                var checksum = CalculateDescriptorChecksum(descriptorWithoutChecksum);
-                var descriptor = $"{descriptorWithoutChecksum}#{checksum}";
+                var wifMainnet = restoredWallet.GetWIFMainnet(0, 0);
+                var wifTestnet = restoredWallet.GetWIFTestnet(0, 0);
+                var descriptorMainnet = restoredWallet.GetDescriptorMainnet(0, 0);
+                var descriptorTestnet = restoredWallet.GetDescriptorTestnet(0, 0);
 
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[bold]WIF (for import):[/] [dim]{wifKey}[/]");
-                AnsiConsole.MarkupLine($"[bold]Descriptor:[/] [dim]{descriptor}[/]");
+                AnsiConsole.MarkupLine($"[bold]WIF Mainnet:[/] [dim]{wifMainnet}[/]");
+                AnsiConsole.MarkupLine($"[bold]WIF Testnet:[/] [dim]{wifTestnet}[/]");
+
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"[bold]Descriptor (Mainnet):[/] [dim]{descriptorMainnet}[/]");
+                AnsiConsole.MarkupLine($"[bold]Descriptor (Testnet):[/] [dim]{descriptorTestnet}[/]");
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");
@@ -132,8 +135,10 @@ public static class VanityCommands
                     {
                         mnemonic = result.Mnemonic,
                         address = result.Address,
-                        wif = wifKey,
-                        descriptor = descriptor,
+                        wifMainnet = wifMainnet,
+                        wifTestnet = wifTestnet,
+                        descriptorMainnet = descriptorMainnet,
+                        descriptorTestnet = descriptorTestnet,
                         pattern = pattern,
                         created = DateTime.UtcNow.ToString("o")
                     };
@@ -165,86 +170,5 @@ public static class VanityCommands
     private static bool IsValidBech32Pattern(string pattern)
     {
         return pattern.All(c => ValidBech32Chars.Contains(char.ToLower(c)));
-    }
-
-    /// <summary>
-    /// Calculate descriptor checksum according to BIP-380
-    /// </summary>
-    private static string CalculateDescriptorChecksum(string descriptor)
-    {
-        // Descriptor checksum uses a modified Bech32 charset
-        const string CHECKSUM_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-        
-        // Input characters mapping for descriptor
-        const string INPUT_CHARSET = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`#\"\\ ";
-        
-        // Polymod constants for descriptor checksum
-        ulong[] GENERATOR = { 0xf5dee51989, 0xa9fdca3312, 0x1bab10e32d, 0x3706b1677a, 0x644d626ffd };
-        
-        // Expand the descriptor
-        ulong c = 1;
-        int cls = 0;
-        int clscount = 0;
-        
-        foreach (char ch in descriptor)
-        {
-            int pos = INPUT_CHARSET.IndexOf(ch);
-            if (pos == -1) continue;
-            
-            // Emit a symbol for the position inside the group, for every character.
-            c = PolyMod(c, pos & 31, GENERATOR);
-            
-            // Accumulate the group numbers
-            cls = cls * 3 + (pos >> 5);
-            if (++clscount == 3)
-            {
-                // Emit an extra symbol representing the group numbers
-                c = PolyMod(c, cls, GENERATOR);
-                cls = 0;
-                clscount = 0;
-            }
-        }
-        
-        if (clscount > 0)
-        {
-            c = PolyMod(c, cls, GENERATOR);
-        }
-        
-        // Shift further to determine the checksum
-        for (int j = 0; j < 8; ++j)
-        {
-            c = PolyMod(c, 0, GENERATOR);
-        }
-        
-        // XOR with final constant
-        c ^= 1;
-        
-        // Extract 8 5-bit groups for the checksum
-        var checksum = new char[8];
-        for (int j = 0; j < 8; ++j)
-        {
-            checksum[j] = CHECKSUM_CHARSET[(int)((c >> (5 * (7 - j))) & 31)];
-        }
-        
-        return new string(checksum);
-    }
-    
-    /// <summary>
-    /// Polymod function for descriptor checksum calculation
-    /// </summary>
-    private static ulong PolyMod(ulong c, int val, ulong[] generator)
-    {
-        ulong c0 = c >> 35;
-        c = ((c & 0x7ffffffff) << 5) ^ (ulong)val;
-        
-        for (int i = 0; i < 5; i++)
-        {
-            if (((c0 >> i) & 1) != 0)
-            {
-                c ^= generator[i];
-            }
-        }
-        
-        return c;
     }
 }
