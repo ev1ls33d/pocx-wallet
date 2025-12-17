@@ -31,10 +31,10 @@ public static class VanityCommands
         while (true)
         {
             pattern = AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter [green]pattern[/] to search for (or 'cancel' to exit):")
+                new TextPrompt<string>("Enter [green]pattern[/] to search for (or '!' to exit):")
                     .AllowEmpty());
 
-            if (pattern.Equals("cancel", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(pattern))
+            if (pattern.Equals("!", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(pattern))
             {
                 AnsiConsole.MarkupLine("[yellow]Operation cancelled[/]");
                 return;
