@@ -140,7 +140,7 @@ class Program
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<MenuOptions>()
-                    .Title("[bold green]PoCX Wallet - Main Menu[/]")
+                    .Title("[bold green]Main Menu[/]")
                     .PageSize(10)
                     .AddChoices(mainChoices)
                     .UseConverter(opt => opt.ToDisplayString())
@@ -298,12 +298,14 @@ class Program
 
     static void ShowBanner()
     {
-        var banner = new FigletText("PoCX Wallet")
-            .Centered()
-            .Color(Color.Green);
-
-        AnsiConsole.Write(banner);
-        AnsiConsole.MarkupLine("[dim]A .NET 9 HD Wallet for Proof of Capacity X[/]");
+        var rule = new Rule("[red]PoCX HD Wallet[/]");
+        var ruleLine = new Rule();
+        ruleLine.RuleStyle("blue dim");
+        rule.RuleStyle("blue dim");
+        rule.LeftJustified();
+        AnsiConsole.Write(ruleLine);
+        AnsiConsole.Write(rule);
+        AnsiConsole.Write(ruleLine);
         AnsiConsole.WriteLine();
     }
 
@@ -339,7 +341,7 @@ class Program
             WriteIndented = true
         });
         File.WriteAllText(configPath, json);
-        AnsiConsole.MarkupLine($"[green][OK][/] Configuration saved to: {configPath}");
+        AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: {configPath}");
     }
 
     /// <summary>

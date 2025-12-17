@@ -47,7 +47,7 @@ public static class TransactionCommands
             else
             {
                 AnsiConsole.MarkupLine("[yellow]Note:[/] Balance checking requires a running Bitcoin-PoCX node.");
-                AnsiConsole.MarkupLine("[dim]Start the node from [Node] Bitcoin-PoCX Node menu[/]");
+                AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
             }
         }
         catch (Exception ex)
@@ -99,7 +99,7 @@ public static class TransactionCommands
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction broadcasting requires a running Bitcoin-PoCX node.");
-                AnsiConsole.MarkupLine("[dim]Start the node from [Node] Bitcoin-PoCX Node menu[/]");
+                AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
             }
         }
         catch (Exception ex)
@@ -165,7 +165,7 @@ public static class TransactionCommands
             else
             {
                 AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction history requires a running Bitcoin-PoCX node.");
-                AnsiConsole.MarkupLine("[dim]Start the node from [Node] Bitcoin-PoCX Node menu[/]");
+                AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
             }
         }
         catch (Exception ex)

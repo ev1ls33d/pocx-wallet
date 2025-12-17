@@ -1,4 +1,4 @@
-using PocxWallet.Core.Wallet;
+﻿using PocxWallet.Core.Wallet;
 using NBitcoin;
 
 namespace PocxWallet.Cli;
@@ -20,7 +20,7 @@ public static class Demo
         Console.WriteLine("-".PadRight(80, '-'));
         
         var wallet = HDWallet.CreateNew(WordCount.Twelve);
-        Console.WriteLine($"[OK] Wallet created successfully!");
+        Console.WriteLine($"√ Wallet created successfully!");
         Console.WriteLine($"  Mnemonic: {wallet.MnemonicPhrase}");
         Console.WriteLine($"  Master Public Key: {wallet.MasterPublicKey[..40]}...");
         Console.WriteLine();
@@ -48,7 +48,7 @@ public static class Demo
         
         Console.WriteLine($"  Original Address: {originalAddress}");
         Console.WriteLine($"  Restored Address: {restoredAddress}");
-        Console.WriteLine($"  Match: {originalAddress == restoredAddress} [OK]");
+        Console.WriteLine($"  Match: {originalAddress == restoredAddress} √");
         Console.WriteLine();
 
         // Demo 4: Different accounts
@@ -75,16 +75,16 @@ public static class Demo
         Console.WriteLine("-".PadRight(80, '-'));
         
         var walletWithPassphrase = HDWallet.CreateNew(WordCount.Twelve, "super-secret-passphrase");
-        Console.WriteLine($"[OK] Wallet with passphrase created");
+        Console.WriteLine($"√ Wallet with passphrase created");
         Console.WriteLine($"  Address: {walletWithPassphrase.GetPoCXAddress(0, 0)}");
         Console.WriteLine($"  Note: Same mnemonic + different passphrase = different addresses");
         Console.WriteLine();
 
         Console.WriteLine("=".PadRight(80, '='));
-        Console.WriteLine("Demo completed successfully! [OK]");
+        Console.WriteLine("Demo completed successfully! √");
         Console.WriteLine("=".PadRight(80, '='));
         Console.WriteLine();
-        Console.WriteLine("[WARNING] SECURITY WARNING:");
+        Console.WriteLine("▲ SECURITY WARNING:");
         Console.WriteLine("   The mnemonic phrases shown above are for DEMONSTRATION ONLY.");
         Console.WriteLine("   Never share your real mnemonic phrase with anyone!");
         Console.WriteLine("   Always store it securely offline.");
