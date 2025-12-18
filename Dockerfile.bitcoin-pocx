@@ -1,0 +1,75 @@
+# Multi-stage Dockerfile for Bitcoin-PoCX node
+# Stage 1: Builder
+FROM ubuntu:22.04 AS builder
+
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libtool \
+    autotools-dev \
+    automake \
+    pkg-config \
+    bsdmainutils \
+    python3 \
+    libevent-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    libboost-test-dev \
+    libboost-thread-dev \
+    libssl-dev \
+    libdb-dev \
+    libdb++-dev \
+    libminiupnpc-dev \
+    libzmq3-dev \
+    libqrencode-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone and build Bitcoin-PoCX
+WORKDIR /build
+RUN git clone --branch pocx-v30-RC2 https://github.com/PoC-Consortium/bitcoin.git bitcoin-pocx
+
+WORKDIR /build/bitcoin-pocx
+RUN ./autogen.sh && \
+    ./configure \
+    --without-gui \
+    --disable-tests \
+    --disable-bench \
+    --with-incompatible-bdb && \
+    make -j$(nproc)
+
+# Stage 2: Runtime
+FROM ubuntu:22.04
+
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libboost-system1.74.0 \
+    libboost-filesystem1.74.0 \
+    libboost-thread1.74.0 \
+    libevent-2.1-7 \
+    libevent-pthreads-2.1-7 \
+    libssl3 \
+    libdb5.3++ \
+    libminiupnpc17 \
+    libzmq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy binaries from builder
+COPY --from=builder /build/bitcoin-pocx/src/bitcoind /usr/local/bin/
+COPY --from=builder /build/bitcoin-pocx/src/bitcoin-cli /usr/local/bin/
+COPY --from=builder /build/bitcoin-pocx/src/bitcoin-tx /usr/local/bin/
+
+# Create data directory
+RUN mkdir -p /root/.bitcoin
+
+# Expose RPC and P2P ports
+EXPOSE 18883 18884
+
+# Default command
+CMD ["bitcoind", "-printtoconsole", "-rpcport=18883"]

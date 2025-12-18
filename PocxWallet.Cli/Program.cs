@@ -17,6 +17,7 @@ enum MenuOptions
     Main_Mining,
     Main_VanityAddressGenerator,
     Main_BitcoinPoCXNode,
+    Main_DockerManagement,
     Main_Settings,
     Main_Exit,
 
@@ -42,12 +43,26 @@ enum MenuOptions
     Node_StopNode,
     Node_ShowNodeStatus,
 
+    // Docker submenu
+    Docker_CheckStatus,
+    Docker_SetupDocker,
+    Docker_PullImages,
+    Docker_StartBitcoinNode,
+    Docker_StopBitcoinNode,
+    Docker_StartMiner,
+    Docker_StopMiner,
+    Docker_StartPlotter,
+    Docker_ViewLogs,
+    Docker_RemoveAllContainers,
+
     // Settings submenu
     Settings_ViewCurrentSettings,
     Settings_ChangePoCXBinariesPath,
     Settings_ChangePlotDirectory,
     Settings_ChangeWalletFilePath,
     Settings_ChangeMinerConfigPath,
+    Settings_ToggleDockerMode,
+    Settings_ChangeDockerRegistry,
     Settings_SaveSettings,
 
     // General back option (einmalig, für alle Submenus)
@@ -65,6 +80,7 @@ static class MenuOptionsExtensions
             MenuOptions.Main_Mining =>                          Markup.Escape("[Mine]      Mining"),
             MenuOptions.Main_VanityAddressGenerator =>          Markup.Escape("[Vanity]    Vanity Address Generator"),
             MenuOptions.Main_BitcoinPoCXNode =>                 Markup.Escape("[Node]      Bitcoin-PoCX Node"),
+            MenuOptions.Main_DockerManagement =>                Markup.Escape("[Docker]    Docker Container Management"),
             MenuOptions.Main_Settings =>                        Markup.Escape("[Settings]  Settings"),
             MenuOptions.Main_Exit =>                            Markup.Escape("[Exit]      Exit"),
 
@@ -90,12 +106,26 @@ static class MenuOptionsExtensions
             MenuOptions.Node_StopNode =>                        Markup.Escape("Stop Node"),
             MenuOptions.Node_ShowNodeStatus =>                  Markup.Escape("Show Node Status"),
 
+            // Docker
+            MenuOptions.Docker_CheckStatus =>                   Markup.Escape("Check Docker Status"),
+            MenuOptions.Docker_SetupDocker =>                   Markup.Escape("Setup Docker"),
+            MenuOptions.Docker_PullImages =>                    Markup.Escape("Pull Docker Images"),
+            MenuOptions.Docker_StartBitcoinNode =>              Markup.Escape("Start Bitcoin-PoCX Node (Container)"),
+            MenuOptions.Docker_StopBitcoinNode =>               Markup.Escape("Stop Bitcoin-PoCX Node (Container)"),
+            MenuOptions.Docker_StartMiner =>                    Markup.Escape("Start Miner (Container)"),
+            MenuOptions.Docker_StopMiner =>                     Markup.Escape("Stop Miner (Container)"),
+            MenuOptions.Docker_StartPlotter =>                  Markup.Escape("Start Plotter (Container)"),
+            MenuOptions.Docker_ViewLogs =>                      Markup.Escape("View Container Logs"),
+            MenuOptions.Docker_RemoveAllContainers =>           Markup.Escape("Remove All Containers"),
+
             // Settings
             MenuOptions.Settings_ViewCurrentSettings =>         Markup.Escape("View Current Settings"),
             MenuOptions.Settings_ChangePoCXBinariesPath =>      Markup.Escape("Change PoCX Binaries Path"),
             MenuOptions.Settings_ChangePlotDirectory =>         Markup.Escape("Change Plot Directory"),
             MenuOptions.Settings_ChangeWalletFilePath =>        Markup.Escape("Change Wallet File Path"),
             MenuOptions.Settings_ChangeMinerConfigPath =>       Markup.Escape("Change Miner Config Path"),
+            MenuOptions.Settings_ToggleDockerMode =>            Markup.Escape("Toggle Docker Mode"),
+            MenuOptions.Settings_ChangeDockerRegistry =>        Markup.Escape("Change Docker Registry"),
             MenuOptions.Settings_SaveSettings =>                Markup.Escape("Save Settings"),
 
             // General
@@ -215,6 +245,25 @@ class Program
                         });
                     break;
 
+                case MenuOptions.Main_DockerManagement:
+                    await ShowMenuAsync(
+                        "Docker Container Management",
+                        Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Docker_")).ToArray(),
+                        new Func<Task>[]
+                        {
+                            async () => await DockerCommands.CheckDockerStatusAsync(_settings),
+                            async () => await DockerCommands.SetupDockerAsync(_settings),
+                            async () => await DockerCommands.PullImagesAsync(_settings),
+                            async () => await DockerCommands.StartBitcoinNodeContainerAsync(_settings),
+                            async () => await DockerCommands.StopBitcoinNodeContainerAsync(_settings),
+                            async () => await DockerCommands.StartMinerContainerAsync(_settings),
+                            async () => await DockerCommands.StopMinerContainerAsync(_settings),
+                            async () => await DockerCommands.StartPlotterContainerAsync(_settings),
+                            async () => await DockerCommands.ViewContainerLogsAsync(_settings),
+                            async () => await DockerCommands.RemoveAllContainersAsync(_settings)
+                        });
+                    break;
+
                 case MenuOptions.Main_Settings:
                     await ShowMenuAsync(
                         "Settings",
@@ -230,6 +279,9 @@ class Program
                                 table.AddRow("Plot Directory", _settings.PlotDirectory);
                                 table.AddRow("Wallet File Path", _settings.WalletFilePath);
                                 table.AddRow("Miner Config Path", _settings.MinerConfigPath);
+                                table.AddRow("Use Docker", _settings.UseDocker.ToString());
+                                table.AddRow("Docker Registry", _settings.DockerRegistry);
+                                table.AddRow("Docker Image Tag", _settings.DockerImageTag);
                                 AnsiConsole.Write(table);
                                 return Task.CompletedTask;
                             },
@@ -259,6 +311,19 @@ class Program
                                 _settings.MinerConfigPath = AnsiConsole.Ask<string>(
                                     "Enter miner config path:",
                                     _settings.MinerConfigPath);
+                                return Task.CompletedTask;
+                            },
+                            () =>
+                            {
+                                _settings.UseDocker = !_settings.UseDocker;
+                                AnsiConsole.MarkupLine($"[green]✓[/] Docker mode: {(_settings.UseDocker ? "Enabled" : "Disabled")}");
+                                return Task.CompletedTask;
+                            },
+                            () =>
+                            {
+                                _settings.DockerRegistry = AnsiConsole.Ask<string>(
+                                    "Enter Docker registry:",
+                                    _settings.DockerRegistry);
                                 return Task.CompletedTask;
                             },
                             () =>
