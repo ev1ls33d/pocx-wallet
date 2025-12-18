@@ -16,13 +16,13 @@ public class BitcoinNodeWrapper : PoCXProcessWrapper
     /// </summary>
     /// <param name="dataDir">Data directory for blockchain data</param>
     /// <param name="rpcPort">RPC port (default: 18883)</param>
-    /// <param name="port">P2P port (default: 18884)</param>
+    /// <param name="p2p2Port">P2P port (default: 18884)</param>
     /// <param name="onOutput">Output callback</param>
     /// <param name="onError">Error callback</param>
     public void StartNode(
         string? dataDir = null,
-        int rpcPort = 18883,
-        int port = 18884,
+        int rpcPort = 18332,
+        int p2p2Port = 18333,
         Action<string>? onOutput = null,
         Action<string>? onError = null)
     {
@@ -40,7 +40,7 @@ public class BitcoinNodeWrapper : PoCXProcessWrapper
         args.Add("-rpcallowip=127.0.0.1");
 
         // P2P port
-        args.Add($"-port={port}");
+        args.Add($"-port={p2p2Port}");
 
         // Daemon mode (run in background)
         args.Add("-daemon=0");  // Don't daemonize, we'll manage the process
