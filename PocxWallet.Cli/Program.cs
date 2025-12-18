@@ -48,6 +48,11 @@ enum MenuOptions
     Settings_ChangePlotDirectory,
     Settings_ChangeWalletFilePath,
     Settings_ChangeMinerConfigPath,
+    Settings_ToggleDockerMode,
+    Settings_ChangeDockerRegistry,
+    Settings_CheckDockerStatus,
+    Settings_SetupDocker,
+    Settings_PullDockerImages,
     Settings_SaveSettings,
 
     // General back option (einmalig, für alle Submenus)
@@ -96,6 +101,11 @@ static class MenuOptionsExtensions
             MenuOptions.Settings_ChangePlotDirectory =>         Markup.Escape("Change Plot Directory"),
             MenuOptions.Settings_ChangeWalletFilePath =>        Markup.Escape("Change Wallet File Path"),
             MenuOptions.Settings_ChangeMinerConfigPath =>       Markup.Escape("Change Miner Config Path"),
+            MenuOptions.Settings_ToggleDockerMode =>            Markup.Escape("Toggle Docker Mode"),
+            MenuOptions.Settings_ChangeDockerRegistry =>        Markup.Escape("Change Docker Registry"),
+            MenuOptions.Settings_CheckDockerStatus =>           Markup.Escape("Check Docker Status"),
+            MenuOptions.Settings_SetupDocker =>                 Markup.Escape("Setup Docker"),
+            MenuOptions.Settings_PullDockerImages =>            Markup.Escape("Pull Docker Images"),
             MenuOptions.Settings_SaveSettings =>                Markup.Escape("Save Settings"),
 
             // General
@@ -172,7 +182,7 @@ class Program
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Plotting_")).ToArray(),
                         new Func<Task>[]
                         {
-                            async () => await PlottingCommands.CreatePlotAsync(_settings.PoCXBinariesPath)
+                            async () => await PlottingCommands.CreatePlotAsync(_settings)
                         });
                     break;
 
@@ -182,9 +192,9 @@ class Program
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Mining_")).ToArray(),
                         new Func<Task>[]
                         {
-                            () => { MiningCommands.StartMining(_settings.PoCXBinariesPath, _settings.MinerConfigPath); return Task.CompletedTask; },
-                            () => { MiningCommands.StopMining(); return Task.CompletedTask; },
-                            () => { MiningCommands.ShowMiningStatus(); return Task.CompletedTask; },
+                            async () => await MiningCommands.StartMiningAsync(_settings),
+                            async () => await MiningCommands.StopMiningAsync(_settings),
+                            async () => await MiningCommands.ShowMiningStatusAsync(_settings),
                             () => { MiningCommands.CreateMinerConfig(_settings.MinerConfigPath); return Task.CompletedTask; }
                         });
                     break;
@@ -204,14 +214,10 @@ class Program
                             async () =>
                             {
                                 var dataDir = AnsiConsole.Ask<string>("Data directory (or press Enter for default):", "");
-                                NodeCommands.StartNode(
-                                    _settings.BitcoinBinariesPath,
-                                    string.IsNullOrWhiteSpace(dataDir) ? null : dataDir,
-                                    _settings.BitcoinNodePort);
-                                await Task.CompletedTask;
+                                await NodeCommands.StartNodeAsync(_settings, string.IsNullOrWhiteSpace(dataDir) ? null : dataDir);
                             },
-                            () => { NodeCommands.StopNode(); return Task.CompletedTask; },
-                            () => { NodeCommands.ShowNodeStatus(); return Task.CompletedTask; }
+                            async () => await NodeCommands.StopNodeAsync(_settings),
+                            async () => await NodeCommands.ShowNodeStatusAsync(_settings)
                         });
                     break;
 
@@ -230,6 +236,9 @@ class Program
                                 table.AddRow("Plot Directory", _settings.PlotDirectory);
                                 table.AddRow("Wallet File Path", _settings.WalletFilePath);
                                 table.AddRow("Miner Config Path", _settings.MinerConfigPath);
+                                table.AddRow("Use Docker", _settings.UseDocker.ToString());
+                                table.AddRow("Docker Registry", _settings.DockerRegistry);
+                                table.AddRow("Docker Image Tag", _settings.DockerImageTag);
                                 AnsiConsole.Write(table);
                                 return Task.CompletedTask;
                             },
@@ -263,6 +272,22 @@ class Program
                             },
                             () =>
                             {
+                                _settings.UseDocker = !_settings.UseDocker;
+                                AnsiConsole.MarkupLine($"[green]✓[/] Docker mode: {(_settings.UseDocker ? "Enabled" : "Disabled")}");
+                                return Task.CompletedTask;
+                            },
+                            () =>
+                            {
+                                _settings.DockerRegistry = AnsiConsole.Ask<string>(
+                                    "Enter Docker registry:",
+                                    _settings.DockerRegistry);
+                                return Task.CompletedTask;
+                            },
+                            async () => await DockerCommands.CheckDockerStatusAsync(_settings),
+                            async () => await DockerCommands.SetupDockerAsync(_settings),
+                            async () => await DockerCommands.PullImagesAsync(_settings),
+                            () =>
+                            {
                                 SaveConfiguration();
                                 return Task.CompletedTask;
                             }
@@ -278,6 +303,8 @@ class Program
             if (!exit)
             {
                 AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to return to the main menu...[/]");
+                Console.ReadLine();
 
                 // Show background services status
                 if (BackgroundServiceManager.HasRunningServices())

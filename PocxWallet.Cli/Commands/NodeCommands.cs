@@ -1,5 +1,6 @@
 ﻿using PocxWallet.Protocol.Wrappers;
 using PocxWallet.Cli.Services;
+using PocxWallet.Cli.Configuration;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Commands;
@@ -12,8 +13,92 @@ public static class NodeCommands
     private static BitcoinNodeWrapper? _activeNode;
     private static BitcoinCliWrapper? _cliWrapper;
     private const string SERVICE_ID = "bitcoin-node";
+    private static DockerServiceManager? _dockerManager;
 
-    public static void StartNode(string binariesPath, string? dataDir = null, int rpcPort = 18883)
+    private static DockerServiceManager GetDockerManager(AppSettings settings)
+    {
+        if (_dockerManager == null)
+        {
+            _dockerManager = new DockerServiceManager(settings.DockerRegistry, settings.DockerImageTag);
+        }
+        return _dockerManager;
+    }
+
+    public static async Task StartNodeAsync(AppSettings settings, string? dataDir = null)
+    {
+        // Use Docker by default
+        if (settings.UseDocker)
+        {
+            await StartNodeDockerAsync(settings, dataDir);
+        }
+        else
+        {
+            StartNodeNative(settings.BitcoinBinariesPath, dataDir, settings.BitcoinNodePort);
+        }
+    }
+
+    private static async Task StartNodeDockerAsync(AppSettings settings, string? dataDir = null)
+    {
+        var docker = GetDockerManager(settings);
+
+        if (!await docker.IsDockerAvailableAsync())
+        {
+            AnsiConsole.MarkupLine("[red]Docker is not available.[/]");
+            AnsiConsole.MarkupLine("[dim]Install Docker or disable Docker mode in Settings[/]");
+            return;
+        }
+
+        // Check if container is already running
+        var status = await docker.GetContainerStatusAsync(settings.BitcoinContainerName);
+        if (status == "running")
+        {
+            AnsiConsole.MarkupLine("[yellow]Bitcoin-PoCX node container is already running![/]");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(dataDir))
+        {
+            dataDir = "./bitcoin-data";
+        }
+
+        // Create data directory if it doesn't exist
+        if (!Directory.Exists(dataDir))
+        {
+            Directory.CreateDirectory(dataDir);
+        }
+
+        var absoluteDataDir = Path.GetFullPath(dataDir);
+
+        var volumeMounts = new Dictionary<string, string>
+        {
+            { absoluteDataDir, "/root/.bitcoin" }
+        };
+
+        var portMappings = new Dictionary<int, int>
+        {
+            { settings.BitcoinNodePort, 18332 },
+            { 18333, 18333 }  // P2P port
+        };
+
+        var success = await docker.StartContainerAsync(
+            settings.BitcoinContainerName,
+            "bitcoin-pocx",
+            volumeMounts: volumeMounts,
+            portMappings: portMappings,
+            command: "bitcoind -printtoconsole -rpcport=18332 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
+        );
+
+        if (success)
+        {
+            // Register with background service manager
+            BackgroundServiceManager.RegisterService(
+                settings.BitcoinContainerName,
+                "Bitcoin-PoCX Node (Docker)"
+            );
+        }
+    }
+
+    private static void StartNodeNative(string binariesPath, string? dataDir = null, int rpcPort = 18332)
     {
         if (_activeNode?.IsRunning == true)
         {
@@ -67,7 +152,29 @@ public static class NodeCommands
         }
     }
 
-    public static void StopNode()
+    public static async Task StopNodeAsync(AppSettings settings)
+    {
+        // Use Docker by default
+        if (settings.UseDocker)
+        {
+            await StopNodeDockerAsync(settings);
+        }
+        else
+        {
+            StopNodeNative();
+        }
+    }
+
+    private static async Task StopNodeDockerAsync(AppSettings settings)
+    {
+        var docker = GetDockerManager(settings);
+        
+        await docker.StopContainerAsync(settings.BitcoinContainerName);
+        
+        BackgroundServiceManager.RemoveService(settings.BitcoinContainerName);
+    }
+
+    private static void StopNodeNative()
     {
         if (_activeNode?.IsRunning != true)
         {
@@ -101,7 +208,49 @@ public static class NodeCommands
         AnsiConsole.MarkupLine("[green]√[/] Bitcoin-PoCX node stopped");
     }
 
-    public static void ShowNodeStatus()
+    public static async Task ShowNodeStatusAsync(AppSettings settings)
+    {
+        if (settings.UseDocker)
+        {
+            await ShowNodeStatusDockerAsync(settings);
+        }
+        else
+        {
+            ShowNodeStatusNative();
+        }
+    }
+
+    private static async Task ShowNodeStatusDockerAsync(AppSettings settings)
+    {
+        var docker = GetDockerManager(settings);
+        var status = await docker.GetContainerStatusAsync(settings.BitcoinContainerName);
+
+        if (status == "not found")
+        {
+            AnsiConsole.MarkupLine("[dim]Bitcoin-PoCX node container is not running[/]");
+            return;
+        }
+
+        var statusColor = status == "running" ? "green" : "yellow";
+        AnsiConsole.MarkupLine($"[{statusColor}]Container status: {status}[/]");
+
+        if (status == "running")
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold]Recent logs:[/]");
+            var logs = await docker.GetContainerLogsAsync(settings.BitcoinContainerName, 10);
+            
+            var panel = new Panel(logs.Length > 500 ? logs.Substring(logs.Length - 500) : logs)
+            {
+                Border = BoxBorder.Rounded,
+                BorderStyle = new Style(Color.Green)
+            };
+            
+            AnsiConsole.Write(panel);
+        }
+    }
+
+    private static void ShowNodeStatusNative()
     {
         if (_activeNode?.IsRunning != true)
         {

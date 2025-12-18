@@ -31,12 +31,42 @@ public class AppSettings
     public string BitcoinNodeHost { get; set; } = "localhost";
 
     /// <summary>
-    /// Bitcoin-PoCX node RPC port (default: 18883)
+    /// Bitcoin-PoCX node RPC port (default: 18332)
     /// </summary>
-    public int BitcoinNodePort { get; set; } = 18883;
+    public int BitcoinNodePort { get; set; } = 18332;
 
     /// <summary>
     /// Path to Bitcoin-PoCX binaries
     /// </summary>
     public string BitcoinBinariesPath { get; set; } = "./bitcoin-pocx/src";
+
+    /// <summary>
+    /// Use Docker containers for services (recommended)
+    /// </summary>
+    public bool UseDocker { get; set; } = true;
+
+    /// <summary>
+    /// Docker registry to pull images from
+    /// </summary>
+    public string DockerRegistry { get; set; } = "ghcr.io/ev1ls33d/pocx-wallet";
+
+    /// <summary>
+    /// Docker image tag to use
+    /// </summary>
+    public string DockerImageTag { get; set; } = "latest";
+
+    /// <summary>
+    /// Bitcoin-PoCX container name
+    /// </summary>
+    public string BitcoinContainerName { get; set; } = "bitcoin-pocx-node";
+
+    /// <summary>
+    /// PoCX miner container name
+    /// </summary>
+    public string MinerContainerName { get; set; } = "pocx-miner";
+
+    /// <summary>
+    /// PoCX plotter container name
+    /// </summary>
+    public string PlotterContainerName { get; set; } = "pocx-plotter";
 }

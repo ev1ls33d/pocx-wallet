@@ -13,24 +13,33 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
   - Bitcoin-compatible Hash160 (RIPEMD160(SHA256(pubkey))) payload
   - Secure passphrase support
 
+- 🐳 **Docker Container Management**
+  - **Docker-first approach** for easy deployment
+  - Automated setup and configuration
+  - Pre-built Docker images via GitHub Actions
+  - One-command service deployment
+  - Cross-platform compatibility (Windows WSL2, Linux, macOS)
+  - Optional native binary support
+
 - 📊 **Plot Generation**
-  - Wrapper for `pocx_plotter` binary
+  - Docker containers or native `pocx_plotter` binary
   - Create plot files for PoCX mining
   - Configurable plot sizes
   - Background service support
 
 - ⛏️ **Mining**
-  - Wrapper for `pocx_miner` binary
+  - Docker containers or native `pocx_miner` binary
   - Easy mining configuration
   - Pool mining support
   - Background service with status monitoring
 
 - 🔗 **Bitcoin-PoCX Node Integration**
-  - Full `bitcoind` node wrapper
+  - Docker containers or native `bitcoind` node
   - `bitcoin-cli` integration for RPC commands
   - Background service management
   - Start/stop node from CLI
   - Real-time blockchain synchronization
+  - Persistent blockchain data storage
 
 - 💰 **Transaction Features**
   - Check wallet balance via node RPC
@@ -54,63 +63,90 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
 
 ## Prerequisites
 
+### Required
 - .NET 9.0 SDK or later
-- Rust nightly toolchain (for building PoCX binaries)
-- Linux, macOS, or Windows
+- Docker (recommended) or Rust nightly toolchain for native binaries
+- Linux, macOS, or Windows (with WSL2 for Docker on Windows)
+
+### Docker Setup (Recommended)
+The wallet uses Docker containers by default for easy setup:
+- **Linux**: Docker Engine
+- **Windows**: Docker Desktop with WSL2
+- **macOS**: Docker Desktop
+
+See [DOCKER.md](DOCKER.md) for detailed Docker setup instructions.
 
 ## Quick Start
 
-### 1. Clone the Repository
+### Using Docker (Recommended)
 
-```bash
-git clone --recursive https://github.com/ev1ls33d/pocx-wallet.git
-cd pocx-wallet
-```
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/ev1ls33d/pocx-wallet.git
+   cd pocx-wallet
+   ```
 
-### 2. Build Dependencies
+2. **Build the Wallet**
+   ```bash
+   dotnet build
+   ```
 
-Run the automated build script to build PoCX binaries:
+3. **Run the Wallet**
+   ```bash
+   cd PocxWallet.Cli
+   dotnet run
+   ```
 
-```bash
-# Linux/Mac
-./build-dependencies.sh
+4. **Setup Docker** (First Time)
+   - Navigate to: `Settings → Setup Docker`
+   - The wallet will guide you through Docker installation
+   - Pull the pre-built images: `Settings → Pull Docker Images`
 
-# Windows
-./build-dependencies.ps1
-```
+5. **Start Services**
+   - Bitcoin Node: `Bitcoin-PoCX Node → Start Node`
+   - Mining: `Mining → Start Mining`
+   - Plotting: `Plotting → Create Plot`
 
-This will:
-- Check for and install Rust nightly if needed
-- Build `pocx_plotter` and `pocx_miner` binaries
-- Prepare the environment for the wallet
+All services automatically use Docker containers. See [DOCKER.md](DOCKER.md) for more details.
 
-### 3. Build the Wallet
+### Using Native Binaries (Advanced)
 
-```bash
-dotnet build
-```
+If you prefer to build and run native binaries instead of Docker:
 
-### 4. Run the Wallet
+1. **Clone with Submodules**
+   ```bash
+   git clone --recursive https://github.com/ev1ls33d/pocx-wallet.git
+   cd pocx-wallet
+   ```
 
-The wallet runs in interactive mode by default:
+2. **Build Dependencies**
+   ```bash
+   # Linux/Mac
+   ./build-dependencies.sh
+   
+   # Windows
+   ./build-dependencies.ps1
+   ```
+
+3. **Build the Wallet**
+   ```bash
+   dotnet build
+   ```
+
+4. **Disable Docker Mode**
+   ```bash
+   cd PocxWallet.Cli
+   dotnet run
+   ```
+   Navigate to: `Settings → Toggle Docker Mode` to disable Docker and use native binaries.
+
+### Demo Mode
+
+For a quick demonstration without setup:
 
 ```bash
 cd PocxWallet.Cli
-dotnet run
-```
-
-Or run the compiled binary directly:
-
-```bash
-./bin/Debug/net9.0/pocxwallet
-```
-
-For demo mode:
-
-```bash
 dotnet run -- --demo
-# or
-./bin/Debug/net9.0/pocxwallet --demo
 ```
 
 ## Project Structure
@@ -166,14 +202,25 @@ These addresses are:
 4. Enter passphrase if you used one
 5. Wallet restored!
 
+### Starting Bitcoin-PoCX Node
+
+1. Select "🔗 Bitcoin-PoCX Node"
+2. Choose "Start Node"
+3. Enter data directory (or press Enter for default)
+4. Node starts in Docker container automatically
+5. Monitor status with "Show Node Status"
+
+**Note**: First-time sync may take several hours depending on blockchain size.
+
 ### Creating Plot Files
 
 1. Select "📊 Plotting"
 2. Choose "Create Plot"
 3. Enter your account ID (from wallet)
-4. Specify plot directory
+4. Specify plot directory (default: `./plots`)
 5. Set number of warps (1 warp ≈ 1GB)
-6. Wait for plotting to complete
+6. Plotter runs in background (Docker container)
+7. Check progress in background services
 
 ### Mining PoCX
 
@@ -183,7 +230,8 @@ These addresses are:
    - Enter pool details and account ID
 2. Start mining:
    - Choose "Start Mining"
-   - Monitor output in real-time
+   - Miner runs in Docker container
+   - Monitor with "Show Mining Status"
 3. Stop mining when done
 
 ### Generating Vanity Addresses
@@ -204,22 +252,49 @@ The application uses `appsettings.json` for configuration:
   "PoCXBinariesPath": "./pocx/target/release",
   "PlotDirectory": "./plots",
   "WalletFilePath": "./wallet.json",
-  "MinerConfigPath": "./config.yaml"
+  "MinerConfigPath": "./config.yaml",
+  "UseDocker": true,
+  "DockerRegistry": "ghcr.io/ev1ls33d/pocx-wallet",
+  "DockerImageTag": "latest"
 }
 ```
 
+**Key Settings**:
+- `UseDocker`: Enable/disable Docker mode (default: `true`)
+- `DockerRegistry`: Docker registry for images
+- `DockerImageTag`: Image version to use
+- Native binary paths used when Docker mode is disabled
+
 You can modify these settings through the CLI "⚙️ Settings" menu or by editing the file directly.
 
-## PoCX Binary Wrappers
+## Service Management
 
-The wallet wraps the following PoCX binaries:
+### Docker Mode (Default)
 
+Services run in isolated Docker containers:
+
+- **bitcoin-pocx**: Bitcoin-PoCX full node (bitcoind, bitcoin-cli)
+- **pocx-miner**: PoCX mining service
+- **pocx-plotter**: Plot file generator
+
+Benefits:
+- ✅ No manual compilation required
+- ✅ Consistent environment across platforms
+- ✅ Easy updates via image pulls
+- ✅ Resource isolation and management
+- ✅ Automatic dependency handling
+
+### Native Mode (Optional)
+
+For advanced users who prefer native binaries:
+
+The wallet can wrap local PoCX binaries:
 - **pocx_plotter**: Generate plot files
 - **pocx_miner**: Mine PoCX blocks
 - **pocx_verifier**: Verify plot file integrity
-- **pocx_address**: Address utilities
+- **bitcoind**: Bitcoin-PoCX full node
 
-These binaries must be built from the `pocx` submodule.
+These must be built from the `pocx` and `bitcoin-pocx` submodules.
 
 ## Security Considerations
 
@@ -251,10 +326,19 @@ dotnet test
 
 ## Dependencies
 
+### Core Libraries
 - [NBitcoin](https://github.com/MetacoSA/NBitcoin) - Bitcoin library for .NET
 - [Spectre.Console](https://spectreconsole.net/) - Beautiful console applications
+
+### External Services
+- [Docker](https://www.docker.com/) - Container platform (recommended)
 - [PoCX](https://github.com/PoC-Consortium/pocx) - Proof of Capacity X framework (branch: master)
 - [Bitcoin-PoCX](https://github.com/PoC-Consortium/bitcoin) - Bitcoin node with PoCX support (branch: pocx-v30-RC2)
+
+### Docker Images
+Pre-built images available at:
+- `ghcr.io/ev1ls33d/pocx-wallet/bitcoin-pocx:latest` - Bitcoin-PoCX node
+- `ghcr.io/ev1ls33d/pocx-wallet/pocx:latest` - PoCX tools (miner, plotter)
 
 ## Roadmap
 
@@ -269,6 +353,9 @@ dotnet test
 - [x] Balance checking via node RPC
 - [x] Transaction history
 - [x] Cross-platform compatibility
+- [x] **Docker container orchestration**
+- [x] **Automated Docker image builds via GitHub Actions**
+- [x] **Docker-first service deployment**
 
 ### In Progress 🚧
 - [ ] GPU-accelerated vanity address generation (OpenCL/CUDA)
@@ -279,6 +366,8 @@ dotnet test
 - [ ] QR code generation
 - [ ] Hardware wallet support
 - [ ] Multi-signature support
+- [ ] Docker Compose configuration
+- [ ] Kubernetes deployment manifests
 
 ## Contributing
 

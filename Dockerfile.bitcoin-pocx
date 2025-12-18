@@ -1,0 +1,100 @@
+# Multi-stage Dockerfile for Bitcoin-PoCX node
+# Stage 1: Builder
+FROM debian:bookworm-slim AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    libtool \
+    autotools-dev \
+    automake \
+    pkg-config \
+    bsdmainutils \
+    python3 \
+    libevent-dev \
+    libboost-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    libboost-test-dev \
+    libsqlite3-dev \
+    libzmq3-dev \
+    libminiupnpc-dev \
+    libnatpmp-dev \
+    qtbase5-dev \
+    qttools5-dev \
+    qttools5-dev-tools \
+    libqrencode-dev \
+    ccache \
+    cmake \
+    capnproto \
+    libcapnp-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone the repository (master branch by default)
+WORKDIR /build
+RUN git clone https://github.com/PoC-Consortium/bitcoin.git .
+
+# Configure and build with CMake
+RUN cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TESTS=OFF \
+    -DBUILD_BENCH=OFF \
+    -DBUILD_GUI=OFF \
+    -DWITH_QRENCODE=OFF \
+    -DWITH_MINIUPNPC=OFF \
+    -DWITH_NATPMP=OFF \
+    -DWITH_ZMQ=ON \
+    -DWITH_SQLITE=ON \
+    -DENABLE_WALLET=ON \
+    -DENABLE_POCX=ON
+
+RUN cmake --build build -j$(nproc)
+RUN cmake --install build --prefix /install
+
+# Stage 2: Minimal Runtime
+FROM debian:bookworm-slim
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libevent-2.1-7 \
+    libevent-core-2.1-7 \
+    libevent-extra-2.1-7 \
+    libevent-pthreads-2.1-7 \
+    libboost-system1.74.0 \
+    libboost-filesystem1.74.0 \
+    libsqlite3-0 \
+    libzmq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy entire install directory and extract what we need
+COPY --from=builder /install /tmp/install
+
+# Move binaries and libraries
+RUN if [ -d /tmp/install/bin ]; then \
+        cp -r /tmp/install/bin/* /usr/local/bin/ 2>/dev/null || true; \
+    fi && \
+    if [ -d /tmp/install/lib ]; then \
+        cp -r /tmp/install/lib/* /usr/local/lib/ 2>/dev/null || true; \
+    fi && \
+    if [ -d /tmp/install/lib64 ]; then \
+        cp -r /tmp/install/lib64/* /usr/local/lib/ 2>/dev/null || true; \
+    fi && \
+    rm -rf /tmp/install
+
+# Update library cache
+RUN ldconfig
+
+# Create data directory
+RUN mkdir -p /root/.bitcoin-pocx
+
+# Expose Bitcoin Core ports
+# 18332: RPC
+# 18333: P2P
+EXPOSE 18332 18333
+
+# Set working directory
+WORKDIR /root
+
+# Default command
+CMD ["bitcoind", "-printtoconsole", "-rpcport=18332"]

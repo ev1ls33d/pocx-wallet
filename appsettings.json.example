@@ -2,5 +2,14 @@
   "PoCXBinariesPath": "./pocx/target/release",
   "PlotDirectory": "./plots",
   "WalletFilePath": "./wallet.json",
-  "MinerConfigPath": "./config.yaml"
+  "MinerConfigPath": "./config.yaml",
+  "BitcoinNodeHost": "localhost",
+  "BitcoinNodePort": 18332,
+  "BitcoinBinariesPath": "./bitcoin-pocx/src",
+  "UseDocker": true,
+  "DockerRegistry": "ghcr.io/ev1ls33d/pocx-wallet",
+  "DockerImageTag": "latest",
+  "BitcoinContainerName": "bitcoin-pocx-node",
+  "MinerContainerName": "pocx-miner",
+  "PlotterContainerName": "pocx-plotter"
 }

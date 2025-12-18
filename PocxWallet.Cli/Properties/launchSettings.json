@@ -1,8 +1,7 @@
 {
   "profiles": {
     "PocxWallet.Cli": {
-      "commandName": "Project",
-      "commandLineArgs": "--demo"
+      "commandName": "Project"
     }
   }
 }
