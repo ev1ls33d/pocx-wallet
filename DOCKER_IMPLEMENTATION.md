@@ -94,7 +94,7 @@ public class AppSettings
     // Common settings
     public string PlotDirectory { get; set; } = "./plots";
     public string MinerConfigPath { get; set; } = "./config.yaml";
-    public int BitcoinNodePort { get; set; } = 18883;
+    public int BitcoinNodePort { get; set; } = 18332;
 }
 ```
 
@@ -114,8 +114,8 @@ public class AppSettings
 **Size**: ~300MB (runtime only)
 
 **Exposed Ports**:
-- 18883: RPC API (for wallet communication)
-- 18884: P2P Network (for blockchain sync)
+- 18332: RPC API (for wallet communication)
+- 18333: P2P Network (for blockchain sync)
 
 ### pocx Image
 
@@ -322,7 +322,7 @@ Users can toggle between Docker and native modes:
 - Try building images locally
 
 **Container won't start**
-- Check port conflicts (18883, 18884)
+- Check port conflicts (18332, 18333)
 - Verify directory permissions
 - Review container logs for errors
 

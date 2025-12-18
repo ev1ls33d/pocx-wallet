@@ -76,8 +76,8 @@ public static class NodeCommands
 
         var portMappings = new Dictionary<int, int>
         {
-            { settings.BitcoinNodePort, 18883 },
-            { 18884, 18884 }  // P2P port
+            { settings.BitcoinNodePort, 18332 },
+            { 18333, 18333 }  // P2P port
         };
 
         var success = await docker.StartContainerAsync(
@@ -85,7 +85,7 @@ public static class NodeCommands
             "bitcoin-pocx",
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: "bitcoind -printtoconsole -rpcport=18883 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
+            command: "bitcoind -printtoconsole -rpcport=18332 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
         );
 
         if (success)
@@ -98,7 +98,7 @@ public static class NodeCommands
         }
     }
 
-    private static void StartNodeNative(string binariesPath, string? dataDir = null, int rpcPort = 18883)
+    private static void StartNodeNative(string binariesPath, string? dataDir = null, int rpcPort = 18332)
     {
         if (_activeNode?.IsRunning == true)
         {

@@ -15,8 +15,8 @@ public class BitcoinNodeWrapper : PoCXProcessWrapper
     /// Start the Bitcoin-PoCX node
     /// </summary>
     /// <param name="dataDir">Data directory for blockchain data</param>
-    /// <param name="rpcPort">RPC port (default: 18883)</param>
-    /// <param name="p2p2Port">P2P port (default: 18884)</param>
+    /// <param name="rpcPort">RPC port (default: 18332)</param>
+    /// <param name="p2p2Port">P2P port (default: 18333)</param>
     /// <param name="onOutput">Output callback</param>
     /// <param name="onError">Error callback</param>
     public void StartNode(

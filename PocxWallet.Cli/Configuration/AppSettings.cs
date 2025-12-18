@@ -31,9 +31,9 @@ public class AppSettings
     public string BitcoinNodeHost { get; set; } = "localhost";
 
     /// <summary>
-    /// Bitcoin-PoCX node RPC port (default: 18883)
+    /// Bitcoin-PoCX node RPC port (default: 18332)
     /// </summary>
-    public int BitcoinNodePort { get; set; } = 18883;
+    public int BitcoinNodePort { get; set; } = 18332;
 
     /// <summary>
     /// Path to Bitcoin-PoCX binaries

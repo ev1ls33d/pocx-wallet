@@ -86,8 +86,8 @@ You'll be asked for:
 
 The node will:
 - Mount your data directory to persist blockchain data
-- Expose RPC port 18883 for wallet communication
-- Expose P2P port 18884 for network communication
+- Expose RPC port 18332 for wallet communication
+- Expose P2P port 18333 for network communication
 
 #### PoCX Miner
 
@@ -233,8 +233,8 @@ Containers automatically mount directories for data persistence:
 
 | Container | Host Port | Container Port | Purpose |
 |-----------|-----------|----------------|---------|
-| bitcoin-pocx-node | 18883 | 18883 | RPC API |
-| bitcoin-pocx-node | 18884 | 18884 | P2P Network |
+| bitcoin-pocx-node | 18332 | 18332 | RPC API |
+| bitcoin-pocx-node | 18333 | 18333 | P2P Network |
 
 ## Troubleshooting
 
@@ -332,11 +332,11 @@ services:
     image: ghcr.io/ev1ls33d/pocx-wallet/bitcoin-pocx:latest
     container_name: bitcoin-pocx-node
     ports:
-      - "18883:18883"
-      - "18884:18884"
+      - "18332:18332"
+      - "18333:18333"
     volumes:
       - ./bitcoin-data:/root/.bitcoin
-    command: bitcoind -printtoconsole -rpcport=18883 -rpcallowip=0.0.0.0/0
+    command: bitcoind -printtoconsole -rpcport=18332 -rpcallowip=0.0.0.0/0
 
   pocx-miner:
     image: ghcr.io/ev1ls33d/pocx-wallet/pocx:latest

@@ -7,7 +7,7 @@ public class BitcoinCliWrapper : PoCXProcessWrapper
 {
     private readonly int _rpcPort;
 
-    public BitcoinCliWrapper(string binaryPath, int rpcPort = 18883) : base(binaryPath)
+    public BitcoinCliWrapper(string binaryPath, int rpcPort = 18332) : base(binaryPath)
     {
         _rpcPort = rpcPort;
     }

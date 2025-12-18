@@ -146,8 +146,8 @@ public static class DockerCommands
 
         var portMappings = new Dictionary<int, int>
         {
-            { settings.BitcoinNodePort, 18883 },
-            { 18884, 18884 }  // P2P port
+            { settings.BitcoinNodePort, 18332 },
+            { 18333, 18333 }  // P2P port
         };
 
         await docker.StartContainerAsync(
@@ -155,7 +155,7 @@ public static class DockerCommands
             "bitcoin-pocx",
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: "bitcoind -printtoconsole -rpcport=18883 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
+            command: "bitcoind -printtoconsole -rpcport=18332 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
         );
 
         // Register with background service manager
