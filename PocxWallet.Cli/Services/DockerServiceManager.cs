@@ -88,22 +88,22 @@ public class DockerServiceManager
     {
         try
         {
-            AnsiConsole.Status()
-                .Start("Installing Docker...", ctx =>
+            await AnsiConsole.Status()
+                .StartAsync("Installing Docker...", async ctx =>
                 {
                     ctx.Status("Downloading Docker installation script...");
-                    var downloadResult = ExecuteCommandAsync("curl", "-fsSL https://get.docker.com -o /tmp/get-docker.sh").Result;
+                    var downloadResult = await ExecuteCommandAsync("curl", "-fsSL https://get.docker.com -o /tmp/get-docker.sh");
                     
                     if (downloadResult.exitCode == 0)
                     {
                         ctx.Status("Running Docker installation...");
-                        var installResult = ExecuteCommandAsync("sudo", "sh /tmp/get-docker.sh").Result;
+                        var installResult = await ExecuteCommandAsync("sudo", "sh /tmp/get-docker.sh");
                         
                         if (installResult.exitCode == 0)
                         {
                             ctx.Status("Starting Docker service...");
-                            ExecuteCommandAsync("sudo", "systemctl start docker").Wait();
-                            ExecuteCommandAsync("sudo", "systemctl enable docker").Wait();
+                            await ExecuteCommandAsync("sudo", "systemctl start docker");
+                            await ExecuteCommandAsync("sudo", "systemctl enable docker");
                         }
                     }
                 });
@@ -239,6 +239,7 @@ public class DockerServiceManager
     /// </summary>
     public async Task<bool> StopContainerAsync(string containerName)
     {
+        ValidateContainerName(containerName);
         AnsiConsole.MarkupLine($"[bold]Stopping container:[/] {containerName}");
         
         var result = await ExecuteCommandAsync("docker", $"stop {containerName}");
@@ -260,6 +261,7 @@ public class DockerServiceManager
     /// </summary>
     public async Task<bool> RemoveContainerAsync(string containerName)
     {
+        ValidateContainerName(containerName);
         AnsiConsole.MarkupLine($"[bold]Removing container:[/] {containerName}");
         
         // Stop first
@@ -284,6 +286,7 @@ public class DockerServiceManager
     /// </summary>
     public async Task<string> GetContainerStatusAsync(string containerName)
     {
+        ValidateContainerName(containerName);
         var result = await ExecuteCommandAsync("docker", $"inspect -f '{{{{.State.Status}}}}' {containerName}");
         return result.exitCode == 0 ? result.output.Trim() : "not found";
     }
@@ -293,8 +296,25 @@ public class DockerServiceManager
     /// </summary>
     public async Task<string> GetContainerLogsAsync(string containerName, int tailLines = 50)
     {
+        ValidateContainerName(containerName);
+        if (tailLines < 1 || tailLines > 10000)
+            throw new ArgumentException("Tail lines must be between 1 and 10000", nameof(tailLines));
+        
         var result = await ExecuteCommandAsync("docker", $"logs --tail {tailLines} {containerName}");
         return result.exitCode == 0 ? result.output : $"Failed to get logs: {result.output}";
+    }
+
+    /// <summary>
+    /// Validate container name to prevent command injection
+    /// </summary>
+    private void ValidateContainerName(string containerName)
+    {
+        if (string.IsNullOrWhiteSpace(containerName))
+            throw new ArgumentException("Container name cannot be empty", nameof(containerName));
+        
+        // Container names can only contain: [a-zA-Z0-9][a-zA-Z0-9_.-]
+        if (!System.Text.RegularExpressions.Regex.IsMatch(containerName, @"^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"))
+            throw new ArgumentException("Invalid container name format", nameof(containerName));
     }
 
     /// <summary>
@@ -335,6 +355,7 @@ public class DockerServiceManager
         string containerName,
         string command)
     {
+        ValidateContainerName(containerName);
         return await ExecuteCommandAsync("docker", $"exec {containerName} {command}");
     }
 

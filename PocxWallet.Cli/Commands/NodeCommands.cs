@@ -85,7 +85,7 @@ public static class NodeCommands
             "bitcoin-pocx",
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: "bitcoind -printtoconsole -rpcport=18883 -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0"
+            command: "bitcoind -printtoconsole -rpcport=18883 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
         );
 
         if (success)
