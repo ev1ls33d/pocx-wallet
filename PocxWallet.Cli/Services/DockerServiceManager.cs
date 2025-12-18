@@ -10,12 +10,12 @@ namespace PocxWallet.Cli.Services;
 public class DockerServiceManager
 {
     private readonly string _registry;
-    private readonly string _imageTag;
+    private readonly string _defaultImageTag;
 
     public DockerServiceManager(string registry, string imageTag)
     {
         _registry = registry;
-        _imageTag = imageTag;
+        _defaultImageTag = imageTag;
     }
 
     /// <summary>
@@ -126,9 +126,9 @@ public class DockerServiceManager
     /// <summary>
     /// Pull a Docker image
     /// </summary>
-    public async Task<bool> PullImageAsync(string imageName)
+    public async Task<bool> PullImageAsync(string imageName, string? imageTag = null)
     {
-        var fullImageName = $"{_registry}/{imageName}:{_imageTag}";
+        var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
         
         AnsiConsole.MarkupLine($"[bold]Pulling Docker image:[/] {fullImageName}");
         
@@ -155,9 +155,10 @@ public class DockerServiceManager
         Dictionary<string, string>? environmentVars = null,
         Dictionary<string, string>? volumeMounts = null,
         Dictionary<int, int>? portMappings = null,
-        string? command = null)
+        string? command = null,
+        string? imageTag = null)
     {
-        var fullImageName = $"{_registry}/{imageName}:{_imageTag}";
+        var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
         
         // Check if container already exists
         var existsResult = await ExecuteCommandAsync("docker", $"ps -a -q -f name={containerName}");

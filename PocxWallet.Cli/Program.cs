@@ -303,6 +303,8 @@ class Program
             if (!exit)
             {
                 AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to return to the main menu...[/]");
+                Console.ReadLine();
 
                 // Show background services status
                 if (BackgroundServiceManager.HasRunningServices())
