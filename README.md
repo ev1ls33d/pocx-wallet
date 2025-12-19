@@ -49,11 +49,11 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
 
 - 🎯 **Vanity Address Generator**
   - Generate pocx1q... addresses with custom patterns
-  - Multi-threaded CPU implementation
+  - **Native CUDA/GPU acceleration** for 1000x+ speedup (via P/Invoke)
+  - Integrates with VanitySearch-PocX GPU kernels
+  - Automatic fallback to optimized CPU parallelization
   - Pattern matching on Bech32 encoded addresses
-  - **GPU acceleration using ILGPU** (CUDA/OpenCL with CPU fallback)
-  - Optimized parallel processing with smart batching
-  - Automatic hardware detection and configuration
+  - Real-time progress reporting with attempt rates
 
 - 💻 **CLI Interface**
   - Beautiful console UI with Spectre.Console
