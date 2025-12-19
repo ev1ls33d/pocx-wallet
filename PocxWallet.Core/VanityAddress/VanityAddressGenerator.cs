@@ -51,16 +51,25 @@ public class VanityAddressGenerator
     }
 
     /// <summary>
-    /// GPU-accelerated vanity generation using parallel processing
+    /// GPU-accelerated vanity generation using ILGPU
     /// </summary>
     private async Task<(string Mnemonic, string Address)> GenerateGpuAsync(
         IProgress<long>? progress,
         CancellationToken cancellationToken)
     {
-        // For now, use high-parallelism CPU implementation as GPU fallback
-        // True GPU acceleration would require OpenCL/CUDA kernel implementation
-        Console.WriteLine($"GPU mode: Using {_threadCount * 2} parallel tasks for maximum throughput");
-        return await GenerateMultiThreadedAsync(progress, cancellationToken, _threadCount * 2);
+        try
+        {
+            // Use ILGPU-based GPU acceleration
+            using var gpuGenerator = new GpuVanityAddressGenerator(_pattern, _testnet);
+            return await gpuGenerator.GenerateAsync(progress, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GPU acceleration failed: {ex.Message}");
+            Console.WriteLine("Falling back to CPU multi-threaded mode...");
+            // Fallback to CPU implementation if GPU fails
+            return await GenerateMultiThreadedAsync(progress, cancellationToken, _threadCount * 2);
+        }
     }
 
     /// <summary>

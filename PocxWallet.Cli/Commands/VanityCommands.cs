@@ -58,7 +58,8 @@ public static class VanityCommands
 
         if (useGpu)
         {
-            AnsiConsole.MarkupLine("[yellow]Note: GPU acceleration is not yet fully implemented[/]");
+            AnsiConsole.MarkupLine("[green]GPU acceleration enabled using ILGPU[/]");
+            AnsiConsole.MarkupLine("[dim]Will automatically detect and use available GPU (CUDA/OpenCL) or fallback to optimized CPU mode[/]");
         }
 
         var generator = new VanityAddressGenerator(pattern, useGpu, useTestnet);
