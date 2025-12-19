@@ -161,3 +161,9 @@ plots/
 wallet.dat
 *.wallet
 *.keys
+
+# Native library build artifacts
+PocxWallet.Native/build/
+*.so
+*.dll
+*.dylib
