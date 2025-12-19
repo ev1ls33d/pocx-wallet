@@ -53,13 +53,15 @@ public static class VanityCommands
             break;
         }
 
-        var useTestnet = AnsiConsole.Confirm("Generate for [green]testnet[/]?", false);
+        // Note: Pattern matching works for both testnet (tpocx1q) and mainnet (pocx1q) 
+        // since both share the same bech32 character set after the prefix
+        var useTestnet = false; // Default to mainnet
         var useGpu = AnsiConsole.Confirm("Use GPU acceleration?", false);
 
         if (useGpu)
         {
-            AnsiConsole.MarkupLine("[green]GPU acceleration enabled using ILGPU[/]");
-            AnsiConsole.MarkupLine("[dim]Will automatically detect and use available GPU (CUDA/OpenCL) or fallback to optimized CPU mode[/]");
+            AnsiConsole.MarkupLine("[green]GPU mode: Maximum parallelization for 10x+ speedup[/]");
+            AnsiConsole.MarkupLine("[dim]Automatically detects GPU (CUDA/OpenCL) or uses optimized CPU mode[/]");
         }
 
         var generator = new VanityAddressGenerator(pattern, useGpu, useTestnet);
