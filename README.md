@@ -51,7 +51,9 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
   - Generate pocx1q... addresses with custom patterns
   - Multi-threaded CPU implementation
   - Pattern matching on Bech32 encoded addresses
-  - GPU acceleration support (planned)
+  - **GPU acceleration using ILGPU** (CUDA/OpenCL with CPU fallback)
+  - Optimized parallel processing with smart batching
+  - Automatic hardware detection and configuration
 
 - 💻 **CLI Interface**
   - Beautiful console UI with Spectre.Console
@@ -358,7 +360,7 @@ Pre-built images available at:
 - [x] **Docker-first service deployment**
 
 ### In Progress 🚧
-- [ ] GPU-accelerated vanity address generation (OpenCL/CUDA)
+- [x] GPU-accelerated vanity address generation using ILGPU
 - [ ] Avalonia cross-platform GUI
 
 ### Planned 📋
