@@ -1,12 +1,13 @@
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPU.Runtime.OpenCL;
 using NBitcoin;
-using System.Diagnostics;
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using PocxWallet.Core.Wallet;
 
 namespace PocxWallet.Core.VanityAddress;
@@ -143,9 +144,7 @@ public class GpuVanityAddressGenerator : IDisposable
         Console.WriteLine($"[GPU] Batch size: {_batchSize} addresses per iteration");
         Console.WriteLine($"[GPU] Target pattern: '{_pattern}'");
 
-        // Pre-compile pattern for faster matching
-        var patternLower = _pattern.ToLowerInvariant();
-        var patternBytes = System.Text.Encoding.ASCII.GetBytes(patternLower);
+        var lastLogTime = 0; // Shared across workers but synchronized with Interlocked
 
         for (int i = 0; i < _optimalWorkerCount; i++)
         {
@@ -179,35 +178,48 @@ public class GpuVanityAddressGenerator : IDisposable
 
                         var (wallet, address) = wallets[j];
                         
-                        // Fast case-insensitive check
-                        if (address.Contains(patternLower, StringComparison.Ordinal) || 
-                            address.ToLowerInvariant().Contains(patternLower))
+                        // Case-insensitive pattern matching
+                        // Pattern is lowercase from constructor, but addresses can be mixed case
+                        if (address.Contains(_pattern, StringComparison.OrdinalIgnoreCase))
                         {
+                            // Ensure all local attempts are counted before returning
+                            if (localAttempts > 0)
+                            {
+                                Interlocked.Add(ref totalAttempts, localAttempts);
+                            }
                             resultFound.TrySetResult((wallet.MnemonicPhrase, address));
                             cts.Cancel();
                             return;
                         }
                     }
 
-                    // Update total attempts atomically
-                    Interlocked.Add(ref totalAttempts, localAttempts);
-                    localAttempts = 0;
+                    // Update total attempts atomically after each batch
+                    if (localAttempts > 0)
+                    {
+                        Interlocked.Add(ref totalAttempts, localAttempts);
+                        localAttempts = 0;
+                    }
 
                     // Report progress periodically (every 250ms)
-                    if (progress != null && sw.Elapsed - lastProgressUpdate > TimeSpan.FromMilliseconds(250))
+                    // Note: Race conditions on these variables are acceptable as they only affect reporting
+                    var currentTime = sw.Elapsed;
+                    if (progress != null && currentTime - lastProgressUpdate > TimeSpan.FromMilliseconds(250))
                     {
                         var currentAttempts = Interlocked.Read(ref totalAttempts);
-                        var attemptsPerSecond = (currentAttempts - lastProgressAttempts) / (sw.Elapsed - lastProgressUpdate).TotalSeconds;
+                        var timeDelta = currentTime - lastProgressUpdate;
+                        var attemptsPerSecond = (currentAttempts - lastProgressAttempts) / timeDelta.TotalSeconds;
                         
                         progress.Report(currentAttempts);
                         
-                        // Log performance stats every 3 seconds
-                        if (sw.Elapsed.TotalSeconds > 3 && (int)(sw.Elapsed.TotalSeconds) % 3 == 0)
+                        // Log performance stats every 3 seconds (synchronized via lastLogTime)
+                        var currentSecond = (int)currentTime.TotalSeconds;
+                        var previousLogTime = Interlocked.CompareExchange(ref lastLogTime, currentSecond, lastLogTime);
+                        if (currentSecond > 3 && currentSecond != previousLogTime && currentSecond % 3 == 0)
                         {
                             Console.WriteLine($"[GPU] Rate: {attemptsPerSecond:N0} attempts/sec | Total: {currentAttempts:N0}");
                         }
                         
-                        lastProgressUpdate = sw.Elapsed;
+                        lastProgressUpdate = currentTime;
                         lastProgressAttempts = currentAttempts;
                     }
                 }
@@ -226,7 +238,7 @@ public class GpuVanityAddressGenerator : IDisposable
             Console.WriteLine($"[GPU] ✓ Success! Found match in {elapsed.TotalSeconds:F2}s");
             Console.WriteLine($"[GPU] Total attempts: {finalAttempts:N0}");
             Console.WriteLine($"[GPU] Average rate: {avgRate:N0} attempts/sec");
-            Console.WriteLine($"[GPU] Peak performance: {avgRate * _optimalWorkerCount:N0} ops/sec across all workers");
+            Console.WriteLine($"[GPU] Workers: {_optimalWorkerCount} parallel tasks");
             
             return result;
         }
