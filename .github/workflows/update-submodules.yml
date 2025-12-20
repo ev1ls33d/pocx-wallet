@@ -27,6 +27,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       
+      - name: Fetch remote branches in submodules
+        run: |
+          # Fetch remote branches in each submodule
+          git submodule foreach 'git fetch origin'
+      
       - name: Update submodules to latest
         id: update
         run: |
