@@ -8,7 +8,7 @@ RUN rustup toolchain install nightly && \
 
 # Clone PoCX repository
 WORKDIR /build
-RUN git clone https://github.com/PoC-Consortium/pocx.git
+RUN git clone -b master --single-branch https://github.com/PoC-Consortium/pocx.git
 
 # Build PoCX binaries
 WORKDIR /build/pocx
