@@ -1,7 +1,0 @@
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/pocxwallet_native.dir
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/edit_cache.dir
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/rebuild_cache.dir
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/list_install_components.dir
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/install.dir
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/install/local.dir
-/home/runner/work/pocx-wallet/pocx-wallet/PocxWallet.Native/build/CMakeFiles/install/strip.dir

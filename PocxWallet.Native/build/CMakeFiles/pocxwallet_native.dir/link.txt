@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/pocxwallet_native.dir/link.d -shared -Wl,-soname,libpocxwallet_native.so -o lib/libpocxwallet_native.so CMakeFiles/pocxwallet_native.dir/src/vanitysearch_wrapper.cpp.o
