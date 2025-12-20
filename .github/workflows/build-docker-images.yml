@@ -32,7 +32,10 @@ jobs:
           
       - name: Fetch specific branches in submodules
         run: git submodule foreach 'git fetch origin $(git config -f $toplevel/.gitmodules submodule.$name.branch)'
-        
+
+      - name: Set remote tracking refs for submodules 
+        run: git submodule foreach 'git update-ref refs/remotes/origin/$(git config -f $toplevel/.gitmodules submodule.$name.branch) FETCH_HEAD'
+
       - name: Update submodules to latest branch commits
         run: git submodule update --remote --recursive
 
@@ -83,6 +86,9 @@ jobs:
 
       - name: Fetch specific branches in submodules
         run: git submodule foreach 'git fetch origin $(git config -f $toplevel/.gitmodules submodule.$name.branch)'
+        
+      - name: Set remote tracking refs for submodules 
+        run: git submodule foreach 'git update-ref refs/remotes/origin/$(git config -f $toplevel/.gitmodules submodule.$name.branch) FETCH_HEAD'
         
       - name: Update submodules to latest branch commits
         run: git submodule update --remote --recursive
