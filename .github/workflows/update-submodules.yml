@@ -60,10 +60,9 @@ jobs:
         if: steps.update.outputs.changes == 'true'
         run: |
           git add pocx bitcoin-pocx
-          git commit -m "chore: update submodules to latest versions
-          
-          - pocx: $(git -C pocx rev-parse --short HEAD)
-          - bitcoin-pocx: $(git -C bitcoin-pocx rev-parse --short HEAD)"
+          POCX_SHA=$(git -C pocx rev-parse --short HEAD)
+          BITCOIN_SHA=$(git -C bitcoin-pocx rev-parse --short HEAD)
+          git commit -m "chore: update submodules to latest versions" -m "- pocx: $POCX_SHA" -m "- bitcoin-pocx: $BITCOIN_SHA"
           git push
       
       - name: Trigger Docker build
