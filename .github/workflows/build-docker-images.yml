@@ -21,7 +21,7 @@ jobs:
   build-bitcoin-pocx:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -37,9 +37,16 @@ jobs:
         run: git submodule foreach 'git update-ref refs/remotes/origin/$(git config -f $toplevel/.gitmodules submodule.$name.branch) FETCH_HEAD'
 
       - name: Update submodules to latest branch commits
-        run: git submodule update --remote bitcoin-pocx
-             git add bitcoin-pocx
-             git commit
+        run: |
+          git submodule update --remote --recursive bitcoin-pocx
+          # Optional: Commit die Änderung (nur bei manuellen Runs, um Loops zu vermeiden)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add bitcoin-pocx
+            git commit -m "updated by manual github action run"
+            git push
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -77,7 +84,7 @@ jobs:
   build-pocx:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -93,9 +100,16 @@ jobs:
         run: git submodule foreach 'git update-ref refs/remotes/origin/$(git config -f $toplevel/.gitmodules submodule.$name.branch) FETCH_HEAD'
         
       - name: Update submodules to latest branch commits
-        run: git submodule update --remote pocx
-             git add pocx
-             git commit
+        run: |
+          git submodule update --remote --recursive pocx
+          # Optional: Commit die Änderung (nur bei manuellen Runs, um Loops zu vermeiden)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add pocx
+            git commit -m "updated by manual github action run"
+            git push
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
