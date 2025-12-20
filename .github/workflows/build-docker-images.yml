@@ -37,7 +37,7 @@ jobs:
         run: git submodule foreach 'git update-ref refs/remotes/origin/$(git config -f $toplevel/.gitmodules submodule.$name.branch) FETCH_HEAD'
 
       - name: Update submodules to latest branch commits
-        run: git submodule update --remote --recursive
+        run: git submodule update --remote bitcoin-pocx
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -91,7 +91,7 @@ jobs:
         run: git submodule foreach 'git update-ref refs/remotes/origin/$(git config -f $toplevel/.gitmodules submodule.$name.branch) FETCH_HEAD'
         
       - name: Update submodules to latest branch commits
-        run: git submodule update --remote --recursive
+        run: git submodule update --remote pocx
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
