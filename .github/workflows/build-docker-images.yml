@@ -30,10 +30,8 @@ jobs:
         with:
           submodules: recursive
           
-      - name: Unshallow and fetch remote branches in submodules
-        run: |
-          git submodule foreach 'git fetch --unshallow origin || git fetch origin'
-          git submodule foreach 'git fetch origin'
+      - name: Fetch specific branches in submodules
+        run: git submodule foreach 'git fetch origin $(git config -f $toplevel/.gitmodules submodule.$name.branch)'
         
       - name: Update submodules to latest branch commits
         run: git submodule update --remote --recursive
@@ -83,10 +81,8 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Unshallow and fetch remote branches in submodules
-        run: |
-          git submodule foreach 'git fetch --unshallow origin || git fetch origin'
-          git submodule foreach 'git fetch origin'
+      - name: Fetch specific branches in submodules
+        run: git submodule foreach 'git fetch origin $(git config -f $toplevel/.gitmodules submodule.$name.branch)'
         
       - name: Update submodules to latest branch commits
         run: git submodule update --remote --recursive
