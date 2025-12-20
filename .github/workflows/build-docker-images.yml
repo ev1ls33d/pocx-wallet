@@ -29,7 +29,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          
+      - name: Fetch remote branches in submodules
+        run: git submodule foreach 'git fetch origin'
+        
       - name: Update submodules to latest branch commits
         run: git submodule update --remote --recursive
 
@@ -77,7 +80,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          
+
+      - name: Fetch remote branches in submodules
+        run: git submodule foreach 'git fetch origin'
+        
       - name: Update submodules to latest branch commits
         run: git submodule update --remote --recursive
 
