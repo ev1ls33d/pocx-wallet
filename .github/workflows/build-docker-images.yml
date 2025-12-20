@@ -38,6 +38,8 @@ jobs:
 
       - name: Update submodules to latest branch commits
         run: git submodule update --remote bitcoin-pocx
+             git add bitcoin-pocx
+             git commit
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -92,6 +94,8 @@ jobs:
         
       - name: Update submodules to latest branch commits
         run: git submodule update --remote pocx
+             git add pocx
+             git commit
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
