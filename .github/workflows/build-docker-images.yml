@@ -78,8 +78,6 @@ jobs:
           push: true
           tags: ${{ steps.meta-bitcoin.outputs.tags }}
           labels: ${{ steps.meta-bitcoin.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   build-pocx:
     runs-on: ubuntu-latest
@@ -141,5 +139,3 @@ jobs:
           push: true
           tags: ${{ steps.meta-pocx.outputs.tags }}
           labels: ${{ steps.meta-pocx.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
