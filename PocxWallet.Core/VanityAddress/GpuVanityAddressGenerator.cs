@@ -40,23 +40,39 @@ public class GpuVanityAddressGenerator : IDisposable
         
         if (_useNativeLibrary)
         {
-            Console.WriteLine("[GPU Mode] Native CUDA library detected - TRUE GPU ACCELERATION");
-            Console.WriteLine("[GPU Mode] Using VanitySearch-PocX CUDA kernels");
-            _optimalWorkerCount = 0; // Not needed for native
+            // Check if native library has actual CUDA kernels integrated
+            try
+            {
+                NativeVanitySearch.vanitysearch_init();
+                var error = NativeVanitySearch.GetLastError();
+                if (!string.IsNullOrEmpty(error))
+                {
+                    // Library present but kernels not integrated, use CPU fallback
+                    Console.WriteLine("[GPU Mode] Native library detected but CUDA kernels not integrated");
+                    Console.WriteLine("[GPU Mode] Falling back to CPU parallelization");
+                    _useNativeLibrary = false;
+                }
+                else
+                {
+                    Console.WriteLine("[GPU Mode] Native CUDA library with GPU kernels detected");
+                    _optimalWorkerCount = 0; // Not needed for native
+                    return;
+                }
+            }
+            catch
+            {
+                Console.WriteLine("[GPU Mode] Native library initialization failed, using CPU fallback");
+                _useNativeLibrary = false;
+            }
         }
-        else
-        {
-            Console.WriteLine("[GPU Mode] Native library not available, using CPU parallelization");
-            // Initialize ILGPU context for hardware detection
-            _context = Context.CreateDefault();
-            _accelerator = GetBestAccelerator(_context);
-            
-            // Calculate optimal worker count for maximum throughput
-            _optimalWorkerCount = CalculateOptimalWorkerCount(_accelerator);
-            
-            Console.WriteLine($"[GPU Mode] Accelerator: {_accelerator.Name}");
-            Console.WriteLine($"[GPU Mode] Workers: {_optimalWorkerCount}");
-        }
+
+        // Initialize CPU parallelization fallback
+        _context = Context.CreateDefault();
+        _accelerator = GetBestAccelerator(_context);
+        _optimalWorkerCount = CalculateOptimalWorkerCount(_accelerator);
+        
+        Console.WriteLine($"[GPU Mode] Using CPU parallelization");
+        Console.WriteLine($"[GPU Mode] Workers: {_optimalWorkerCount}");
     }
 
     /// <summary>
@@ -139,19 +155,22 @@ public class GpuVanityAddressGenerator : IDisposable
     {
         return await Task.Run(() =>
         {
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Starting native CUDA search for pattern: {_pattern}");
+            var startTime = DateTime.Now;
             
             // Initialize native library
-            NativeVanitySearch.vanitysearch_init();
+            var initResult = NativeVanitySearch.vanitysearch_init();
+            if (initResult != 0)
+            {
+                throw new Exception("Failed to initialize native CUDA library");
+            }
             
-            // Setup progress callback
+            // Setup progress callback - report attempts without excessive logging
             NativeVanitySearch.ProgressCallback? progressCb = null;
             if (progress != null)
             {
                 progressCb = (attempts, rate) =>
                 {
                     progress.Report((long)attempts);
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Rate: {rate:N0} attempts/sec | Total: {attempts:N0}");
                 };
             }
             
@@ -165,12 +184,12 @@ public class GpuVanityAddressGenerator : IDisposable
             
             if (result == 0 && nativeResult.Found == 1)
             {
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ✓ Match found!");
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Total: {nativeResult.Attempts:N0} attempts in {nativeResult.ElapsedSeconds:F2}s");
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Rate: {(nativeResult.Attempts / nativeResult.ElapsedSeconds):N0} attempts/sec");
+                var elapsed = DateTime.Now - startTime;
+                Console.WriteLine($"Match found in {elapsed.TotalSeconds:F2}s");
                 return (nativeResult.Mnemonic, nativeResult.Address);
             }
             
+            // If native search failed, throw exception to trigger CPU fallback
             var error = NativeVanitySearch.GetLastError();
             throw new Exception($"Native search failed: {error ?? "Unknown error"}");
         }, cancellationToken);

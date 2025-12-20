@@ -58,19 +58,21 @@ public static class VanityCommands
         var useTestnet = false; // Default to mainnet
         var useGpu = AnsiConsole.Confirm("Use GPU acceleration?", false);
 
-        if (useGpu)
-        {
-            AnsiConsole.MarkupLine("[green]GPU mode: Maximum parallelization for 10x+ speedup[/]");
-            AnsiConsole.MarkupLine("[dim]Automatically detects GPU (CUDA/OpenCL) or uses optimized CPU mode[/]");
-        }
-
         var generator = new VanityAddressGenerator(pattern, useGpu, useTestnet);
         var cts = new CancellationTokenSource();
+
+        // Setup console cancellation on Ctrl+C or Escape
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        };
 
         try
         {
             // Verwende den konkreten, erwarteten Rückgabetyp (named ValueTuple).
             (string Mnemonic, string Address) result = default;
+            var startTime = DateTime.Now;
 
             // Run the generator inside the progress scope but do NOT run interactive prompts inside it.
             await AnsiConsole.Progress()
@@ -79,6 +81,7 @@ public static class VanityCommands
                 .Columns(
                     new TaskDescriptionColumn(),
                     new ProgressBarColumn(),
+                    new ElapsedTimeColumn(),
                     new SpinnerColumn())
                 .StartAsync(async ctx =>
                 {
@@ -87,7 +90,8 @@ public static class VanityCommands
 
                     var progress = new Progress<long>(attempts =>
                     {
-                        task.Description = $"[green]Searching... ({attempts:N0} attempts)[/]";
+                        var elapsed = DateTime.Now - startTime;
+                        task.Description = $"[green]Searching... ({attempts:N0} attempts, {elapsed.TotalSeconds:F1}s)[/]";
                     });
 
                     // Generator liefert tatsächlich (string Mnemonic, string Address) — direkt zuweisen.
