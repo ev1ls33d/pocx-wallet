@@ -41,6 +41,8 @@ jobs:
           
           # Update submodules to latest from their tracked branches
           git submodule update --remote --merge
+          git submodule update --remote bitcoin-pocx
+          git submodule update --remote pocx
           
           # Get new commit hashes
           NEW_POCX=$(git -C pocx rev-parse HEAD)
