@@ -31,9 +31,9 @@ RUN apt-get update && apt-get install -y \
     libcapnp-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone the repository (master branch by default)
+# Clone the repository
 WORKDIR /build
-RUN git clone https://github.com/PoC-Consortium/bitcoin.git .
+RUN git clone -b pocx-v30-RC2 --single-branch https://github.com/PoC-Consortium/bitcoin.git .
 
 # Configure and build with CMake
 RUN cmake -B build \
