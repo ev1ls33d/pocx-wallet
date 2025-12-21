@@ -8,9 +8,9 @@ RUN apt-get update && apt-get install -y \
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the electrs-pocx submodule from build context
+# Clone electrs-pocx repository
 WORKDIR /build
-COPY electrs-pocx ./electrs-pocx
+RUN git clone --single-branch https://github.com/PoC-Consortium/electrs-pocx.git
 
 # Build electrs binary
 WORKDIR /build/electrs-pocx
