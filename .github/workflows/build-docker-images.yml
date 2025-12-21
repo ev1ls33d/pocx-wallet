@@ -21,7 +21,7 @@ jobs:
   build-bitcoin-pocx:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     steps:
@@ -29,9 +29,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Update submodules to latest branch commits
-        run: git submodule update --remote --recursive --checkout --remote bitcoin-pocx
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -63,11 +60,13 @@ jobs:
           push: true
           tags: ${{ steps.meta-bitcoin.outputs.tags }}
           labels: ${{ steps.meta-bitcoin.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-pocx:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     steps:
@@ -75,9 +74,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-        
-      - name: Update submodules to latest branch commits
-        run: git submodule update --remote --recursive --checkout --remote pocx
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -109,3 +105,5 @@ jobs:
           push: true
           tags: ${{ steps.meta-pocx.outputs.tags }}
           labels: ${{ steps.meta-pocx.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
