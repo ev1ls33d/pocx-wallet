@@ -53,6 +53,8 @@ enum MenuOptions
     Settings_CheckDockerStatus,
     Settings_SetupDocker,
     Settings_PullDockerImages,
+    Settings_StartElectrsContainer,
+    Settings_StopElectrsContainer,
     Settings_SaveSettings,
 
     // General back option (einmalig, für alle Submenus)
@@ -106,6 +108,8 @@ static class MenuOptionsExtensions
             MenuOptions.Settings_CheckDockerStatus =>           Markup.Escape("Check Docker Status"),
             MenuOptions.Settings_SetupDocker =>                 Markup.Escape("Setup Docker"),
             MenuOptions.Settings_PullDockerImages =>            Markup.Escape("Pull Docker Images"),
+            MenuOptions.Settings_StartElectrsContainer =>       Markup.Escape("Start Electrs-PoCX Server (Container)"),
+            MenuOptions.Settings_StopElectrsContainer =>        Markup.Escape("Stop Electrs-PoCX Server (Container)"),
             MenuOptions.Settings_SaveSettings =>                Markup.Escape("Save Settings"),
 
             // General
@@ -286,6 +290,8 @@ class Program
                             async () => await DockerCommands.CheckDockerStatusAsync(_settings),
                             async () => await DockerCommands.SetupDockerAsync(_settings),
                             async () => await DockerCommands.PullImagesAsync(_settings),
+                            async () => await DockerCommands.StartElectrsContainerAsync(_settings),
+                            async () => await DockerCommands.StopElectrsContainerAsync(_settings),
                             () =>
                             {
                                 SaveConfiguration();
