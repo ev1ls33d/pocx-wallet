@@ -31,7 +31,7 @@ jobs:
           submodules: recursive
 
       - name: Update submodules to latest branch commits
-        run: git submodule update --remote --recursive bitcoin-pocx
+        run: git submodule update --remote --recursive --checkout --remote bitcoin-pocx
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -77,7 +77,7 @@ jobs:
           submodules: recursive
         
       - name: Update submodules to latest branch commits
-        run: git submodule update --remote --recursive pocx
+        run: git submodule update --remote --recursive --checkout --remote pocx
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
