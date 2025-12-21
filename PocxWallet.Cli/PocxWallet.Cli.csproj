@@ -21,21 +21,37 @@
     <AssemblyName>pocxwallet</AssemblyName>
   </PropertyGroup>
 
-  <!-- Pre-build target to build PoCX dependencies -->
-  <!-- Note: Enable this if you want automatic builds on every compilation -->
-  <!-- For now, run ./build-dependencies.sh (or .ps1) manually before first use -->
-  <!--
-  <Target Name="BuildPoCXDependencies" BeforeTargets="PreBuildEvent">
-    <Message Text="Checking PoCX dependencies..." Importance="high" />
-    <Exec Condition="'$(OS)' != 'Windows_NT'" 
-          Command="bash $(ProjectDir)../build-dependencies.sh" 
-          ContinueOnError="true" 
-          IgnoreExitCode="true" />
-    <Exec Condition="'$(OS)' == 'Windows_NT'" 
-          Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)../build-dependencies.ps1" 
-          ContinueOnError="true" 
-          IgnoreExitCode="true" />
-  </Target>
-  -->
+	<Target Name="CopyNativeDll" AfterTargets="Build;Publish">
+		<PropertyGroup>
+			<!-- mögliche Pfade -->
+			<NativeDllPathConfig>$(ProjectDir)..\PocxWallet.Native\build\bin\$(Configuration)\pocxwallet_native.dll</NativeDllPathConfig>
+			<NativeDllPathRelease>$(ProjectDir)..\PocxWallet.Native\build\bin\Release\pocxwallet_native.dll</NativeDllPathRelease>
+			<NativeDllPathDebug>$(ProjectDir)..\PocxWallet.Native\build\bin\Debug\pocxwallet_native.dll</NativeDllPathDebug>
+		</PropertyGroup>
+
+		<Message Text="Looking for native DLL in: $(NativeDllPathConfig), $(NativeDllPathRelease), $(NativeDllPathDebug)" Importance="High" />
+
+		<!-- 1) bevorzugter Pfad (Konfiguration) -->
+		<Copy Condition="Exists('$(NativeDllPathConfig)')"
+			  SourceFiles="$(NativeDllPathConfig)"
+			  DestinationFolder="$(TargetDir)"
+			  SkipUnchangedFiles="true" />
+
+		<!-- 2) fallback Release -->
+		<Copy Condition="!Exists('$(NativeDllPathConfig)') and Exists('$(NativeDllPathRelease)')"
+			  SourceFiles="$(NativeDllPathRelease)"
+			  DestinationFolder="$(TargetDir)"
+			  SkipUnchangedFiles="true" />
+
+		<!-- 3) fallback Debug -->
+		<Copy Condition="!Exists('$(NativeDllPathConfig)') and !Exists('$(NativeDllPathRelease)') and Exists('$(NativeDllPathDebug)')"
+			  SourceFiles="$(NativeDllPathDebug)"
+			  DestinationFolder="$(TargetDir)"
+			  SkipUnchangedFiles="true" />
+
+		<!-- Warnung wenn nicht gefunden -->
+		<Warning Condition="!Exists('$(NativeDllPathConfig)') and !Exists('$(NativeDllPathRelease)') and !Exists('$(NativeDllPathDebug)')"
+				 Text="Native DLL not found. Build PocxWallet.Native first (see build-dependencies scripts) or adjust path in the csproj." />
+	</Target>
 
 </Project>
