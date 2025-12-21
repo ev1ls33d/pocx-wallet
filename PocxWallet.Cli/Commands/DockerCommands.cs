@@ -333,6 +333,9 @@ public static class DockerCommands
     /// </summary>
     public static async Task StartElectrsContainerAsync(AppSettings settings)
     {
+        const int ElectrsHttpPort = 3000;
+        const int ElectrsRpcPort = 50001;
+        
         var docker = GetDockerManager(settings);
 
         if (!await docker.IsDockerAvailableAsync())
@@ -363,8 +366,8 @@ public static class DockerCommands
 
         var portMappings = new Dictionary<int, int>
         {
-            { 3000, 3000 },  // HTTP API port
-            { 50001, 50001 }  // Electrum RPC port
+            { ElectrsHttpPort, ElectrsHttpPort },  // HTTP API port
+            { ElectrsRpcPort, ElectrsRpcPort }  // Electrum RPC port
         };
 
         await docker.StartContainerAsync(
@@ -372,7 +375,7 @@ public static class DockerCommands
             "electrs-pocx",
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: "electrs --http-addr 0.0.0.0:3000 --electrum-rpc-addr 0.0.0.0:50001 --daemon-dir /root/.bitcoin --db-dir /data"
+            command: $"electrs --http-addr 0.0.0.0:{ElectrsHttpPort} --electrum-rpc-addr 0.0.0.0:{ElectrsRpcPort} --daemon-dir /root/.bitcoin --db-dir /data"
         );
 
         // Register with background service manager
@@ -410,6 +413,8 @@ public static class DockerCommands
         foreach (var container in containers)
         {
             await docker.RemoveContainerAsync(container.Name);
+            // Also remove from background service manager
+            BackgroundServiceManager.RemoveService(container.Name);
         }
 
         AnsiConsole.MarkupLine("[green]✓[/] All containers removed");
