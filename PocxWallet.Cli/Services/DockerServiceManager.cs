@@ -326,7 +326,7 @@ public class DockerServiceManager
         var containers = new List<ContainerInfo>();
         
         var result = await ExecuteCommandAsync("docker", 
-            "ps -a --filter name=bitcoin-pocx --filter name=pocx-miner --filter name=pocx-plotter " +
+            "ps -a --filter name=bitcoin-pocx --filter name=pocx-miner --filter name=pocx-plotter --filter name=electrs-pocx " +
             "--format '{{.Names}}|{{.Status}}|{{.Ports}}'");
 
         if (result.exitCode == 0 && !string.IsNullOrWhiteSpace(result.output))

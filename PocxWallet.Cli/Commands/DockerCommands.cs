@@ -109,6 +109,10 @@ public static class DockerCommands
                     var pocxTask = ctx.AddTask("[green]PoCX tools image[/]");
                     await docker.PullImageAsync("pocx");
                     pocxTask.Value = 100;
+
+                    var electrsTask = ctx.AddTask("[green]Electrs-PoCX image[/]");
+                    await docker.PullImageAsync("electrs-pocx");
+                    electrsTask.Value = 100;
                 }
             });
 
@@ -322,6 +326,72 @@ public static class DockerCommands
         };
         
         AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Start Electrs-PoCX server container (Electrum server)
+    /// </summary>
+    public static async Task StartElectrsContainerAsync(AppSettings settings)
+    {
+        var docker = GetDockerManager(settings);
+
+        if (!await docker.IsDockerAvailableAsync())
+        {
+            AnsiConsole.MarkupLine("[red]Docker is not available. Please run Docker Setup first.[/]");
+            return;
+        }
+
+        var dataDir = AnsiConsole.Ask<string>("Electrs data directory on host (press Enter for default):", "./electrs-data");
+        
+        // Create data directory if it doesn't exist
+        if (!Directory.Exists(dataDir))
+        {
+            Directory.CreateDirectory(dataDir);
+        }
+
+        var absoluteDataDir = Path.GetFullPath(dataDir);
+
+        // Ask for Bitcoin node connection details
+        var daemonDir = AnsiConsole.Ask<string>("Bitcoin-PoCX data directory (press Enter for default):", "./bitcoin-data");
+        var absoluteDaemonDir = Path.GetFullPath(daemonDir);
+
+        var volumeMounts = new Dictionary<string, string>
+        {
+            { absoluteDataDir, "/data" },
+            { absoluteDaemonDir, "/root/.bitcoin" }
+        };
+
+        var portMappings = new Dictionary<int, int>
+        {
+            { 3000, 3000 },  // HTTP API port
+            { 50001, 50001 }  // Electrum RPC port
+        };
+
+        await docker.StartContainerAsync(
+            settings.ElectrsContainerName,
+            "electrs-pocx",
+            volumeMounts: volumeMounts,
+            portMappings: portMappings,
+            command: "electrs --http-addr 0.0.0.0:3000 --electrum-rpc-addr 0.0.0.0:50001 --daemon-dir /root/.bitcoin --db-dir /data"
+        );
+
+        // Register with background service manager
+        BackgroundServiceManager.RegisterService(
+            settings.ElectrsContainerName,
+            "Electrs-PoCX Server (Docker)"
+        );
+    }
+
+    /// <summary>
+    /// Stop Electrs-PoCX server container
+    /// </summary>
+    public static async Task StopElectrsContainerAsync(AppSettings settings)
+    {
+        var docker = GetDockerManager(settings);
+        
+        await docker.StopContainerAsync(settings.ElectrsContainerName);
+        
+        BackgroundServiceManager.RemoveService(settings.ElectrsContainerName);
     }
 
     /// <summary>

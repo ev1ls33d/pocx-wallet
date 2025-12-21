@@ -1,0 +1,42 @@
+# Multi-stage Dockerfile for Electrs-PoCX (Electrum server)
+# Stage 1: Builder
+FROM rust:latest AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    clang \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone electrs-pocx repository
+WORKDIR /build
+RUN git clone --single-branch https://github.com/PoC-Consortium/electrs-pocx.git
+
+# Build electrs binary
+WORKDIR /build/electrs-pocx
+RUN cargo build --release --bin electrs
+
+# Stage 2: Runtime
+FROM debian:bookworm-slim
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    librocksdb-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy binary from builder
+COPY --from=builder /build/electrs-pocx/target/release/electrs /usr/local/bin/
+
+# Create data directory for index storage
+RUN mkdir -p /data
+
+# Expose HTTP API port (default: 3000)
+# Expose Electrum RPC port (default: 50001)
+EXPOSE 3000 50001
+
+# Set working directory
+WORKDIR /data
+
+# Default command
+CMD ["electrs", "--http-addr", "0.0.0.0:3000", "--electrum-rpc-addr", "0.0.0.0:50001"]

@@ -69,4 +69,9 @@ public class AppSettings
     /// PoCX plotter container name
     /// </summary>
     public string PlotterContainerName { get; set; } = "pocx-plotter";
+
+    /// <summary>
+    /// Electrs-PoCX container name (Electrum server)
+    /// </summary>
+    public string ElectrsContainerName { get; set; } = "electrs-pocx";
 }

@@ -11,5 +11,6 @@
   "DockerImageTag": "latest",
   "BitcoinContainerName": "bitcoin-pocx-node",
   "MinerContainerName": "pocx-miner",
-  "PlotterContainerName": "pocx-plotter"
+  "PlotterContainerName": "pocx-plotter",
+  "ElectrsContainerName": "electrs-pocx"
 }
