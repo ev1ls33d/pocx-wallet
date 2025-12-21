@@ -210,7 +210,7 @@ docker build -t pocx:local -f Dockerfile.pocx .
 #### Electrs-PoCX Image
 
 ```bash
-docker build -t electrs-pocx:local -f Dockerfile.electrs-pocx .
+docker build -t electrs-pocx:local -f Dockerfile.electrs .
 ```
 
 To use local images, update settings:
