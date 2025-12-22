@@ -124,29 +124,6 @@ public class DockerServiceManager
     }
 
     /// <summary>
-    /// Pull a Docker image
-    /// </summary>
-    public async Task<bool> PullImageAsync(string imageName, string? imageTag = null)
-    {
-        var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
-        
-        AnsiConsole.MarkupLine($"[bold]Pulling Docker image:[/] {fullImageName}");
-        
-        var result = await ExecuteCommandAsync("docker", $"pull {fullImageName}");
-        
-        if (result.exitCode == 0)
-        {
-            AnsiConsole.MarkupLine("[green]✓[/] Image pulled successfully");
-            return true;
-        }
-        else
-        {
-            AnsiConsole.MarkupLine($"[red]Failed to pull image:[/] {result.output}");
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Ensure Docker network exists
     /// </summary>
     public async Task<bool> EnsureNetworkExistsAsync(string networkName)

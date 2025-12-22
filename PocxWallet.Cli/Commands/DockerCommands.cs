@@ -82,45 +82,6 @@ public static class DockerCommands
     }
 
     /// <summary>
-    /// Pull Docker images
-    /// </summary>
-    public static async Task PullImagesAsync(AppSettings settings)
-    {
-        var docker = GetDockerManager(settings);
-
-        if (!await docker.IsDockerAvailableAsync())
-        {
-            AnsiConsole.MarkupLine("[red]Docker is not available. Please run Docker Setup first.[/]");
-            return;
-        }
-
-        AnsiConsole.MarkupLine("[bold green]Pulling Docker images...[/]");
-        AnsiConsole.WriteLine();
-
-        await AnsiConsole.Progress()
-            .StartAsync(async ctx =>
-            {
-                var bitcoinTask = ctx.AddTask("[green]Bitcoin-PoCX image[/]");
-                var pullSuccess = await docker.PullImageAsync("bitcoin-pocx");
-                bitcoinTask.Value = 100;
-
-                if (pullSuccess)
-                {
-                    var pocxTask = ctx.AddTask("[green]PoCX tools image[/]");
-                    await docker.PullImageAsync("pocx");
-                    pocxTask.Value = 100;
-
-                    var electrsTask = ctx.AddTask("[green]Electrs-PoCX image[/]");
-                    await docker.PullImageAsync("electrs-pocx");
-                    electrsTask.Value = 100;
-                }
-            });
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[green]✓[/] Images pulled successfully");
-    }
-
-    /// <summary>
     /// Start Bitcoin-PoCX node container
     /// </summary>
     public static async Task StartBitcoinNodeContainerAsync(AppSettings settings)
