@@ -11,6 +11,9 @@ public class DockerServiceManager
 {
     private readonly string _registry;
     private readonly string _defaultImageTag;
+    
+    // Maximum log size to display before truncation
+    private const int MaxLogDisplaySize = 5000;
 
     public DockerServiceManager(string registry, string imageTag)
     {
@@ -341,9 +344,9 @@ public class DockerServiceManager
         var logs = await GetContainerLogsAsync(containerName, tailLines);
         
         // Limit log display to reasonable size
-        if (logs.Length > 5000)
+        if (logs.Length > MaxLogDisplaySize)
         {
-            logs = "...\n" + logs.Substring(logs.Length - 5000);
+            logs = "...\n" + logs.Substring(logs.Length - MaxLogDisplaySize);
         }
 
         var panel = new Panel(logs)

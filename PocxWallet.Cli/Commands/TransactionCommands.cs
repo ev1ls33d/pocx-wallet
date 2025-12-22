@@ -43,7 +43,9 @@ public static class TransactionCommands
                 {
                     var balance = settings.UseDocker
                         ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getbalance")
-                        : await NodeCommands.GetCliWrapper()!.GetBalanceAsync();
+                        : (NodeCommands.GetCliWrapper() != null 
+                            ? await NodeCommands.GetCliWrapper()!.GetBalanceAsync()
+                            : "Error: CLI wrapper not available");
 
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine($"[bold]Wallet Balance:[/] [green]{balance}[/]");
@@ -53,7 +55,9 @@ public static class TransactionCommands
             AnsiConsole.WriteLine();
             var walletInfo = settings.UseDocker
                 ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getwalletinfo")
-                : await NodeCommands.GetCliWrapper()!.GetWalletInfoAsync();
+                : (NodeCommands.GetCliWrapper() != null 
+                    ? await NodeCommands.GetCliWrapper()!.GetWalletInfoAsync()
+                    : "Error: CLI wrapper not available");
 
             var panel = new Panel(walletInfo)
             {
@@ -111,7 +115,9 @@ public static class TransactionCommands
                 {
                     var txid = settings.UseDocker
                         ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "sendtoaddress", toAddress, amount.ToString())
-                        : await NodeCommands.GetCliWrapper()!.SendToAddressAsync(toAddress, amount);
+                        : (NodeCommands.GetCliWrapper() != null 
+                            ? await NodeCommands.GetCliWrapper()!.SendToAddressAsync(toAddress, amount)
+                            : "Error: CLI wrapper not available");
 
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[green]√[/] Transaction sent!");
@@ -159,7 +165,9 @@ public static class TransactionCommands
                 {
                     var txs = settings.UseDocker
                         ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "listtransactions", "*", count.ToString())
-                        : await NodeCommands.GetCliWrapper()!.ListTransactionsAsync(count);
+                        : (NodeCommands.GetCliWrapper() != null 
+                            ? await NodeCommands.GetCliWrapper()!.ListTransactionsAsync(count)
+                            : "Error: CLI wrapper not available");
 
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine($"[bold]Recent Transactions (last {count}):[/]");
@@ -180,21 +188,6 @@ public static class TransactionCommands
 
     private static AppSettings LoadSettings()
     {
-        var settingsPath = "appsettings.json";
-        var settings = new AppSettings();
-        if (File.Exists(settingsPath))
-        {
-            try
-            {
-                var json = File.ReadAllText(settingsPath);
-                var config = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
-                if (config != null)
-                {
-                    settings = config;
-                }
-            }
-            catch { }
-        }
-        return settings;
+        return SettingsManager.LoadSettings();
     }
 }

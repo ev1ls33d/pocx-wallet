@@ -591,8 +591,17 @@ public static class NodeCommands
             // Import the descriptor
             AnsiConsole.MarkupLine("[yellow]Importing WIF into wallet...[/]");
             
-            // Build the descriptor JSON for import
-            var descriptorJson = $"[{{\"desc\": \"wpkh({wif})\", \"timestamp\": \"now\", \"label\": \"imported\"}}]";
+            // Build the descriptor JSON for import using proper JSON serialization
+            var descriptor = new[]
+            {
+                new
+                {
+                    desc = $"wpkh({wif})",
+                    timestamp = "now",
+                    label = "imported"
+                }
+            };
+            var descriptorJson = System.Text.Json.JsonSerializer.Serialize(descriptor);
             
             var importResult = settings.UseDocker
                 ? await ExecuteBitcoinCliDockerAsync(settings, "importdescriptors", $"'{descriptorJson}'")

@@ -1,4 +1,5 @@
 ﻿using PocxWallet.Core.Wallet;
+using PocxWallet.Cli.Configuration;
 using Spectre.Console;
 using NBitcoin;
 
@@ -100,21 +101,7 @@ public static class WalletCommands
         AnsiConsole.WriteLine();
 
         // Get settings to pass to NodeCommands
-        var settingsPath = "appsettings.json";
-        var settings = new Configuration.AppSettings();
-        if (File.Exists(settingsPath))
-        {
-            try
-            {
-                var json = File.ReadAllText(settingsPath);
-                var config = System.Text.Json.JsonSerializer.Deserialize<Configuration.AppSettings>(json);
-                if (config != null)
-                {
-                    settings = config;
-                }
-            }
-            catch { }
-        }
+        var settings = SettingsManager.LoadSettings();
 
         var success = await NodeCommands.ImportWalletFromWIFAsync(settings, walletName, wif, address, useTestnet);
         
