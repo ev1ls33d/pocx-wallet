@@ -8,6 +8,7 @@ The wallet can orchestrate the following Docker containers:
 - **bitcoin-pocx-node**: Bitcoin-PoCX full node (bitcoind, bitcoin-cli)
 - **pocx-miner**: PoCX mining service
 - **pocx-plotter**: PoCX plot file generator
+- **electrs-pocx**: Electrum server for lightweight wallet access and blockchain indexing
 
 ## Benefits of Using Docker
 
@@ -72,6 +73,7 @@ Main Menu → Docker Container Management → Pull Docker Images
 This downloads:
 - `ghcr.io/ev1ls33d/pocx-wallet/bitcoin-pocx:latest`
 - `ghcr.io/ev1ls33d/pocx-wallet/pocx:latest`
+- `ghcr.io/ev1ls33d/pocx-wallet/electrs-pocx:latest`
 
 ### 3. Start Services
 
@@ -120,6 +122,25 @@ The plotter will:
 - Generate plot files in the background
 - Automatically exit when plotting is complete
 
+#### Electrs-PoCX Server
+
+```
+Main Menu → Docker Container Management → Start Electrs-PoCX Server (Container)
+```
+
+You'll be asked for:
+- Electrs data directory on host (default: `./electrs-data`)
+- Bitcoin-PoCX data directory (default: `./bitcoin-data`)
+
+The Electrs server will:
+- Connect to your Bitcoin-PoCX node to index the blockchain
+- Mount the electrs data directory to store the index
+- Expose HTTP API on port 3000 for REST queries
+- Expose Electrum RPC on port 50001 for Electrum wallet connections
+- Provide fast blockchain queries without requiring a full node
+
+**Note:** Electrs requires a synced Bitcoin-PoCX node and significant disk space for the index (approximately 600GB+ after compaction).
+
 ## Managing Containers
 
 ### Check Container Status
@@ -147,6 +168,7 @@ Individual stop commands:
 ```
 Main Menu → Docker Container Management → Stop Bitcoin-PoCX Node (Container)
 Main Menu → Docker Container Management → Stop Miner (Container)
+Main Menu → Docker Container Management → Stop Electrs-PoCX Server (Container)
 ```
 
 Or stop all containers from the background services view.
@@ -167,6 +189,7 @@ This stops and deletes containers, but preserves your data and plots.
 Images are automatically built via GitHub Actions and published to:
 - https://github.com/ev1ls33d/pocx-wallet/pkgs/container/bitcoin-pocx
 - https://github.com/ev1ls33d/pocx-wallet/pkgs/container/pocx
+- https://github.com/ev1ls33d/pocx-wallet/pkgs/container/electrs-pocx
 
 ### Building Images Locally
 
@@ -182,6 +205,12 @@ docker build -t bitcoin-pocx:local -f Dockerfile.bitcoin-pocx .
 
 ```bash
 docker build -t pocx:local -f Dockerfile.pocx .
+```
+
+#### Electrs-PoCX Image
+
+```bash
+docker build -t electrs-pocx:local -f Dockerfile.electrs .
 ```
 
 To use local images, update settings:
@@ -203,7 +232,8 @@ Available in `appsettings.json`:
   "DockerImageTag": "latest",
   "BitcoinContainerName": "bitcoin-pocx-node",
   "MinerContainerName": "pocx-miner",
-  "PlotterContainerName": "pocx-plotter"
+  "PlotterContainerName": "pocx-plotter",
+  "ElectrsContainerName": "electrs-pocx"
 }
 ```
 
@@ -228,6 +258,8 @@ Containers automatically mount directories for data persistence:
 | pocx-miner | `./plots` | `/plots` | Plot files (read) |
 | pocx-miner | `./config` | `/config` | Miner config |
 | pocx-plotter | `./plots` | `/plots` | Plot files (write) |
+| electrs-pocx | `./electrs-data` | `/data` | Electrs index storage |
+| electrs-pocx | `./bitcoin-data` | `/root/.bitcoin` | Bitcoin node data (read) |
 
 ## Port Mappings
 
@@ -235,6 +267,8 @@ Containers automatically mount directories for data persistence:
 |-----------|-----------|----------------|---------|
 | bitcoin-pocx-node | 18332 | 18332 | RPC API |
 | bitcoin-pocx-node | 18333 | 18333 | P2P Network |
+| electrs-pocx | 3000 | 3000 | HTTP REST API |
+| electrs-pocx | 50001 | 50001 | Electrum RPC |
 
 ## Troubleshooting
 

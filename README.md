@@ -41,6 +41,14 @@ A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)]
   - Real-time blockchain synchronization
   - Persistent blockchain data storage
 
+- 🔌 **Electrum Server (Electrs-PoCX)**
+  - Docker container support for Electrum server
+  - Fast blockchain indexing with RocksDB
+  - HTTP REST API for blockchain queries
+  - Electrum RPC protocol support
+  - Enables lightweight wallet access without a full node
+  - Efficient transaction and address lookups
+
 - 💰 **Transaction Features**
   - Check wallet balance via node RPC
   - Send funds to other addresses
