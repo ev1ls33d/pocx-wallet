@@ -169,7 +169,7 @@ public class DockerServiceManager
         
         // Always stop and remove existing container to ensure settings changes are applied
         AnsiConsole.MarkupLine($"[dim]Cleaning up existing container if present...[/]");
-        await ExecuteCommandAsync("docker", $"stop {containerName}", suppressOutput: true);
+        await ExecuteCommandAsync("docker", $"stop --time=10 {containerName}", suppressOutput: true);
         await ExecuteCommandAsync("docker", $"rm {containerName}", suppressOutput: true);
 
         // Build docker run command
