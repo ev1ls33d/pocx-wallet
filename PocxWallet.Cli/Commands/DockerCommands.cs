@@ -82,41 +82,6 @@ public static class DockerCommands
     }
 
     /// <summary>
-    /// Pull Docker images
-    /// </summary>
-    public static async Task PullImagesAsync(AppSettings settings)
-    {
-        var docker = GetDockerManager(settings);
-
-        if (!await docker.IsDockerAvailableAsync())
-        {
-            AnsiConsole.MarkupLine("[red]Docker is not available. Please run Docker Setup first.[/]");
-            return;
-        }
-
-        AnsiConsole.MarkupLine("[bold green]Pulling Docker images...[/]");
-        AnsiConsole.WriteLine();
-
-        await AnsiConsole.Progress()
-            .StartAsync(async ctx =>
-            {
-                var bitcoinTask = ctx.AddTask("[green]Bitcoin-PoCX image[/]");
-                var pullSuccess = await docker.PullImageAsync("bitcoin-pocx");
-                bitcoinTask.Value = 100;
-
-                if (pullSuccess)
-                {
-                    var pocxTask = ctx.AddTask("[green]PoCX tools image[/]");
-                    await docker.PullImageAsync("pocx");
-                    pocxTask.Value = 100;
-                }
-            });
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[green]✓[/] Images pulled successfully");
-    }
-
-    /// <summary>
     /// Start Bitcoin-PoCX node container
     /// </summary>
     public static async Task StartBitcoinNodeContainerAsync(AppSettings settings)
@@ -325,6 +290,75 @@ public static class DockerCommands
     }
 
     /// <summary>
+    /// Start Electrs-PoCX server container (Electrum server)
+    /// </summary>
+    public static async Task StartElectrsContainerAsync(AppSettings settings)
+    {
+        const int ElectrsHttpPort = 3000;
+        const int ElectrsRpcPort = 50001;
+        
+        var docker = GetDockerManager(settings);
+
+        if (!await docker.IsDockerAvailableAsync())
+        {
+            AnsiConsole.MarkupLine("[red]Docker is not available. Please run Docker Setup first.[/]");
+            return;
+        }
+
+        var dataDir = AnsiConsole.Ask<string>("Electrs data directory on host (press Enter for default):", "./electrs-data");
+        
+        // Create data directory if it doesn't exist
+        if (!Directory.Exists(dataDir))
+        {
+            Directory.CreateDirectory(dataDir);
+        }
+
+        var absoluteDataDir = Path.GetFullPath(dataDir);
+
+        // Ask for Bitcoin node connection details
+        var daemonDir = AnsiConsole.Ask<string>("Bitcoin-PoCX data directory (press Enter for default):", "./bitcoin-data");
+        var absoluteDaemonDir = Path.GetFullPath(daemonDir);
+
+        var volumeMounts = new Dictionary<string, string>
+        {
+            { absoluteDataDir, "/data" },
+            { absoluteDaemonDir, "/root/.bitcoin" }
+        };
+
+        var portMappings = new Dictionary<int, int>
+        {
+            { ElectrsHttpPort, ElectrsHttpPort },  // HTTP API port
+            { ElectrsRpcPort, ElectrsRpcPort }  // Electrum RPC port
+        };
+
+        await docker.StartContainerAsync(
+            settings.ElectrsContainerName,
+            "electrs-pocx",
+            volumeMounts: volumeMounts,
+            portMappings: portMappings,
+            command: $"electrs --http-addr 0.0.0.0:{ElectrsHttpPort} --electrum-rpc-addr 0.0.0.0:{ElectrsRpcPort} --daemon-dir /root/.bitcoin --db-dir /data"
+        );
+
+        // Register with background service manager
+        BackgroundServiceManager.RegisterService(
+            settings.ElectrsContainerName,
+            "Electrs-PoCX Server (Docker)"
+        );
+    }
+
+    /// <summary>
+    /// Stop Electrs-PoCX server container
+    /// </summary>
+    public static async Task StopElectrsContainerAsync(AppSettings settings)
+    {
+        var docker = GetDockerManager(settings);
+        
+        await docker.StopContainerAsync(settings.ElectrsContainerName);
+        
+        BackgroundServiceManager.RemoveService(settings.ElectrsContainerName);
+    }
+
+    /// <summary>
     /// Remove all PoCX containers
     /// </summary>
     public static async Task RemoveAllContainersAsync(AppSettings settings)
@@ -340,6 +374,8 @@ public static class DockerCommands
         foreach (var container in containers)
         {
             await docker.RemoveContainerAsync(container.Name);
+            // Also remove from background service manager
+            BackgroundServiceManager.RemoveService(container.Name);
         }
 
         AnsiConsole.MarkupLine("[green]✓[/] All containers removed");

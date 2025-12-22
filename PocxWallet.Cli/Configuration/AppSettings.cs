@@ -36,9 +36,9 @@ public class AppSettings
     public int BitcoinNodePort { get; set; } = 18332;
 
     /// <summary>
-    /// Path to Bitcoin-PoCX binaries
+    /// Path to Bitcoin binaries
     /// </summary>
-    public string BitcoinBinariesPath { get; set; } = "./bitcoin-pocx/src";
+    public string BitcoinBinariesPath { get; set; } = "./bitcoin/src";
 
     /// <summary>
     /// Use Docker containers for services (recommended)
@@ -56,17 +56,52 @@ public class AppSettings
     public string DockerImageTag { get; set; } = "latest";
 
     /// <summary>
-    /// Bitcoin-PoCX container name
+    /// Docker network name
     /// </summary>
-    public string BitcoinContainerName { get; set; } = "bitcoin-pocx-node";
+    public string DockerNetwork { get; set; } = "pocx";
+
+    /// <summary>
+    /// Bitcoin node container name
+    /// </summary>
+    public string BitcoinContainerName { get; set; } = "pocx-node";
 
     /// <summary>
     /// PoCX miner container name
     /// </summary>
-    public string MinerContainerName { get; set; } = "pocx-miner";
+    public string MinerContainerName { get; set; } = "miner";
 
     /// <summary>
     /// PoCX plotter container name
     /// </summary>
-    public string PlotterContainerName { get; set; } = "pocx-plotter";
+    public string PlotterContainerName { get; set; } = "plotter";
+
+    /// <summary>
+    /// Electrs container name (Electrum server)
+    /// </summary>
+    public string ElectrsContainerName { get; set; } = "electrs";
+
+    /// <summary>
+    /// Enable Electrs (Electrum server) alongside the node
+    /// </summary>
+    public bool EnableElectrs { get; set; } = false;
+
+    /// <summary>
+    /// Bitcoin node specific settings
+    /// </summary>
+    public BitcoinNodeSettings BitcoinNode { get; set; } = new();
+
+    /// <summary>
+    /// Electrs specific settings
+    /// </summary>
+    public ElectrsSettings Electrs { get; set; } = new();
+
+    /// <summary>
+    /// Miner specific settings
+    /// </summary>
+    public MinerSettings Miner { get; set; } = new();
+
+    /// <summary>
+    /// Plotter specific settings
+    /// </summary>
+    public PlotterSettings Plotter { get; set; } = new();
 }

@@ -11,6 +11,9 @@ public class DockerServiceManager
 {
     private readonly string _registry;
     private readonly string _defaultImageTag;
+    
+    // Maximum log size to display before truncation
+    private const int MaxLogDisplaySize = 5000;
 
     public DockerServiceManager(string registry, string imageTag)
     {
@@ -124,26 +127,32 @@ public class DockerServiceManager
     }
 
     /// <summary>
-    /// Pull a Docker image
+    /// Ensure Docker network exists
     /// </summary>
-    public async Task<bool> PullImageAsync(string imageName, string? imageTag = null)
+    public async Task<bool> EnsureNetworkExistsAsync(string networkName)
     {
-        var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
+        // Check if network exists
+        var result = await ExecuteCommandAsync("docker", $"network ls -q -f name=^{networkName}$");
         
-        AnsiConsole.MarkupLine($"[bold]Pulling Docker image:[/] {fullImageName}");
-        
-        var result = await ExecuteCommandAsync("docker", $"pull {fullImageName}");
-        
-        if (result.exitCode == 0)
+        if (string.IsNullOrWhiteSpace(result.output))
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Image pulled successfully");
-            return true;
+            // Create network
+            AnsiConsole.MarkupLine($"[bold]Creating Docker network:[/] {networkName}");
+            var createResult = await ExecuteCommandAsync("docker", $"network create {networkName}");
+            
+            if (createResult.exitCode == 0)
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Network created successfully");
+                return true;
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]Failed to create network:[/] {createResult.output}");
+                return false;
+            }
         }
-        else
-        {
-            AnsiConsole.MarkupLine($"[red]Failed to pull image:[/] {result.output}");
-            return false;
-        }
+        
+        return true;
     }
 
     /// <summary>
@@ -156,7 +165,9 @@ public class DockerServiceManager
         Dictionary<string, string>? volumeMounts = null,
         Dictionary<int, int>? portMappings = null,
         string? command = null,
-        string? imageTag = null)
+        string? imageTag = null,
+        string? network = null,
+        List<string>? readOnlyVolumes = null)
     {
         var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
         
@@ -181,7 +192,14 @@ public class DockerServiceManager
         }
 
         // Build docker run command
-        var args = new List<string> { "run", "-d", "--name", containerName };
+        var args = new List<string> { "run", "-dit", "--name", containerName };
+
+        // Add network if specified
+        if (!string.IsNullOrWhiteSpace(network))
+        {
+            args.Add("--network");
+            args.Add(network);
+        }
 
         // Add environment variables
         if (environmentVars != null)
@@ -198,8 +216,9 @@ public class DockerServiceManager
         {
             foreach (var (hostPath, containerPath) in volumeMounts)
             {
+                var isReadOnly = readOnlyVolumes?.Contains(hostPath) ?? false;
                 args.Add("-v");
-                args.Add($"{hostPath}:{containerPath}");
+                args.Add($"{hostPath}:{containerPath}{(isReadOnly ? ":ro" : "")}");
             }
         }
 
@@ -306,6 +325,41 @@ public class DockerServiceManager
     }
 
     /// <summary>
+    /// Display container logs in a formatted panel
+    /// </summary>
+    public async Task DisplayContainerLogsAsync(string containerName, int tailLines = 50, string title = "Container Logs")
+    {
+        ValidateContainerName(containerName);
+        
+        var status = await GetContainerStatusAsync(containerName);
+        if (status == "not found")
+        {
+            AnsiConsole.MarkupLine($"[yellow]Container '{containerName}' is not running[/]");
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[bold]Container Status:[/] [{(status == "running" ? "green" : "yellow")}]{status}[/]");
+        AnsiConsole.WriteLine();
+
+        var logs = await GetContainerLogsAsync(containerName, tailLines);
+        
+        // Limit log display to reasonable size
+        if (logs.Length > MaxLogDisplaySize)
+        {
+            logs = "...\n" + logs.Substring(logs.Length - MaxLogDisplaySize);
+        }
+
+        var panel = new Panel(logs)
+        {
+            Header = new PanelHeader($"[bold]{title} (last {tailLines} lines)[/]"),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(status == "running" ? Color.Green : Color.Yellow)
+        };
+        
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
     /// Validate container name to prevent command injection
     /// </summary>
     private void ValidateContainerName(string containerName)
@@ -326,7 +380,7 @@ public class DockerServiceManager
         var containers = new List<ContainerInfo>();
         
         var result = await ExecuteCommandAsync("docker", 
-            "ps -a --filter name=bitcoin-pocx --filter name=pocx-miner --filter name=pocx-plotter " +
+            "ps -a --filter name=pocx-node --filter name=miner --filter name=plotter --filter name=electrs " +
             "--format '{{.Names}}|{{.Status}}|{{.Ports}}'");
 
         if (result.exitCode == 0 && !string.IsNullOrWhiteSpace(result.output))

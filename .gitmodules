@@ -2,7 +2,10 @@
 	path = pocx
 	url = https://github.com/PoC-Consortium/pocx.git
 	branch = master
-[submodule "bitcoin-pocx"]
-	path = bitcoin-pocx
+[submodule "electrs"]
+	path = electrs
+	url = https://github.com/PoC-Consortium/electrs-pocx.git
+[submodule "bitcoin"]
+	path = bitcoin
 	url = https://github.com/PoC-Consortium/bitcoin.git
 	branch = pocx-v30-RC2
