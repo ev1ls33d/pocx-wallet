@@ -80,11 +80,17 @@ public static class MiningCommands
             { Path.GetFullPath(configDir ?? "."), "/config" }
         };
 
+        // Build environment variables from settings
+        var envVars = new Dictionary<string, string>(settings.Miner.EnvironmentVariables);
+
+        var command = $"pocx_miner -c /config/{configFileName} {settings.Miner.AdditionalParams}";
+
         var success = await docker.StartContainerAsync(
             settings.MinerContainerName,
             "pocx",
+            environmentVars: envVars.Count > 0 ? envVars : null,
             volumeMounts: volumeMounts,
-            command: $"pocx_miner -c /config/{configFileName}"
+            command: command
         );
 
         if (success)

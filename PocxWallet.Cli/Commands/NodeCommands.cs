@@ -69,9 +69,10 @@ public static class NodeCommands
             return;
         }
 
+        // Use configured data directory or default
         if (string.IsNullOrWhiteSpace(dataDir))
         {
-            dataDir = "./bitcoin-data";
+            dataDir = settings.BitcoinNode.DataDirectory;
         }
 
         // Create data directory if it doesn't exist
@@ -87,21 +88,27 @@ public static class NodeCommands
             { absoluteDataDir, "/root/.bitcoin" }
         };
 
+        // Build environment variables from settings
+        var envVars = new Dictionary<string, string>(settings.BitcoinNode.EnvironmentVariables);
+
         // Don't expose ports on node if electrs will handle it
         Dictionary<int, int>? portMappings = settings.EnableElectrs ? null : new Dictionary<int, int>
         {
-            { settings.BitcoinNodePort, 18332 },
-            { 18333, 18333 }  // P2P port
+            { settings.BitcoinNode.RpcPort, 18332 },
+            { settings.BitcoinNode.P2PPort, 18333 }  // P2P port
         };
 
         AnsiConsole.MarkupLine("[bold]Starting Bitcoin node...[/]");
         
+        var command = $"bitcoind -rpcport=18332 {settings.BitcoinNode.AdditionalParams}";
+        
         var success = await docker.StartContainerAsync(
             settings.BitcoinContainerName,
             "bitcoin",
+            environmentVars: envVars.Count > 0 ? envVars : null,
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: "bitcoind -printtoconsole -rpcport=18332 -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0",
+            command: command,
             network: settings.DockerNetwork
         );
 
@@ -125,10 +132,6 @@ public static class NodeCommands
 
     private static async Task StartElectrsDockerAsync(AppSettings settings, string? bitcoinDataDir = null)
     {
-        const int ElectrsHttpPort = 3000;
-        const int ElectrsRpcPort = 50001;
-        const int ElectrsTestnetPort = 60001;
-
         var docker = GetDockerManager(settings);
 
         // Check if electrs is already running
@@ -139,7 +142,7 @@ public static class NodeCommands
             return;
         }
 
-        var electrsDataDir = "./electrs-data";
+        var electrsDataDir = settings.Electrs.DataDirectory;
         if (!Directory.Exists(electrsDataDir))
         {
             Directory.CreateDirectory(electrsDataDir);
@@ -149,32 +152,43 @@ public static class NodeCommands
         
         if (string.IsNullOrWhiteSpace(bitcoinDataDir))
         {
-            bitcoinDataDir = "./bitcoin-data";
+            bitcoinDataDir = settings.BitcoinNode.DataDirectory;
         }
         var absoluteBitcoinDataDir = Path.GetFullPath(bitcoinDataDir);
 
+        // Volume mounts: electrs needs read-only access to bitcoin's .cookie file
         var volumeMounts = new Dictionary<string, string>
         {
             { absoluteElectrsDataDir, "/data" },
             { absoluteBitcoinDataDir, "/root/.bitcoin" }
         };
 
+        // Mark bitcoin data directory as read-only (for .cookie file access)
+        var readOnlyVolumes = new List<string> { absoluteBitcoinDataDir };
+
         var portMappings = new Dictionary<int, int>
         {
-            { ElectrsHttpPort, ElectrsHttpPort },
-            { ElectrsRpcPort, ElectrsRpcPort },
-            { ElectrsTestnetPort, ElectrsTestnetPort }
+            { settings.Electrs.HttpPort, settings.Electrs.HttpPort },
+            { settings.Electrs.RpcPort, settings.Electrs.RpcPort },
+            { settings.Electrs.TestnetPort, settings.Electrs.TestnetPort }
         };
 
+        // Build environment variables from settings
+        var envVars = new Dictionary<string, string>(settings.Electrs.EnvironmentVariables);
+
         AnsiConsole.MarkupLine("[bold]Starting Electrs server...[/]");
+
+        var command = $"electrs --http-addr 0.0.0.0:{settings.Electrs.HttpPort} --electrum-rpc-addr 0.0.0.0:{settings.Electrs.RpcPort} --daemon-rpc-addr {settings.BitcoinContainerName}:18332 --daemon-dir /root/.bitcoin --db-dir /data {settings.Electrs.AdditionalParams}";
 
         var success = await docker.StartContainerAsync(
             settings.ElectrsContainerName,
             "electrs",
+            environmentVars: envVars.Count > 0 ? envVars : null,
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: $"electrs --http-addr 0.0.0.0:{ElectrsHttpPort} --electrum-rpc-addr 0.0.0.0:{ElectrsRpcPort} --daemon-rpc-addr {settings.BitcoinContainerName}:18332 --daemon-dir /root/.bitcoin --db-dir /data",
-            network: settings.DockerNetwork
+            command: command,
+            network: settings.DockerNetwork,
+            readOnlyVolumes: readOnlyVolumes
         );
 
         if (success)
@@ -184,9 +198,9 @@ public static class NodeCommands
                 "Electrs Server (Docker)"
             );
             AnsiConsole.MarkupLine("[green]✓[/] Electrs server started successfully");
-            AnsiConsole.MarkupLine($"[dim]HTTP API: http://localhost:{ElectrsHttpPort}[/]");
-            AnsiConsole.MarkupLine($"[dim]Electrum RPC: localhost:{ElectrsRpcPort}[/]");
-            AnsiConsole.MarkupLine($"[dim]Testnet RPC: localhost:{ElectrsTestnetPort}[/]");
+            AnsiConsole.MarkupLine($"[dim]HTTP API: http://localhost:{settings.Electrs.HttpPort}[/]");
+            AnsiConsole.MarkupLine($"[dim]Electrum RPC: localhost:{settings.Electrs.RpcPort}[/]");
+            AnsiConsole.MarkupLine($"[dim]Testnet RPC: localhost:{settings.Electrs.TestnetPort}[/]");
         }
     }
 

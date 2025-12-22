@@ -84,4 +84,24 @@ public class AppSettings
     /// Enable Electrs (Electrum server) alongside the node
     /// </summary>
     public bool EnableElectrs { get; set; } = false;
+
+    /// <summary>
+    /// Bitcoin node specific settings
+    /// </summary>
+    public BitcoinNodeSettings BitcoinNode { get; set; } = new();
+
+    /// <summary>
+    /// Electrs specific settings
+    /// </summary>
+    public ElectrsSettings Electrs { get; set; } = new();
+
+    /// <summary>
+    /// Miner specific settings
+    /// </summary>
+    public MinerSettings Miner { get; set; } = new();
+
+    /// <summary>
+    /// Plotter specific settings
+    /// </summary>
+    public PlotterSettings Plotter { get; set; } = new();
 }

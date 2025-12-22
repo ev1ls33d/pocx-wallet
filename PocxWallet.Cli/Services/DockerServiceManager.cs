@@ -163,7 +163,8 @@ public class DockerServiceManager
         Dictionary<int, int>? portMappings = null,
         string? command = null,
         string? imageTag = null,
-        string? network = null)
+        string? network = null,
+        List<string>? readOnlyVolumes = null)
     {
         var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
         
@@ -212,8 +213,9 @@ public class DockerServiceManager
         {
             foreach (var (hostPath, containerPath) in volumeMounts)
             {
+                var isReadOnly = readOnlyVolumes?.Contains(hostPath) ?? false;
                 args.Add("-v");
-                args.Add($"{hostPath}:{containerPath}");
+                args.Add($"{hostPath}:{containerPath}{(isReadOnly ? ":ro" : "")}");
             }
         }
 
