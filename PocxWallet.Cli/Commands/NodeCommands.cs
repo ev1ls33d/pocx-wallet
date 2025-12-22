@@ -48,11 +48,24 @@ public static class NodeCommands
             return;
         }
 
+        // Ensure Docker network exists
+        await docker.EnsureNetworkExistsAsync(settings.DockerNetwork);
+
         // Check if container is already running
         var status = await docker.GetContainerStatusAsync(settings.BitcoinContainerName);
         if (status == "running")
         {
-            AnsiConsole.MarkupLine("[yellow]Bitcoin-PoCX node container is already running![/]");
+            AnsiConsole.MarkupLine("[yellow]Bitcoin node container is already running![/]");
+            
+            // Check if electrs should also be started
+            if (settings.EnableElectrs)
+            {
+                var electrsStatus = await docker.GetContainerStatusAsync(settings.ElectrsContainerName);
+                if (electrsStatus != "running")
+                {
+                    await StartElectrsDockerAsync(settings, dataDir);
+                }
+            }
             return;
         }
 
@@ -74,18 +87,22 @@ public static class NodeCommands
             { absoluteDataDir, "/root/.bitcoin" }
         };
 
-        var portMappings = new Dictionary<int, int>
+        // Don't expose ports on node if electrs will handle it
+        Dictionary<int, int>? portMappings = settings.EnableElectrs ? null : new Dictionary<int, int>
         {
             { settings.BitcoinNodePort, 18332 },
             { 18333, 18333 }  // P2P port
         };
 
+        AnsiConsole.MarkupLine("[bold]Starting Bitcoin node...[/]");
+        
         var success = await docker.StartContainerAsync(
             settings.BitcoinContainerName,
-            "bitcoin-pocx",
+            "bitcoin",
             volumeMounts: volumeMounts,
             portMappings: portMappings,
-            command: "bitcoind -printtoconsole -rpcport=18332 -rpcallowip=127.0.0.1 -rpcbind=0.0.0.0"
+            command: "bitcoind -printtoconsole -rpcport=18332 -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0",
+            network: settings.DockerNetwork
         );
 
         if (success)
@@ -93,8 +110,83 @@ public static class NodeCommands
             // Register with background service manager
             BackgroundServiceManager.RegisterService(
                 settings.BitcoinContainerName,
-                "Bitcoin-PoCX Node (Docker)"
+                "Bitcoin Node (Docker)"
             );
+            
+            // Start electrs if enabled
+            if (settings.EnableElectrs)
+            {
+                // Wait a moment for node to initialize
+                await Task.Delay(2000);
+                await StartElectrsDockerAsync(settings, dataDir);
+            }
+        }
+    }
+
+    private static async Task StartElectrsDockerAsync(AppSettings settings, string? bitcoinDataDir = null)
+    {
+        const int ElectrsHttpPort = 3000;
+        const int ElectrsRpcPort = 50001;
+        const int ElectrsTestnetPort = 60001;
+
+        var docker = GetDockerManager(settings);
+
+        // Check if electrs is already running
+        var status = await docker.GetContainerStatusAsync(settings.ElectrsContainerName);
+        if (status == "running")
+        {
+            AnsiConsole.MarkupLine("[yellow]Electrs container is already running![/]");
+            return;
+        }
+
+        var electrsDataDir = "./electrs-data";
+        if (!Directory.Exists(electrsDataDir))
+        {
+            Directory.CreateDirectory(electrsDataDir);
+        }
+
+        var absoluteElectrsDataDir = Path.GetFullPath(electrsDataDir);
+        
+        if (string.IsNullOrWhiteSpace(bitcoinDataDir))
+        {
+            bitcoinDataDir = "./bitcoin-data";
+        }
+        var absoluteBitcoinDataDir = Path.GetFullPath(bitcoinDataDir);
+
+        var volumeMounts = new Dictionary<string, string>
+        {
+            { absoluteElectrsDataDir, "/data" },
+            { absoluteBitcoinDataDir, "/root/.bitcoin" }
+        };
+
+        var portMappings = new Dictionary<int, int>
+        {
+            { ElectrsHttpPort, ElectrsHttpPort },
+            { ElectrsRpcPort, ElectrsRpcPort },
+            { ElectrsTestnetPort, ElectrsTestnetPort }
+        };
+
+        AnsiConsole.MarkupLine("[bold]Starting Electrs server...[/]");
+
+        var success = await docker.StartContainerAsync(
+            settings.ElectrsContainerName,
+            "electrs",
+            volumeMounts: volumeMounts,
+            portMappings: portMappings,
+            command: $"electrs --http-addr 0.0.0.0:{ElectrsHttpPort} --electrum-rpc-addr 0.0.0.0:{ElectrsRpcPort} --daemon-rpc-addr {settings.BitcoinContainerName}:18332 --daemon-dir /root/.bitcoin --db-dir /data",
+            network: settings.DockerNetwork
+        );
+
+        if (success)
+        {
+            BackgroundServiceManager.RegisterService(
+                settings.ElectrsContainerName,
+                "Electrs Server (Docker)"
+            );
+            AnsiConsole.MarkupLine("[green]✓[/] Electrs server started successfully");
+            AnsiConsole.MarkupLine($"[dim]HTTP API: http://localhost:{ElectrsHttpPort}[/]");
+            AnsiConsole.MarkupLine($"[dim]Electrum RPC: localhost:{ElectrsRpcPort}[/]");
+            AnsiConsole.MarkupLine($"[dim]Testnet RPC: localhost:{ElectrsTestnetPort}[/]");
         }
     }
 
@@ -169,8 +261,21 @@ public static class NodeCommands
     {
         var docker = GetDockerManager(settings);
         
-        await docker.StopContainerAsync(settings.BitcoinContainerName);
+        // Stop electrs if it's running
+        if (settings.EnableElectrs)
+        {
+            var electrsStatus = await docker.GetContainerStatusAsync(settings.ElectrsContainerName);
+            if (electrsStatus == "running")
+            {
+                AnsiConsole.MarkupLine("[bold]Stopping Electrs server...[/]");
+                await docker.StopContainerAsync(settings.ElectrsContainerName);
+                BackgroundServiceManager.RemoveService(settings.ElectrsContainerName);
+            }
+        }
         
+        // Stop node
+        AnsiConsole.MarkupLine("[bold]Stopping Bitcoin node...[/]");
+        await docker.StopContainerAsync(settings.BitcoinContainerName);
         BackgroundServiceManager.RemoveService(settings.BitcoinContainerName);
     }
 

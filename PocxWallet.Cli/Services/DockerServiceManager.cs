@@ -147,6 +147,35 @@ public class DockerServiceManager
     }
 
     /// <summary>
+    /// Ensure Docker network exists
+    /// </summary>
+    public async Task<bool> EnsureNetworkExistsAsync(string networkName)
+    {
+        // Check if network exists
+        var result = await ExecuteCommandAsync("docker", $"network ls -q -f name=^{networkName}$");
+        
+        if (string.IsNullOrWhiteSpace(result.output))
+        {
+            // Create network
+            AnsiConsole.MarkupLine($"[bold]Creating Docker network:[/] {networkName}");
+            var createResult = await ExecuteCommandAsync("docker", $"network create {networkName}");
+            
+            if (createResult.exitCode == 0)
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Network created successfully");
+                return true;
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]Failed to create network:[/] {createResult.output}");
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /// <summary>
     /// Start a Docker container
     /// </summary>
     public async Task<bool> StartContainerAsync(
@@ -156,7 +185,8 @@ public class DockerServiceManager
         Dictionary<string, string>? volumeMounts = null,
         Dictionary<int, int>? portMappings = null,
         string? command = null,
-        string? imageTag = null)
+        string? imageTag = null,
+        string? network = null)
     {
         var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
         
@@ -181,7 +211,14 @@ public class DockerServiceManager
         }
 
         // Build docker run command
-        var args = new List<string> { "run", "-d", "--name", containerName };
+        var args = new List<string> { "run", "-dit", "--name", containerName };
+
+        // Add network if specified
+        if (!string.IsNullOrWhiteSpace(network))
+        {
+            args.Add("--network");
+            args.Add(network);
+        }
 
         // Add environment variables
         if (environmentVars != null)
@@ -326,7 +363,7 @@ public class DockerServiceManager
         var containers = new List<ContainerInfo>();
         
         var result = await ExecuteCommandAsync("docker", 
-            "ps -a --filter name=bitcoin-pocx --filter name=pocx-miner --filter name=pocx-plotter --filter name=electrs-pocx " +
+            "ps -a --filter name=pocx-node --filter name=miner --filter name=plotter --filter name=electrs " +
             "--format '{{.Names}}|{{.Status}}|{{.Ports}}'");
 
         if (result.exitCode == 0 && !string.IsNullOrWhiteSpace(result.output))

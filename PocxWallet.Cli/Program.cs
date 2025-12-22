@@ -30,17 +30,21 @@ enum MenuOptions
 
     // Plotting submenu
     Plotting_CreatePlot,
+    Plotting_Settings,
 
     // Mining submenu
     Mining_StartMining,
     Mining_StopMining,
     Mining_ShowMiningStatus,
     Mining_CreateMinerConfig,
+    Mining_Settings,
 
     // Node submenu
     Node_StartNode,
     Node_StopNode,
     Node_ShowNodeStatus,
+    Node_EnableElectrs,
+    Node_Settings,
 
     // Settings submenu
     Settings_ViewCurrentSettings,
@@ -52,9 +56,6 @@ enum MenuOptions
     Settings_ChangeDockerRegistry,
     Settings_CheckDockerStatus,
     Settings_SetupDocker,
-    Settings_PullDockerImages,
-    Settings_StartElectrsContainer,
-    Settings_StopElectrsContainer,
     Settings_SaveSettings,
 
     // General back option (einmalig, für alle Submenus)
@@ -85,17 +86,21 @@ static class MenuOptionsExtensions
 
             // Plotting
             MenuOptions.Plotting_CreatePlot =>                  Markup.Escape("Create Plot"),
+            MenuOptions.Plotting_Settings =>                    Markup.Escape("Plotter Settings"),
 
             // Mining
             MenuOptions.Mining_StartMining =>                   Markup.Escape("Start Mining"),
             MenuOptions.Mining_StopMining =>                    Markup.Escape("Stop Mining"),
             MenuOptions.Mining_ShowMiningStatus =>              Markup.Escape("Show Mining Status"),
             MenuOptions.Mining_CreateMinerConfig =>             Markup.Escape("Create Miner Config"),
+            MenuOptions.Mining_Settings =>                      Markup.Escape("Miner Settings"),
 
             // Node
             MenuOptions.Node_StartNode =>                       Markup.Escape("Start Node"),
             MenuOptions.Node_StopNode =>                        Markup.Escape("Stop Node"),
             MenuOptions.Node_ShowNodeStatus =>                  Markup.Escape("Show Node Status"),
+            MenuOptions.Node_EnableElectrs =>                   Markup.Escape("Toggle Electrs (Electrum Server)"),
+            MenuOptions.Node_Settings =>                        Markup.Escape("Node Settings"),
 
             // Settings
             MenuOptions.Settings_ViewCurrentSettings =>         Markup.Escape("View Current Settings"),
@@ -107,9 +112,6 @@ static class MenuOptionsExtensions
             MenuOptions.Settings_ChangeDockerRegistry =>        Markup.Escape("Change Docker Registry"),
             MenuOptions.Settings_CheckDockerStatus =>           Markup.Escape("Check Docker Status"),
             MenuOptions.Settings_SetupDocker =>                 Markup.Escape("Setup Docker"),
-            MenuOptions.Settings_PullDockerImages =>            Markup.Escape("Pull Docker Images"),
-            MenuOptions.Settings_StartElectrsContainer =>       Markup.Escape("Start Electrs-PoCX Server (Container)"),
-            MenuOptions.Settings_StopElectrsContainer =>        Markup.Escape("Stop Electrs-PoCX Server (Container)"),
             MenuOptions.Settings_SaveSettings =>                Markup.Escape("Save Settings"),
 
             // General
@@ -186,7 +188,15 @@ class Program
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Plotting_")).ToArray(),
                         new Func<Task>[]
                         {
-                            async () => await PlottingCommands.CreatePlotAsync(_settings)
+                            async () => await PlottingCommands.CreatePlotAsync(_settings),
+                            () =>
+                            {
+                                AnsiConsole.MarkupLine("[bold yellow]Plotter Settings (Service-specific)[/]");
+                                AnsiConsole.MarkupLine("[dim]Configure plotter-specific environment variables and parameters here[/]");
+                                AnsiConsole.MarkupLine("[dim]Press ENTER to return[/]");
+                                Console.ReadLine();
+                                return Task.CompletedTask;
+                            }
                         });
                     break;
 
@@ -199,7 +209,15 @@ class Program
                             async () => await MiningCommands.StartMiningAsync(_settings),
                             async () => await MiningCommands.StopMiningAsync(_settings),
                             async () => await MiningCommands.ShowMiningStatusAsync(_settings),
-                            () => { MiningCommands.CreateMinerConfig(_settings.MinerConfigPath); return Task.CompletedTask; }
+                            () => { MiningCommands.CreateMinerConfig(_settings.MinerConfigPath); return Task.CompletedTask; },
+                            () =>
+                            {
+                                AnsiConsole.MarkupLine("[bold yellow]Miner Settings (Service-specific)[/]");
+                                AnsiConsole.MarkupLine("[dim]Configure miner-specific environment variables and parameters here[/]");
+                                AnsiConsole.MarkupLine("[dim]Press ENTER to return[/]");
+                                Console.ReadLine();
+                                return Task.CompletedTask;
+                            }
                         });
                     break;
 
@@ -221,7 +239,23 @@ class Program
                                 await NodeCommands.StartNodeAsync(_settings, string.IsNullOrWhiteSpace(dataDir) ? null : dataDir);
                             },
                             async () => await NodeCommands.StopNodeAsync(_settings),
-                            async () => await NodeCommands.ShowNodeStatusAsync(_settings)
+                            async () => await NodeCommands.ShowNodeStatusAsync(_settings),
+                            () =>
+                            {
+                                _settings.EnableElectrs = !_settings.EnableElectrs;
+                                AnsiConsole.MarkupLine($"[green]✓[/] Electrs: {(_settings.EnableElectrs ? "Enabled" : "Disabled")}");
+                                AnsiConsole.MarkupLine("[dim]Electrs will {0} with the node on next start[/]", _settings.EnableElectrs ? "start" : "not start");
+                                return Task.CompletedTask;
+                            },
+                            () =>
+                            {
+                                AnsiConsole.MarkupLine("[bold yellow]Node Settings (Service-specific)[/]");
+                                AnsiConsole.MarkupLine($"[dim]Electrs Enabled: {_settings.EnableElectrs}[/]");
+                                AnsiConsole.MarkupLine("[dim]Configure node-specific environment variables and parameters here[/]");
+                                AnsiConsole.MarkupLine("[dim]Press ENTER to return[/]");
+                                Console.ReadLine();
+                                return Task.CompletedTask;
+                            }
                         });
                     break;
 
@@ -289,9 +323,6 @@ class Program
                             },
                             async () => await DockerCommands.CheckDockerStatusAsync(_settings),
                             async () => await DockerCommands.SetupDockerAsync(_settings),
-                            async () => await DockerCommands.PullImagesAsync(_settings),
-                            async () => await DockerCommands.StartElectrsContainerAsync(_settings),
-                            async () => await DockerCommands.StopElectrsContainerAsync(_settings),
                             () =>
                             {
                                 SaveConfiguration();

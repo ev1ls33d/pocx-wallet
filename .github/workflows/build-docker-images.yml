@@ -14,12 +14,12 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BITCOIN: ${{ github.repository }}/bitcoin-pocx
+  IMAGE_NAME_BITCOIN: ${{ github.repository }}/bitcoin
   IMAGE_NAME_POCX: ${{ github.repository }}/pocx
-  IMAGE_NAME_ELECTRS: ${{ github.repository }}/electrs-pocx
+  IMAGE_NAME_ELECTRS: ${{ github.repository }}/electrs
 
 jobs:
-  build-bitcoin-pocx:
+  build-bitcoin:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,7 +41,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Bitcoin-PoCX
+      - name: Extract metadata for Bitcoin
         id: meta-bitcoin
         uses: docker/metadata-action@v5
         with:
@@ -53,11 +53,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
 
-      - name: Build and push Bitcoin-PoCX image
+      - name: Build and push Bitcoin image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.bitcoin-pocx
+          file: ./Dockerfile.bitcoin
           push: true
           tags: ${{ steps.meta-bitcoin.outputs.tags }}
           labels: ${{ steps.meta-bitcoin.outputs.labels }}
@@ -109,7 +109,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-electrs-pocx:
+  build-electrs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -131,7 +131,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Electrs-PoCX
+      - name: Extract metadata for Electrs
         id: meta-electrs
         uses: docker/metadata-action@v5
         with:
@@ -143,7 +143,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
 
-      - name: Build and push Electrs-PoCX image
+      - name: Build and push Electrs image
         uses: docker/build-push-action@v5
         with:
           context: .
