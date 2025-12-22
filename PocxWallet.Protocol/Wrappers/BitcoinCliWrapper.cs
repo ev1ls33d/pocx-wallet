@@ -114,4 +114,141 @@ public class BitcoinCliWrapper : PoCXProcessWrapper
         var result = await ExecuteCliCommandAsync("stop");
         return result.Output;
     }
+
+    // ========== Wallet Management Commands ==========
+
+    /// <summary>
+    /// List all wallet directories
+    /// </summary>
+    public async Task<string> ListWalletDirAsync()
+    {
+        var result = await ExecuteCliCommandAsync("listwalletdir");
+        return result.Output;
+    }
+
+    /// <summary>
+    /// List currently loaded wallets
+    /// </summary>
+    public async Task<string> ListWalletsAsync()
+    {
+        var result = await ExecuteCliCommandAsync("listwallets");
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Load a wallet
+    /// </summary>
+    public async Task<string> LoadWalletAsync(string walletName, bool loadOnStartup = true)
+    {
+        var result = await ExecuteCliCommandAsync("loadwallet", walletName, loadOnStartup.ToString().ToLower());
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Create a new wallet
+    /// </summary>
+    public async Task<string> CreateWalletAsync(string walletName, bool disablePrivateKeys = false, bool blank = false, string? passphrase = null, bool avoidReuse = false, bool descriptors = true, bool loadOnStartup = true)
+    {
+        var args = new List<string> { walletName, disablePrivateKeys.ToString().ToLower(), blank.ToString().ToLower() };
+        if (!string.IsNullOrEmpty(passphrase))
+            args.Add(passphrase);
+        else
+            args.Add("\"\"");
+        args.Add(avoidReuse.ToString().ToLower());
+        args.Add(descriptors.ToString().ToLower());
+        args.Add(loadOnStartup.ToString().ToLower());
+        
+        var result = await ExecuteCliCommandAsync("createwallet", args.ToArray());
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Import descriptors (for importing wallets via WIF/descriptors)
+    /// </summary>
+    public async Task<string> ImportDescriptorsAsync(string descriptorsJson)
+    {
+        var result = await ExecuteCliCommandAsync("importdescriptors", $"'{descriptorsJson}'");
+        return result.Output;
+    }
+
+    /// <summary>
+    /// List received by address (with confirmations)
+    /// </summary>
+    public async Task<string> ListReceivedByAddressAsync(int minConfirmations = 0, bool includeEmpty = true, bool includeWatchOnly = true)
+    {
+        var result = await ExecuteCliCommandAsync("listreceivedbyaddress", minConfirmations.ToString(), includeEmpty.ToString().ToLower(), includeWatchOnly.ToString().ToLower());
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Get wallet info
+    /// </summary>
+    public async Task<string> GetWalletInfoAsync()
+    {
+        var result = await ExecuteCliCommandAsync("getwalletinfo");
+        return result.Output;
+    }
+
+    /// <summary>
+    /// List unspent transaction outputs
+    /// </summary>
+    public async Task<string> ListUnspentAsync(int minConfirmations = 1, int maxConfirmations = 9999999)
+    {
+        var result = await ExecuteCliCommandAsync("listunspent", minConfirmations.ToString(), maxConfirmations.ToString());
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Create a raw transaction
+    /// </summary>
+    public async Task<string> CreateRawTransactionAsync(string inputs, string outputs)
+    {
+        var result = await ExecuteCliCommandAsync("createrawtransaction", inputs, outputs);
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Sign a raw transaction with wallet
+    /// </summary>
+    public async Task<string> SignRawTransactionWithWalletAsync(string hexString)
+    {
+        var result = await ExecuteCliCommandAsync("signrawtransactionwithwallet", hexString);
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Send a raw transaction
+    /// </summary>
+    public async Task<string> SendRawTransactionAsync(string hexString)
+    {
+        var result = await ExecuteCliCommandAsync("sendrawtransaction", hexString);
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Estimate smart fee
+    /// </summary>
+    public async Task<string> EstimateSmartFeeAsync(int confirmationTarget = 6)
+    {
+        var result = await ExecuteCliCommandAsync("estimatesmartfee", confirmationTarget.ToString());
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Get address info
+    /// </summary>
+    public async Task<string> GetAddressInfoAsync(string address)
+    {
+        var result = await ExecuteCliCommandAsync("getaddressinfo", address);
+        return result.Output;
+    }
+
+    /// <summary>
+    /// Validate an address
+    /// </summary>
+    public async Task<string> ValidateAddressAsync(string address)
+    {
+        var result = await ExecuteCliCommandAsync("validateaddress", address);
+        return result.Output;
+    }
 }

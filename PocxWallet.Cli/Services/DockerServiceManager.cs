@@ -11,6 +11,9 @@ public class DockerServiceManager
 {
     private readonly string _registry;
     private readonly string _defaultImageTag;
+    
+    // Maximum log size to display before truncation
+    private const int MaxLogDisplaySize = 5000;
 
     public DockerServiceManager(string registry, string imageTag)
     {
@@ -163,7 +166,8 @@ public class DockerServiceManager
         Dictionary<int, int>? portMappings = null,
         string? command = null,
         string? imageTag = null,
-        string? network = null)
+        string? network = null,
+        List<string>? readOnlyVolumes = null)
     {
         var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
         
@@ -212,8 +216,9 @@ public class DockerServiceManager
         {
             foreach (var (hostPath, containerPath) in volumeMounts)
             {
+                var isReadOnly = readOnlyVolumes?.Contains(hostPath) ?? false;
                 args.Add("-v");
-                args.Add($"{hostPath}:{containerPath}");
+                args.Add($"{hostPath}:{containerPath}{(isReadOnly ? ":ro" : "")}");
             }
         }
 
@@ -317,6 +322,41 @@ public class DockerServiceManager
         
         var result = await ExecuteCommandAsync("docker", $"logs --tail {tailLines} {containerName}");
         return result.exitCode == 0 ? result.output : $"Failed to get logs: {result.output}";
+    }
+
+    /// <summary>
+    /// Display container logs in a formatted panel
+    /// </summary>
+    public async Task DisplayContainerLogsAsync(string containerName, int tailLines = 50, string title = "Container Logs")
+    {
+        ValidateContainerName(containerName);
+        
+        var status = await GetContainerStatusAsync(containerName);
+        if (status == "not found")
+        {
+            AnsiConsole.MarkupLine($"[yellow]Container '{containerName}' is not running[/]");
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[bold]Container Status:[/] [{(status == "running" ? "green" : "yellow")}]{status}[/]");
+        AnsiConsole.WriteLine();
+
+        var logs = await GetContainerLogsAsync(containerName, tailLines);
+        
+        // Limit log display to reasonable size
+        if (logs.Length > MaxLogDisplaySize)
+        {
+            logs = "...\n" + logs.Substring(logs.Length - MaxLogDisplaySize);
+        }
+
+        var panel = new Panel(logs)
+        {
+            Header = new PanelHeader($"[bold]{title} (last {tailLines} lines)[/]"),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(status == "running" ? Color.Green : Color.Yellow)
+        };
+        
+        AnsiConsole.Write(panel);
     }
 
     /// <summary>

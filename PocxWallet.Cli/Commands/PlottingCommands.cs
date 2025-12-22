@@ -48,7 +48,7 @@ public static class PlottingCommands
 
         var accountId = AnsiConsole.Ask<string>("Enter [green]account ID[/]:");
         var plotPath = AnsiConsole.Ask<string>("Enter [green]plot directory[/]:", settings.PlotDirectory);
-        var warps = AnsiConsole.Ask<int>("Enter number of [green]warps[/] (1 warp ~= 1GB):", 10);
+        var warps = AnsiConsole.Ask<int>("Enter number of [green]warps[/] (1 warp ~= 1GB):", settings.Plotter.DefaultWarps);
 
         // Create plot directory if it doesn't exist
         if (!Directory.Exists(plotPath))
@@ -63,14 +63,20 @@ public static class PlottingCommands
             { absolutePlotDir, "/plots" }
         };
 
-        AnsiConsole.MarkupLine("[yellow]Note: Plotter will run in background. Use 'Docker Management → View Logs' to monitor progress.[/]");
+        // Build environment variables from settings
+        var envVars = new Dictionary<string, string>(settings.Plotter.EnvironmentVariables);
+
+        AnsiConsole.MarkupLine("[yellow]Note: Plotter will run in background. Use 'View Logs' to monitor progress.[/]");
         AnsiConsole.WriteLine();
+
+        var command = $"pocx_plotter -a {accountId} -d /plots -w {warps} {settings.Plotter.AdditionalParams}";
 
         var success = await docker.StartContainerAsync(
             settings.PlotterContainerName,
             "pocx",
+            environmentVars: envVars.Count > 0 ? envVars : null,
             volumeMounts: volumeMounts,
-            command: $"pocx_plotter -a {accountId} -d /plots -w {warps}"
+            command: command
         );
 
         if (success)
@@ -143,5 +149,18 @@ public static class PlottingCommands
         }
     }
 
-
+    public static async Task ViewLogsAsync(AppSettings settings)
+    {
+        if (settings.UseDocker)
+        {
+            var docker = GetDockerManager(settings);
+            var lines = AnsiConsole.Ask("How many log lines to display?", 50);
+            await docker.DisplayContainerLogsAsync(settings.PlotterContainerName, lines, "Plotter Logs");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[yellow]Log viewing is only available in Docker mode[/]");
+            AnsiConsole.MarkupLine("[dim]Enable Docker mode in Settings to use this feature[/]");
+        }
+    }
 }

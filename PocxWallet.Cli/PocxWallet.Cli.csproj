@@ -19,7 +19,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>pocxwallet</AssemblyName>
+    
+    <!-- Single-file publish configuration -->
+    <!-- RuntimeIdentifier is specified at publish time via -r flag -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+
+  <!-- Ensure appsettings.json is copied to output but excluded from single-file -->
+  <ItemGroup>
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
 
   <!-- Pre-build target to build PoCX dependencies -->
   <!-- Note: Enable this if you want automatic builds on every compilation -->
