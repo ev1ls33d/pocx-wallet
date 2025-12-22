@@ -17,7 +17,6 @@ enum MenuOptions
     Main_Mining,
     Main_VanityAddressGenerator,
     Main_BitcoinPoCXNode,
-    Main_Settings,
     Main_Exit,
 
     // Wallet submenu
@@ -49,17 +48,9 @@ enum MenuOptions
     Node_EnableElectrs,
     Node_Settings,
 
-    // Settings submenu
-    Settings_ViewCurrentSettings,
-    Settings_ChangePoCXBinariesPath,
-    Settings_ChangePlotDirectory,
-    Settings_ChangeWalletFilePath,
-    Settings_ChangeMinerConfigPath,
-    Settings_ToggleDockerMode,
-    Settings_ChangeDockerRegistry,
-    Settings_CheckDockerStatus,
-    Settings_SetupDocker,
-    Settings_SaveSettings,
+    // Docker submenu
+    Docker_CheckStatus,
+    Docker_Setup,
 
     // General back option (einmalig, für alle Submenus)
     General_Back
@@ -76,7 +67,6 @@ static class MenuOptionsExtensions
             MenuOptions.Main_Mining =>                          Markup.Escape("[Mine]      Mining"),
             MenuOptions.Main_VanityAddressGenerator =>          Markup.Escape("[Vanity]    Vanity Address Generator"),
             MenuOptions.Main_BitcoinPoCXNode =>                 Markup.Escape("[Node]      Bitcoin-PoCX Node"),
-            MenuOptions.Main_Settings =>                        Markup.Escape("[Settings]  Settings"),
             MenuOptions.Main_Exit =>                            Markup.Escape("[Exit]      Exit"),
 
             // Wallet
@@ -108,17 +98,9 @@ static class MenuOptionsExtensions
             MenuOptions.Node_EnableElectrs =>                   Markup.Escape("Toggle Electrs (Electrum Server)"),
             MenuOptions.Node_Settings =>                        Markup.Escape("Node Settings"),
 
-            // Settings
-            MenuOptions.Settings_ViewCurrentSettings =>         Markup.Escape("View Current Settings"),
-            MenuOptions.Settings_ChangePoCXBinariesPath =>      Markup.Escape("Change PoCX Binaries Path"),
-            MenuOptions.Settings_ChangePlotDirectory =>         Markup.Escape("Change Plot Directory"),
-            MenuOptions.Settings_ChangeWalletFilePath =>        Markup.Escape("Change Wallet File Path"),
-            MenuOptions.Settings_ChangeMinerConfigPath =>       Markup.Escape("Change Miner Config Path"),
-            MenuOptions.Settings_ToggleDockerMode =>            Markup.Escape("Toggle Docker Mode"),
-            MenuOptions.Settings_ChangeDockerRegistry =>        Markup.Escape("Change Docker Registry"),
-            MenuOptions.Settings_CheckDockerStatus =>           Markup.Escape("Check Docker Status"),
-            MenuOptions.Settings_SetupDocker =>                 Markup.Escape("Setup Docker"),
-            MenuOptions.Settings_SaveSettings =>                Markup.Escape("Save Settings"),
+            // Docker
+            MenuOptions.Docker_CheckStatus =>                   Markup.Escape("Check Docker Status"),
+            MenuOptions.Docker_Setup =>                         Markup.Escape("Setup Docker"),
 
             // General
             MenuOptions.General_Back =>                         Markup.Escape("<= Back"),
@@ -277,78 +259,6 @@ class Program
                         });
                     break;
 
-                case MenuOptions.Main_Settings:
-                    await ShowMenuAsync(
-                        "Settings",
-                        Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Settings_")).ToArray(),
-                        new Func<Task>[]
-                        {
-                            () =>
-                            {
-                                var table = new Table();
-                                table.AddColumn("Setting");
-                                table.AddColumn("Value");
-                                table.AddRow("PoCX Binaries Path", _settings.PoCXBinariesPath);
-                                table.AddRow("Plot Directory", _settings.PlotDirectory);
-                                table.AddRow("Wallet File Path", _settings.WalletFilePath);
-                                table.AddRow("Miner Config Path", _settings.MinerConfigPath);
-                                table.AddRow("Use Docker", _settings.UseDocker.ToString());
-                                table.AddRow("Docker Registry", _settings.DockerRegistry);
-                                table.AddRow("Docker Image Tag", _settings.DockerImageTag);
-                                AnsiConsole.Write(table);
-                                return Task.CompletedTask;
-                            },
-                            () =>
-                            {
-                                _settings.PoCXBinariesPath = AnsiConsole.Ask<string>(
-                                    "Enter PoCX binaries path:",
-                                    _settings.PoCXBinariesPath);
-                                return Task.CompletedTask;
-                            },
-                            () =>
-                            {
-                                _settings.PlotDirectory = AnsiConsole.Ask<string>(
-                                    "Enter plot directory:",
-                                    _settings.PlotDirectory);
-                                return Task.CompletedTask;
-                            },
-                            () =>
-                            {
-                                _settings.WalletFilePath = AnsiConsole.Ask<string>(
-                                    "Enter wallet file path:",
-                                    _settings.WalletFilePath);
-                                return Task.CompletedTask;
-                            },
-                            () =>
-                            {
-                                _settings.MinerConfigPath = AnsiConsole.Ask<string>(
-                                    "Enter miner config path:",
-                                    _settings.MinerConfigPath);
-                                return Task.CompletedTask;
-                            },
-                            () =>
-                            {
-                                _settings.UseDocker = !_settings.UseDocker;
-                                AnsiConsole.MarkupLine($"[green]✓[/] Docker mode: {(_settings.UseDocker ? "Enabled" : "Disabled")}");
-                                return Task.CompletedTask;
-                            },
-                            () =>
-                            {
-                                _settings.DockerRegistry = AnsiConsole.Ask<string>(
-                                    "Enter Docker registry:",
-                                    _settings.DockerRegistry);
-                                return Task.CompletedTask;
-                            },
-                            async () => await DockerCommands.CheckDockerStatusAsync(_settings),
-                            async () => await DockerCommands.SetupDockerAsync(_settings),
-                            () =>
-                            {
-                                SaveConfiguration();
-                                return Task.CompletedTask;
-                            }
-                        });
-                    break;
-
                 case MenuOptions.Main_Exit:
                     exit = true;
                     AnsiConsole.MarkupLine("[bold yellow]Goodbye![/]");
@@ -393,37 +303,36 @@ class Program
 
     static void LoadConfiguration()
     {
-        var configPath = "appsettings.json";
-        if (File.Exists(configPath))
+        try
         {
-            try
-            {
-                var json = File.ReadAllText(configPath);
-                var config = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
-                if (config != null)
-                {
-                    _settings.PoCXBinariesPath = config.PoCXBinariesPath;
-                    _settings.PlotDirectory = config.PlotDirectory;
-                    _settings.WalletFilePath = config.WalletFilePath;
-                    _settings.MinerConfigPath = config.MinerConfigPath;
-                }
-            }
-            catch
-            {
-                // Use defaults if configuration fails to load
-            }
+            var loadedSettings = SettingsManager.LoadSettings();
+            // Copy all properties from loaded settings
+            _settings.PlotDirectory = loadedSettings.PlotDirectory;
+            _settings.WalletFilePath = loadedSettings.WalletFilePath;
+            _settings.MinerConfigPath = loadedSettings.MinerConfigPath;
+            _settings.BitcoinNodeHost = loadedSettings.BitcoinNodeHost;
+            _settings.BitcoinNodePort = loadedSettings.BitcoinNodePort;
+            _settings.DockerNetwork = loadedSettings.DockerNetwork;
+            _settings.BitcoinContainerName = loadedSettings.BitcoinContainerName;
+            _settings.MinerContainerName = loadedSettings.MinerContainerName;
+            _settings.PlotterContainerName = loadedSettings.PlotterContainerName;
+            _settings.ElectrsContainerName = loadedSettings.ElectrsContainerName;
+            _settings.EnableElectrs = loadedSettings.EnableElectrs;
+            _settings.BitcoinNode = loadedSettings.BitcoinNode;
+            _settings.Electrs = loadedSettings.Electrs;
+            _settings.Miner = loadedSettings.Miner;
+            _settings.Plotter = loadedSettings.Plotter;
+        }
+        catch
+        {
+            // Use defaults if configuration fails to load
         }
     }
 
     static void SaveConfiguration()
     {
-        var configPath = "appsettings.json";
-        var json = System.Text.Json.JsonSerializer.Serialize(_settings, new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
-        File.WriteAllText(configPath, json);
-        AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: {configPath}");
+        SettingsManager.SaveSettings(_settings);
+        AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: appsettings.json");
     }
 
     /// <summary>
@@ -465,9 +374,7 @@ class Program
     /// </summary>
     static async Task ShowServiceBannerAsync(AppSettings settings, string? serviceType = null)
     {
-        if (!settings.UseDocker) return;
-
-        var docker = new DockerServiceManager(settings.DockerRegistry, settings.DockerImageTag);
+        var docker = new DockerServiceManager();
         
         // Determine which containers to check based on service type
         var containersToCheck = new List<(string name, string label)>();

@@ -10,7 +10,6 @@ namespace PocxWallet.Cli.Commands;
 /// </summary>
 public static class NodeCommands
 {
-    private static BitcoinCliWrapper? _cliWrapper;
     private const string SERVICE_ID = "bitcoin-node";
     private static DockerServiceManager? _dockerManager;
 
@@ -257,75 +256,6 @@ public static class NodeCommands
             
             AnsiConsole.Write(panel);
         }
-    }
-
-    public static async Task CheckAddressBalanceAsync(string address)
-    {
-        if (_cliWrapper == null)
-        {
-            AnsiConsole.MarkupLine("[yellow]Bitcoin-PoCX node is not running[/]");
-            AnsiConsole.MarkupLine("[dim]Start the node first from the Node menu[/]");
-            return;
-        }
-
-        try
-        {
-            AnsiConsole.MarkupLine($"[bold]Checking balance for:[/] [green]{address}[/]");
-            
-            await AnsiConsole.Status()
-                .StartAsync("Querying node...", async ctx =>
-                {
-                    var balance = await _cliWrapper.GetBalanceAsync();
-                    AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine($"[bold]Balance:[/] {balance}");
-                });
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
-        }
-    }
-
-    public static async Task SendTransactionAsync(string toAddress, decimal amount)
-    {
-        if (_cliWrapper == null)
-        {
-            AnsiConsole.MarkupLine("[yellow]Bitcoin-PoCX node is not running[/]");
-            AnsiConsole.MarkupLine("[dim]Start the node first from the Node menu[/]");
-            return;
-        }
-
-        try
-        {
-            if (!AnsiConsole.Confirm($"Send {amount} PoCX to {toAddress}?", false))
-            {
-                AnsiConsole.MarkupLine("[yellow]Transaction cancelled[/]");
-                return;
-            }
-
-            await AnsiConsole.Status()
-                .StartAsync("Broadcasting transaction...", async ctx =>
-                {
-                    var txid = await _cliWrapper.SendToAddressAsync(toAddress, amount);
-                    AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[green]√[/] Transaction sent!");
-                    AnsiConsole.MarkupLine($"[bold]Transaction ID:[/] {txid}");
-                });
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
-        }
-    }
-
-    public static BitcoinCliWrapper? GetCliWrapper()
-    {
-        return _cliWrapper;
-    }
-
-    public static bool IsNodeRunning()
-    {
-        return _activeNode?.IsRunning == true;
     }
 
     /// <summary>
