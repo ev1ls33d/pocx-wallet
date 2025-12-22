@@ -1,4 +1,5 @@
 using PocxWallet.Core.Wallet;
+using PocxWallet.Cli.Configuration;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Commands;
@@ -12,43 +13,54 @@ public static class TransactionCommands
     {
         AnsiConsole.MarkupLine("[bold green]Check Balance[/]");
         
-        var walletPath = AnsiConsole.Ask<string>("Enter wallet file path:", "./wallet.json");
-
-        if (!File.Exists(walletPath))
+        // Check if node is running
+        if (!NodeCommands.IsNodeRunning())
         {
-            AnsiConsole.MarkupLine("[red]Wallet file not found![/]");
+            AnsiConsole.MarkupLine("[yellow]Note:[/] Balance checking requires a running Bitcoin-PoCX node.");
+            AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
             return;
         }
 
+        var walletName = AnsiConsole.Ask<string>("Enter wallet name:", "pocx_wallet");
+        
+        // Load settings
+        var settings = LoadSettings();
+
         try
         {
-            var json = File.ReadAllText(walletPath);
-            var walletData = System.Text.Json.JsonDocument.Parse(json);
-            var mnemonic = walletData.RootElement.GetProperty("mnemonic").GetString();
-
-            if (string.IsNullOrEmpty(mnemonic))
+            // Ensure wallet is loaded
+            var walletLoaded = await NodeCommands.EnsureWalletLoadedAsync(settings, walletName);
+            if (!walletLoaded)
             {
-                AnsiConsole.MarkupLine("[red]Invalid wallet file![/]");
+                AnsiConsole.MarkupLine($"[red]Wallet '{walletName}' not found in Bitcoin node[/]");
+                AnsiConsole.MarkupLine("[dim]Create or import a wallet first[/]");
                 return;
             }
 
-            var wallet = HDWallet.FromMnemonic(mnemonic);
-            var address = wallet.GetPoCXAddress(0, 0);
-
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{address}[/]");
-            AnsiConsole.WriteLine();
+            await AnsiConsole.Status()
+                .StartAsync("Fetching balance...", async ctx =>
+                {
+                    var balance = settings.UseDocker
+                        ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getbalance")
+                        : await NodeCommands.GetCliWrapper()!.GetBalanceAsync();
 
-            // Check if node is running
-            if (NodeCommands.IsNodeRunning())
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine($"[bold]Wallet Balance:[/] [green]{balance}[/]");
+                });
+
+            // Also show wallet info
+            AnsiConsole.WriteLine();
+            var walletInfo = settings.UseDocker
+                ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getwalletinfo")
+                : await NodeCommands.GetCliWrapper()!.GetWalletInfoAsync();
+
+            var panel = new Panel(walletInfo)
             {
-                await NodeCommands.CheckAddressBalanceAsync(address);
-            }
-            else
-            {
-                AnsiConsole.MarkupLine("[yellow]Note:[/] Balance checking requires a running Bitcoin-PoCX node.");
-                AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
-            }
+                Header = new PanelHeader("[bold]Wallet Info[/]"),
+                Border = BoxBorder.Rounded
+            };
+            AnsiConsole.Write(panel);
         }
         catch (Exception ex)
         {
@@ -60,47 +72,51 @@ public static class TransactionCommands
     {
         AnsiConsole.MarkupLine("[bold green]Send Funds[/]");
         
-        var walletPath = AnsiConsole.Ask<string>("Enter wallet file path:", "./wallet.json");
-
-        if (!File.Exists(walletPath))
+        // Check if node is running
+        if (!NodeCommands.IsNodeRunning())
         {
-            AnsiConsole.MarkupLine("[red]Wallet file not found![/]");
+            AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction broadcasting requires a running Bitcoin-PoCX node.");
+            AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
             return;
         }
 
+        var walletName = AnsiConsole.Ask<string>("Enter wallet name:", "pocx_wallet");
+        
+        // Load settings
+        var settings = LoadSettings();
+
         try
         {
-            var json = File.ReadAllText(walletPath);
-            var walletData = System.Text.Json.JsonDocument.Parse(json);
-            var mnemonic = walletData.RootElement.GetProperty("mnemonic").GetString();
-
-            if (string.IsNullOrEmpty(mnemonic))
+            // Ensure wallet is loaded
+            var walletLoaded = await NodeCommands.EnsureWalletLoadedAsync(settings, walletName);
+            if (!walletLoaded)
             {
-                AnsiConsole.MarkupLine("[red]Invalid wallet file![/]");
+                AnsiConsole.MarkupLine($"[red]Wallet '{walletName}' not found in Bitcoin node[/]");
+                AnsiConsole.MarkupLine("[dim]Create or import a wallet first[/]");
                 return;
             }
 
-            var wallet = HDWallet.FromMnemonic(mnemonic);
-            var fromAddress = wallet.GetPoCXAddress(0, 0);
-
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[bold]From Address:[/] [green]{fromAddress}[/]");
-            AnsiConsole.WriteLine();
-
             var toAddress = AnsiConsole.Ask<string>("Enter recipient [green]address[/]:");
             var amount = AnsiConsole.Ask<decimal>("Enter [green]amount[/] to send:");
 
-            // Check if node is running
-            if (NodeCommands.IsNodeRunning())
+            if (!AnsiConsole.Confirm($"Send {amount} PoCX to {toAddress}?", false))
             {
-                await NodeCommands.SendTransactionAsync(toAddress, amount);
+                AnsiConsole.MarkupLine("[yellow]Transaction cancelled[/]");
+                return;
             }
-            else
-            {
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction broadcasting requires a running Bitcoin-PoCX node.");
-                AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
-            }
+
+            await AnsiConsole.Status()
+                .StartAsync("Broadcasting transaction...", async ctx =>
+                {
+                    var txid = settings.UseDocker
+                        ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "sendtoaddress", toAddress, amount.ToString())
+                        : await NodeCommands.GetCliWrapper()!.SendToAddressAsync(toAddress, amount);
+
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[green]√[/] Transaction sent!");
+                    AnsiConsole.MarkupLine($"[bold]Transaction ID:[/] {txid}");
+                });
         }
         catch (Exception ex)
         {
@@ -112,65 +128,73 @@ public static class TransactionCommands
     {
         AnsiConsole.MarkupLine("[bold green]Transaction History[/]");
         
-        var walletPath = AnsiConsole.Ask<string>("Enter wallet file path:", "./wallet.json");
-
-        if (!File.Exists(walletPath))
+        // Check if node is running
+        if (!NodeCommands.IsNodeRunning())
         {
-            AnsiConsole.MarkupLine("[red]Wallet file not found![/]");
+            AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction history requires a running Bitcoin-PoCX node.");
+            AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
             return;
         }
 
+        var walletName = AnsiConsole.Ask<string>("Enter wallet name:", "pocx_wallet");
+        var count = AnsiConsole.Ask<int>("How many recent transactions to display?", 10);
+        
+        // Load settings
+        var settings = LoadSettings();
+
         try
         {
-            var json = File.ReadAllText(walletPath);
-            var walletData = System.Text.Json.JsonDocument.Parse(json);
-            var mnemonic = walletData.RootElement.GetProperty("mnemonic").GetString();
-
-            if (string.IsNullOrEmpty(mnemonic))
+            // Ensure wallet is loaded
+            var walletLoaded = await NodeCommands.EnsureWalletLoadedAsync(settings, walletName);
+            if (!walletLoaded)
             {
-                AnsiConsole.MarkupLine("[red]Invalid wallet file![/]");
+                AnsiConsole.MarkupLine($"[red]Wallet '{walletName}' not found in Bitcoin node[/]");
+                AnsiConsole.MarkupLine("[dim]Create or import a wallet first[/]");
                 return;
             }
 
-            var wallet = HDWallet.FromMnemonic(mnemonic);
-            var address = wallet.GetPoCXAddress(0, 0);
-
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{address}[/]");
-            AnsiConsole.WriteLine();
-
-            // Check if node is running
-            if (NodeCommands.IsNodeRunning())
-            {
-                var cli = NodeCommands.GetCliWrapper();
-                if (cli != null)
+            await AnsiConsole.Status()
+                .StartAsync("Fetching transactions...", async ctx =>
                 {
-                    try
+                    var txs = settings.UseDocker
+                        ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "listtransactions", "*", count.ToString())
+                        : await NodeCommands.GetCliWrapper()!.ListTransactionsAsync(count);
+
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine($"[bold]Recent Transactions (last {count}):[/]");
+                    
+                    var panel = new Panel(txs)
                     {
-                        await AnsiConsole.Status()
-                            .StartAsync("Fetching transactions...", async ctx =>
-                            {
-                                var txs = await cli.ListTransactionsAsync(10);
-                                AnsiConsole.WriteLine();
-                                AnsiConsole.MarkupLine("[bold]Recent Transactions:[/]");
-                                AnsiConsole.WriteLine(txs);
-                            });
-                    }
-                    catch (Exception ex)
-                    {
-                        AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
-                    }
-                }
-            }
-            else
-            {
-                AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction history requires a running Bitcoin-PoCX node.");
-                AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
-            }
+                        Border = BoxBorder.Rounded,
+                        BorderStyle = new Style(Color.Green)
+                    };
+                    AnsiConsole.Write(panel);
+                });
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
         }
+    }
+
+    private static AppSettings LoadSettings()
+    {
+        var settingsPath = "appsettings.json";
+        var settings = new AppSettings();
+        if (File.Exists(settingsPath))
+        {
+            try
+            {
+                var json = File.ReadAllText(settingsPath);
+                var config = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+                if (config != null)
+                {
+                    settings = config;
+                }
+            }
+            catch { }
+        }
+        return settings;
     }
 }

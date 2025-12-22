@@ -179,8 +179,8 @@ class Program
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Wallet_")).ToArray(),
                         new Func<Task> []
                         {
-                            () => { WalletCommands.CreateNewWallet(); return Task.CompletedTask; }, // CreateNewWallet
-                            () => { WalletCommands.RestoreWallet(); return Task.CompletedTask; }, // RestoreWallet
+                            async () => await WalletCommands.CreateNewWallet(), // CreateNewWallet
+                            async () => await WalletCommands.RestoreWallet(), // RestoreWallet
                             () => { WalletCommands.ShowAddresses(); return Task.CompletedTask; }, // ShowAddresses
                             async () => await TransactionCommands.CheckBalance(), // CheckBalance
                             async () => await TransactionCommands.SendFunds(), // SendFunds

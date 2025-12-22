@@ -498,4 +498,121 @@ public static class NodeCommands
     {
         return _activeNode?.IsRunning == true;
     }
+
+    /// <summary>
+    /// Execute bitcoin-cli command in Docker container
+    /// </summary>
+    public static async Task<string> ExecuteBitcoinCliDockerAsync(AppSettings settings, string command, params string[] args)
+    {
+        var docker = GetDockerManager(settings);
+        var allArgs = string.Join(" ", args);
+        var fullCommand = $"bitcoin-cli -rpcport=18332 {command} {allArgs}";
+        var result = await docker.ExecInContainerAsync(settings.BitcoinContainerName, fullCommand);
+        return result.output;
+    }
+
+    /// <summary>
+    /// Check if wallet exists and load it if necessary
+    /// </summary>
+    public static async Task<bool> EnsureWalletLoadedAsync(AppSettings settings, string walletName)
+    {
+        try
+        {
+            // Check if wallet is already loaded
+            var loadedWallets = settings.UseDocker 
+                ? await ExecuteBitcoinCliDockerAsync(settings, "listwallets")
+                : await _cliWrapper!.ListWalletsAsync();
+
+            if (loadedWallets.Contains($"\"{walletName}\""))
+            {
+                return true; // Wallet already loaded
+            }
+
+            // Check if wallet directory exists
+            var walletDir = settings.UseDocker
+                ? await ExecuteBitcoinCliDockerAsync(settings, "listwalletdir")
+                : await _cliWrapper!.ListWalletDirAsync();
+
+            if (walletDir.Contains($"\"{walletName}\""))
+            {
+                // Wallet exists, try to load it
+                var loadResult = settings.UseDocker
+                    ? await ExecuteBitcoinCliDockerAsync(settings, "loadwallet", walletName, "true")
+                    : await _cliWrapper!.LoadWalletAsync(walletName, true);
+
+                return !loadResult.Contains("error");
+            }
+
+            return false; // Wallet doesn't exist
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Import wallet from WIF into bitcoin node
+    /// </summary>
+    public static async Task<bool> ImportWalletFromWIFAsync(AppSettings settings, string walletName, string wif, string address, bool testnet = false)
+    {
+        try
+        {
+            // First, ensure wallet exists or create it
+            var walletLoaded = await EnsureWalletLoadedAsync(settings, walletName);
+            
+            if (!walletLoaded)
+            {
+                // Create new wallet
+                AnsiConsole.MarkupLine($"[yellow]Creating wallet '{walletName}'...[/]");
+                var createResult = settings.UseDocker
+                    ? await ExecuteBitcoinCliDockerAsync(settings, "createwallet", walletName, "false", "false", "\"\"", "false", "true", "true")
+                    : await _cliWrapper!.CreateWalletAsync(walletName, false, false, null, false, true, true);
+
+                if (createResult.Contains("error"))
+                {
+                    AnsiConsole.MarkupLine($"[red]Failed to create wallet:[/] {createResult}");
+                    return false;
+                }
+                AnsiConsole.MarkupLine("[green]✓[/] Wallet created");
+            }
+
+            // Check if address already exists in wallet
+            var receivedByAddress = settings.UseDocker
+                ? await ExecuteBitcoinCliDockerAsync(settings, "listreceivedbyaddress", "0", "true")
+                : await _cliWrapper!.ListReceivedByAddressAsync(0, true);
+
+            if (receivedByAddress.Contains(address))
+            {
+                AnsiConsole.MarkupLine("[yellow]Address already exists in wallet[/]");
+                return true;
+            }
+
+            // Import the descriptor
+            AnsiConsole.MarkupLine("[yellow]Importing WIF into wallet...[/]");
+            
+            // Build the descriptor JSON for import
+            var descriptorJson = $"[{{\"desc\": \"wpkh({wif})\", \"timestamp\": \"now\", \"label\": \"imported\"}}]";
+            
+            var importResult = settings.UseDocker
+                ? await ExecuteBitcoinCliDockerAsync(settings, "importdescriptors", $"'{descriptorJson}'")
+                : await _cliWrapper!.ImportDescriptorsAsync(descriptorJson);
+
+            if (importResult.Contains("\"success\": true") || importResult.Contains("\"success\":true"))
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] WIF imported successfully");
+                return true;
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]Failed to import WIF:[/] {importResult}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error importing wallet:[/] {ex.Message}");
+            return false;
+        }
+    }
 }
