@@ -12,35 +12,28 @@ public static class PlottingCommands
 {
     private static DockerServiceManager? _dockerManager;
 
-    private static DockerServiceManager GetDockerManager(AppSettings settings)
+    private static DockerServiceManager GetDockerManager()
     {
         if (_dockerManager == null)
         {
-            _dockerManager = new DockerServiceManager(settings.DockerRegistry, settings.DockerImageTag);
+            _dockerManager = new DockerServiceManager();
         }
         return _dockerManager;
     }
 
     public static async Task CreatePlotAsync(AppSettings settings)
     {
-        if (settings.UseDocker)
-        {
-            await CreatePlotDockerAsync(settings);
-        }
-        else
-        {
-            await CreatePlotNativeAsync(settings.PoCXBinariesPath);
-        }
+        await CreatePlotDockerAsync(settings);
     }
 
     private static async Task CreatePlotDockerAsync(AppSettings settings)
     {
-        var docker = GetDockerManager(settings);
+        var docker = GetDockerManager();
 
         if (!await docker.IsDockerAvailableAsync())
         {
             AnsiConsole.MarkupLine("[red]Docker is not available.[/]");
-            AnsiConsole.MarkupLine("[dim]Install Docker or disable Docker mode in Settings[/]");
+            AnsiConsole.MarkupLine("[dim]Install Docker using the Docker setup menu option[/]");
             return;
         }
 
@@ -74,6 +67,8 @@ public static class PlottingCommands
         var success = await docker.StartContainerAsync(
             settings.PlotterContainerName,
             "pocx",
+            settings.Plotter.Repository,
+            settings.Plotter.Tag,
             environmentVars: envVars.Count > 0 ? envVars : null,
             volumeMounts: volumeMounts,
             command: command
@@ -89,78 +84,10 @@ public static class PlottingCommands
         }
     }
 
-    private static async Task CreatePlotNativeAsync(string binariesPath)
-    {
-        AnsiConsole.MarkupLine("[bold green]Create new plot file[/]");
-
-        var accountId = AnsiConsole.Ask<string>("Enter [green]account ID[/]:");
-        var plotPath = AnsiConsole.Ask<string>("Enter [green]plot directory[/]:", "./plots");
-        var warps = AnsiConsole.Ask<int>("Enter number of [green]warps[/] (1 warp ~= 1GB):", 10);
-
-        var plotterPath = Path.Combine(binariesPath, "pocx_plotter");
-        if (!File.Exists(plotterPath))
-        {
-            AnsiConsole.MarkupLine($"[red]Plotter binary not found at: {plotterPath}[/]");
-            return;
-        }
-
-        using var plotter = new PlotterWrapper(plotterPath);
-
-        try
-        {
-            await AnsiConsole.Progress()
-                .AutoRefresh(true)
-                .Columns(
-                    new TaskDescriptionColumn(),
-                    new ProgressBarColumn(),
-                    new PercentageColumn(),
-                    new SpinnerColumn())
-                .StartAsync(async ctx =>
-                {
-                    var task = ctx.AddTask("[green]Plotting...[/]");
-                    task.IsIndeterminate = true;
-
-                    var progress = new Progress<string>(output =>
-                    {
-                        AnsiConsole.MarkupLine($"[dim]{output}[/]");
-                    });
-
-                    var result = await plotter.CreatePlotAsync(
-                        accountId,
-                        plotPath,
-                        warps,
-                        progress);
-
-                    task.StopTask();
-
-                    if (result.IsSuccess)
-                    {
-                        AnsiConsole.MarkupLine("[green]√[/] Plot created successfully!");
-                    }
-                    else
-                    {
-                        AnsiConsole.MarkupLine($"[red]‼[/] Plotting failed: {result.Error}");
-                    }
-                });
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
-        }
-    }
-
     public static async Task ViewLogsAsync(AppSettings settings)
     {
-        if (settings.UseDocker)
-        {
-            var docker = GetDockerManager(settings);
-            var lines = AnsiConsole.Ask("How many log lines to display?", 50);
-            await docker.DisplayContainerLogsAsync(settings.PlotterContainerName, lines, "Plotter Logs");
-        }
-        else
-        {
-            AnsiConsole.MarkupLine("[yellow]Log viewing is only available in Docker mode[/]");
-            AnsiConsole.MarkupLine("[dim]Enable Docker mode in Settings to use this feature[/]");
-        }
+        var docker = GetDockerManager();
+        var lines = AnsiConsole.Ask("How many log lines to display?", 50);
+        await docker.DisplayContainerLogsAsync(settings.PlotterContainerName, lines, "Plotter Logs");
     }
 }

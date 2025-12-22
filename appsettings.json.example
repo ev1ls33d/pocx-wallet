@@ -1,18 +1,50 @@
 {
-  "PoCXBinariesPath": "./pocx/target/release",
   "PlotDirectory": "./plots",
   "WalletFilePath": "./wallet.json",
   "MinerConfigPath": "./config.yaml",
   "BitcoinNodeHost": "localhost",
   "BitcoinNodePort": 18332,
-  "BitcoinBinariesPath": "./bitcoin/src",
-  "UseDocker": true,
-  "DockerRegistry": "ghcr.io/ev1ls33d/pocx-wallet",
-  "DockerImageTag": "latest",
   "DockerNetwork": "pocx",
   "BitcoinContainerName": "pocx-node",
-  "MinerContainerName": "miner",
-  "PlotterContainerName": "plotter",
-  "ElectrsContainerName": "electrs",
-  "EnableElectrs": false
+  "MinerContainerName": "pocx-miner",
+  "PlotterContainerName": "pocx-plotter",
+  "ElectrsContainerName": "pocx-electrs",
+  "EnableElectrs": false,
+  "BitcoinNode": {
+    "Repository": "ghcr.io/ev1ls33d/pocx-wallet/bitcoin",
+    "Tag": "latest",
+    "RpcPort": 18332,
+    "P2PPort": 18333,
+    "AdditionalParams": "-printtoconsole -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0",
+    "EnvironmentVariables": {},
+    "DataDirectory": "./bitcoin-data"
+  },
+  "Electrs": {
+    "Repository": "ghcr.io/ev1ls33d/pocx-wallet/electrs",
+    "Tag": "latest",
+    "HttpPort": 3000,
+    "RpcPort": 50001,
+    "TestnetPort": 60001,
+    "AdditionalParams": "",
+    "EnvironmentVariables": {},
+    "DataDirectory": "./electrs-data"
+  },
+  "Miner": {
+    "Repository": "ghcr.io/ev1ls33d/pocx-wallet/pocx",
+    "Tag": "latest",
+    "CpuThreads": 8,
+    "UseDirectIO": true,
+    "ShowProgress": true,
+    "AdditionalParams": "",
+    "EnvironmentVariables": {}
+  },
+  "Plotter": {
+    "Repository": "ghcr.io/ev1ls33d/pocx-wallet/pocx",
+    "Tag": "latest",
+    "DefaultWarps": 10,
+    "UseDirectIO": true,
+    "CpuThreads": 4,
+    "AdditionalParams": "",
+    "EnvironmentVariables": {}
+  }
 }

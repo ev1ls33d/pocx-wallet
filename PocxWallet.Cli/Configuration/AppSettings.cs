@@ -6,11 +6,6 @@ namespace PocxWallet.Cli.Configuration;
 public class AppSettings
 {
     /// <summary>
-    /// Path to PoCX binaries directory
-    /// </summary>
-    public string PoCXBinariesPath { get; set; } = "./pocx/target/release";
-
-    /// <summary>
     /// Default plot directory
     /// </summary>
     public string PlotDirectory { get; set; } = "./plots";
@@ -36,26 +31,6 @@ public class AppSettings
     public int BitcoinNodePort { get; set; } = 18332;
 
     /// <summary>
-    /// Path to Bitcoin binaries
-    /// </summary>
-    public string BitcoinBinariesPath { get; set; } = "./bitcoin/src";
-
-    /// <summary>
-    /// Use Docker containers for services (recommended)
-    /// </summary>
-    public bool UseDocker { get; set; } = true;
-
-    /// <summary>
-    /// Docker registry to pull images from
-    /// </summary>
-    public string DockerRegistry { get; set; } = "ghcr.io/ev1ls33d/pocx-wallet";
-
-    /// <summary>
-    /// Docker image tag to use
-    /// </summary>
-    public string DockerImageTag { get; set; } = "latest";
-
-    /// <summary>
     /// Docker network name
     /// </summary>
     public string DockerNetwork { get; set; } = "pocx";
@@ -68,17 +43,17 @@ public class AppSettings
     /// <summary>
     /// PoCX miner container name
     /// </summary>
-    public string MinerContainerName { get; set; } = "miner";
+    public string MinerContainerName { get; set; } = "pocx-miner";
 
     /// <summary>
     /// PoCX plotter container name
     /// </summary>
-    public string PlotterContainerName { get; set; } = "plotter";
+    public string PlotterContainerName { get; set; } = "pocx-plotter";
 
     /// <summary>
     /// Electrs container name (Electrum server)
     /// </summary>
-    public string ElectrsContainerName { get; set; } = "electrs";
+    public string ElectrsContainerName { get; set; } = "pocx-electrs";
 
     /// <summary>
     /// Enable Electrs (Electrum server) alongside the node

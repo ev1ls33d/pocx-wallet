@@ -11,11 +11,11 @@ public static class DockerCommands
 {
     private static DockerServiceManager? _dockerManager;
 
-    private static DockerServiceManager GetDockerManager(AppSettings settings)
+    private static DockerServiceManager GetDockerManager()
     {
         if (_dockerManager == null)
         {
-            _dockerManager = new DockerServiceManager(settings.DockerRegistry, settings.DockerImageTag);
+            _dockerManager = new DockerServiceManager();
         }
         return _dockerManager;
     }
@@ -25,7 +25,7 @@ public static class DockerCommands
     /// </summary>
     public static async Task CheckDockerStatusAsync(AppSettings settings)
     {
-        var docker = GetDockerManager(settings);
+        var docker = GetDockerManager();
 
         AnsiConsole.MarkupLine("[bold]Checking Docker status...[/]");
         AnsiConsole.WriteLine();
@@ -76,7 +76,7 @@ public static class DockerCommands
     /// </summary>
     public static async Task SetupDockerAsync(AppSettings settings)
     {
-        var docker = GetDockerManager(settings);
+        var docker = GetDockerManager();
         
         await docker.EnsureDockerInstalledAsync();
     }

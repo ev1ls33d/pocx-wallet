@@ -6,6 +6,16 @@ namespace PocxWallet.Cli.Configuration;
 public class BitcoinNodeSettings
 {
     /// <summary>
+    /// Docker image repository URL
+    /// </summary>
+    public string Repository { get; set; } = "ghcr.io/ev1ls33d/pocx-wallet/bitcoin";
+
+    /// <summary>
+    /// Docker image tag
+    /// </summary>
+    public string Tag { get; set; } = "latest";
+
+    /// <summary>
     /// RPC port for bitcoin node
     /// </summary>
     public int RpcPort { get; set; } = 18332;
@@ -36,6 +46,16 @@ public class BitcoinNodeSettings
 /// </summary>
 public class ElectrsSettings
 {
+    /// <summary>
+    /// Docker image repository URL
+    /// </summary>
+    public string Repository { get; set; } = "ghcr.io/ev1ls33d/pocx-wallet/electrs";
+
+    /// <summary>
+    /// Docker image tag
+    /// </summary>
+    public string Tag { get; set; } = "latest";
+
     /// <summary>
     /// HTTP API port
     /// </summary>
@@ -73,6 +93,16 @@ public class ElectrsSettings
 public class MinerSettings
 {
     /// <summary>
+    /// Docker image repository URL
+    /// </summary>
+    public string Repository { get; set; } = "ghcr.io/ev1ls33d/pocx-wallet/pocx";
+
+    /// <summary>
+    /// Docker image tag
+    /// </summary>
+    public string Tag { get; set; } = "latest";
+
+    /// <summary>
     /// CPU threads for mining
     /// </summary>
     public int CpuThreads { get; set; } = 8;
@@ -103,6 +133,16 @@ public class MinerSettings
 /// </summary>
 public class PlotterSettings
 {
+    /// <summary>
+    /// Docker image repository URL
+    /// </summary>
+    public string Repository { get; set; } = "ghcr.io/ev1ls33d/pocx-wallet/pocx";
+
+    /// <summary>
+    /// Docker image tag
+    /// </summary>
+    public string Tag { get; set; } = "latest";
+
     /// <summary>
     /// Default number of warps (1 warp ≈ 1GB)
     /// </summary>
