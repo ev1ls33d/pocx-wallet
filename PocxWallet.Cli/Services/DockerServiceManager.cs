@@ -368,12 +368,14 @@ public class DockerServiceManager
         var psi = new ProcessStartInfo
         {
             FileName = command,
-            Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        foreach (var a in arguments.Split())
+            psi.ArgumentList.Add(a);
 
         using var process = new Process { StartInfo = psi };
         process.Start();
