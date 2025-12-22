@@ -30,12 +30,14 @@ enum MenuOptions
 
     // Plotting submenu
     Plotting_CreatePlot,
+    Plotting_ViewLogs,
     Plotting_Settings,
 
     // Mining submenu
     Mining_StartMining,
     Mining_StopMining,
     Mining_ShowMiningStatus,
+    Mining_ViewLogs,
     Mining_CreateMinerConfig,
     Mining_Settings,
 
@@ -43,6 +45,7 @@ enum MenuOptions
     Node_StartNode,
     Node_StopNode,
     Node_ShowNodeStatus,
+    Node_ViewLogs,
     Node_EnableElectrs,
     Node_Settings,
 
@@ -86,12 +89,14 @@ static class MenuOptionsExtensions
 
             // Plotting
             MenuOptions.Plotting_CreatePlot =>                  Markup.Escape("Create Plot"),
+            MenuOptions.Plotting_ViewLogs =>                    Markup.Escape("View Logs"),
             MenuOptions.Plotting_Settings =>                    Markup.Escape("Plotter Settings"),
 
             // Mining
             MenuOptions.Mining_StartMining =>                   Markup.Escape("Start Mining"),
             MenuOptions.Mining_StopMining =>                    Markup.Escape("Stop Mining"),
             MenuOptions.Mining_ShowMiningStatus =>              Markup.Escape("Show Mining Status"),
+            MenuOptions.Mining_ViewLogs =>                      Markup.Escape("View Logs"),
             MenuOptions.Mining_CreateMinerConfig =>             Markup.Escape("Create Miner Config"),
             MenuOptions.Mining_Settings =>                      Markup.Escape("Miner Settings"),
 
@@ -99,6 +104,7 @@ static class MenuOptionsExtensions
             MenuOptions.Node_StartNode =>                       Markup.Escape("Start Node"),
             MenuOptions.Node_StopNode =>                        Markup.Escape("Stop Node"),
             MenuOptions.Node_ShowNodeStatus =>                  Markup.Escape("Show Node Status"),
+            MenuOptions.Node_ViewLogs =>                        Markup.Escape("View Logs"),
             MenuOptions.Node_EnableElectrs =>                   Markup.Escape("Toggle Electrs (Electrum Server)"),
             MenuOptions.Node_Settings =>                        Markup.Escape("Node Settings"),
 
@@ -183,12 +189,16 @@ class Program
                     break;
 
                 case MenuOptions.Main_Plotting:
+                    // Show last 5 log lines if service is running
+                    await ShowServiceBannerAsync(_settings, "plotter");
+                    
                     await ShowMenuAsync(
                         "Plotting",
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Plotting_")).ToArray(),
                         new Func<Task>[]
                         {
                             async () => await PlottingCommands.CreatePlotAsync(_settings),
+                            async () => await PlottingCommands.ViewLogsAsync(_settings),
                             () =>
                             {
                                 AnsiConsole.MarkupLine("[bold yellow]Plotter Settings (Service-specific)[/]");
@@ -201,6 +211,9 @@ class Program
                     break;
 
                 case MenuOptions.Main_Mining:
+                    // Show last 5 log lines if service is running
+                    await ShowServiceBannerAsync(_settings, "miner");
+                    
                     await ShowMenuAsync(
                         "Mining",
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Mining_")).ToArray(),
@@ -209,6 +222,7 @@ class Program
                             async () => await MiningCommands.StartMiningAsync(_settings),
                             async () => await MiningCommands.StopMiningAsync(_settings),
                             async () => await MiningCommands.ShowMiningStatusAsync(_settings),
+                            async () => await MiningCommands.ViewLogsAsync(_settings),
                             () => { MiningCommands.CreateMinerConfig(_settings.MinerConfigPath); return Task.CompletedTask; },
                             () =>
                             {
@@ -228,6 +242,9 @@ class Program
                     break;
 
                 case MenuOptions.Main_BitcoinPoCXNode:
+                    // Show last 5 log lines if service is running
+                    await ShowServiceBannerAsync(_settings);
+                    
                     await ShowMenuAsync(
                         "Bitcoin-PoCX Node",
                         Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Node_")).ToArray(),
@@ -240,6 +257,7 @@ class Program
                             },
                             async () => await NodeCommands.StopNodeAsync(_settings),
                             async () => await NodeCommands.ShowNodeStatusAsync(_settings),
+                            async () => await NodeCommands.ViewLogsAsync(_settings),
                             () =>
                             {
                                 _settings.EnableElectrs = !_settings.EnableElectrs;
@@ -440,5 +458,57 @@ class Program
         var handler = promptHandlers[idx];
         if (handler != null)
             await handler();
+    }
+
+    /// <summary>
+    /// Show service banner with last 5 log lines if service is running
+    /// </summary>
+    static async Task ShowServiceBannerAsync(AppSettings settings, string? serviceType = null)
+    {
+        if (!settings.UseDocker) return;
+
+        var docker = new DockerServiceManager(settings.DockerRegistry, settings.DockerImageTag);
+        
+        // Determine which containers to check based on service type
+        var containersToCheck = new List<(string name, string label)>();
+        
+        if (serviceType == null || serviceType == "node")
+        {
+            containersToCheck.Add((settings.BitcoinContainerName, "Bitcoin Node"));
+            if (settings.EnableElectrs)
+                containersToCheck.Add((settings.ElectrsContainerName, "Electrs Server"));
+        }
+        else if (serviceType == "miner")
+        {
+            containersToCheck.Add((settings.MinerContainerName, "Miner"));
+        }
+        else if (serviceType == "plotter")
+        {
+            containersToCheck.Add((settings.PlotterContainerName, "Plotter"));
+        }
+
+        foreach (var (containerName, label) in containersToCheck)
+        {
+            var status = await docker.GetContainerStatusAsync(containerName);
+            if (status == "running")
+            {
+                AnsiConsole.MarkupLine($"[bold green]● {label} is running[/]");
+                var logs = await docker.GetContainerLogsAsync(containerName, 5);
+                
+                if (!string.IsNullOrWhiteSpace(logs))
+                {
+                    // Limit each log line display
+                    var logLines = logs.Split('\n', StringSplitOptions.RemoveEmptyEntries).TakeLast(5);
+                    var panel = new Panel(string.Join("\n", logLines))
+                    {
+                        Header = new PanelHeader($"[dim]Last 5 log lines[/]"),
+                        Border = BoxBorder.Rounded,
+                        BorderStyle = new Style(Color.Grey)
+                    };
+                    AnsiConsole.Write(panel);
+                }
+                AnsiConsole.WriteLine();
+            }
+        }
     }
 }

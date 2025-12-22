@@ -270,4 +270,19 @@ show_progress: true
         File.WriteAllText(configPath, config);
         AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: {configPath}");
     }
+
+    public static async Task ViewLogsAsync(AppSettings settings)
+    {
+        if (settings.UseDocker)
+        {
+            var docker = GetDockerManager(settings);
+            var lines = AnsiConsole.Ask("How many log lines to display?", 50);
+            await docker.DisplayContainerLogsAsync(settings.MinerContainerName, lines, "Miner Logs");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[yellow]Log viewing is only available in Docker mode[/]");
+            AnsiConsole.MarkupLine("[dim]Enable Docker mode in Settings to use this feature[/]");
+        }
+    }
 }

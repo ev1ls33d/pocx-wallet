@@ -325,6 +325,30 @@ public static class NodeCommands
         }
     }
 
+    public static async Task ViewLogsAsync(AppSettings settings)
+    {
+        if (settings.UseDocker)
+        {
+            var docker = GetDockerManager(settings);
+            
+            var containerChoice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Select [green]container[/] to view logs:")
+                    .AddChoices(new[] { 
+                        settings.BitcoinContainerName, 
+                        settings.ElectrsContainerName 
+                    }));
+
+            var lines = AnsiConsole.Ask("How many log lines to display?", 50);
+            await docker.DisplayContainerLogsAsync(containerChoice, lines, $"{containerChoice} Logs");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[yellow]Log viewing is only available in Docker mode[/]");
+            AnsiConsole.MarkupLine("[dim]Enable Docker mode in Settings to use this feature[/]");
+        }
+    }
+
     private static async Task ShowNodeStatusDockerAsync(AppSettings settings)
     {
         var docker = GetDockerManager(settings);

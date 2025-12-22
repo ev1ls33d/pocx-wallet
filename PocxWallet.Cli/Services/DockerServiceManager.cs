@@ -320,6 +320,41 @@ public class DockerServiceManager
     }
 
     /// <summary>
+    /// Display container logs in a formatted panel
+    /// </summary>
+    public async Task DisplayContainerLogsAsync(string containerName, int tailLines = 50, string title = "Container Logs")
+    {
+        ValidateContainerName(containerName);
+        
+        var status = await GetContainerStatusAsync(containerName);
+        if (status == "not found")
+        {
+            AnsiConsole.MarkupLine($"[yellow]Container '{containerName}' is not running[/]");
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[bold]Container Status:[/] [{(status == "running" ? "green" : "yellow")}]{status}[/]");
+        AnsiConsole.WriteLine();
+
+        var logs = await GetContainerLogsAsync(containerName, tailLines);
+        
+        // Limit log display to reasonable size
+        if (logs.Length > 5000)
+        {
+            logs = "...\n" + logs.Substring(logs.Length - 5000);
+        }
+
+        var panel = new Panel(logs)
+        {
+            Header = new PanelHeader($"[bold]{title} (last {tailLines} lines)[/]"),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(status == "running" ? Color.Green : Color.Yellow)
+        };
+        
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
     /// Validate container name to prevent command injection
     /// </summary>
     private void ValidateContainerName(string containerName)

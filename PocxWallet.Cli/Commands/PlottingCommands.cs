@@ -143,5 +143,18 @@ public static class PlottingCommands
         }
     }
 
-
+    public static async Task ViewLogsAsync(AppSettings settings)
+    {
+        if (settings.UseDocker)
+        {
+            var docker = GetDockerManager(settings);
+            var lines = AnsiConsole.Ask("How many log lines to display?", 50);
+            await docker.DisplayContainerLogsAsync(settings.PlotterContainerName, lines, "Plotter Logs");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[yellow]Log viewing is only available in Docker mode[/]");
+            AnsiConsole.MarkupLine("[dim]Enable Docker mode in Settings to use this feature[/]");
+        }
+    }
 }
