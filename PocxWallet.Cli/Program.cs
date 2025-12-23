@@ -8,18 +8,10 @@ using Spectre.Console;
 
 namespace PocxWallet.Cli;
 
-// Single enum mit Präfix-Notation für Haupt- und Untermenüs
+// Legacy enum - kept for compatibility but main menu now uses string-based dynamic choices
+// This enum is only used internally for wallet submenu type safety if needed
 enum MenuOptions
 {
-    // Main
-    Main_WalletManagement,
-    Main_Plotting,
-    Main_Mining,
-    Main_VanityAddressGenerator,
-    Main_BitcoinPoCXNode,
-    Main_Electrs,
-    Main_Exit,
-
     // Wallet submenu
     Wallet_CreateNewWallet,
     Wallet_RestoreWalletFromMnemonic,
@@ -27,35 +19,8 @@ enum MenuOptions
     Wallet_CheckBalance,
     Wallet_SendFunds,
     Wallet_TransactionHistory,
-
-    // Plotting submenu
-    Plotting_ToggleService,
-    Plotting_CreatePlot,
-    Plotting_ViewLogs,
-    Plotting_Settings,
-
-    // Mining submenu
-    Mining_ToggleService,
-    Mining_CreateMinerConfig,
-    Mining_ViewLogs,
-    Mining_Settings,
-
-    // Node submenu
-    Node_ToggleService,
-    Node_ImportWalletFromFile,
-    Node_ViewLogs,
-    Node_Settings,
-
-    // Electrs submenu
-    Electrs_ToggleService,
-    Electrs_ViewLogs,
-    Electrs_Settings,
-
-    // Docker submenu
-    Docker_CheckStatus,
-    Docker_Setup,
-
-    // General back option (einmalig, für alle Submenus)
+    
+    // General back option
     General_Back
 }
 
@@ -64,15 +29,6 @@ static class MenuOptionsExtensions
     public static string ToDisplayString(this MenuOptions option) =>
         option switch
         {
-            // Main - These will be dynamically updated with status in ShowMainMenu
-            MenuOptions.Main_WalletManagement =>                Markup.Escape("[Wallet]    Wallet Management"),
-            MenuOptions.Main_Plotting =>                        Markup.Escape("[[Plot]]      Plotting"),
-            MenuOptions.Main_Mining =>                          Markup.Escape("[[Mine]]      Mining"),
-            MenuOptions.Main_VanityAddressGenerator =>          Markup.Escape("[Vanity]    Vanity Address Generator"),
-            MenuOptions.Main_BitcoinPoCXNode =>                 Markup.Escape("[[Node]]      Bitcoin-PoCX Node"),
-            MenuOptions.Main_Electrs =>                         Markup.Escape("[[Electrs]]   Electrs Server"),
-            MenuOptions.Main_Exit =>                            Markup.Escape("[Exit]      Exit"),
-
             // Wallet
             MenuOptions.Wallet_CreateNewWallet =>               Markup.Escape("Create New Wallet"),
             MenuOptions.Wallet_RestoreWalletFromMnemonic =>     Markup.Escape("Restore Wallet from Mnemonic"),
@@ -80,38 +36,7 @@ static class MenuOptionsExtensions
             MenuOptions.Wallet_CheckBalance =>                  Markup.Escape("Check Balance"),
             MenuOptions.Wallet_SendFunds =>                     Markup.Escape("Send Funds"),
             MenuOptions.Wallet_TransactionHistory =>            Markup.Escape("Transaction History"),
-
-            // Plotting - Toggle will be updated dynamically
-            MenuOptions.Plotting_ToggleService =>               Markup.Escape("Toggle Plotter Service"),
-            MenuOptions.Plotting_CreatePlot =>                  Markup.Escape("Create Plot"),
-            MenuOptions.Plotting_ViewLogs =>                    Markup.Escape("View Logs"),
-            MenuOptions.Plotting_Settings =>                    Markup.Escape("Plotter Settings"),
-
-            // Mining - Toggle will be updated dynamically
-            MenuOptions.Mining_ToggleService =>                 Markup.Escape("Toggle Miner Service"),
-            MenuOptions.Mining_CreateMinerConfig =>             Markup.Escape("Create Miner Config"),
-            MenuOptions.Mining_ViewLogs =>                      Markup.Escape("View Logs"),
-            MenuOptions.Mining_Settings =>                      Markup.Escape("Miner Settings"),
-
-            // Node - Toggle will be updated dynamically
-            MenuOptions.Node_ToggleService =>                   Markup.Escape("Toggle Node Service"),
-            MenuOptions.Node_ImportWalletFromFile =>            Markup.Escape("Import Wallet from File"),
-            MenuOptions.Node_ViewLogs =>                        Markup.Escape("View Logs"),
-            MenuOptions.Node_Settings =>                        Markup.Escape("Node Settings"),
-
-            // Electrs - Toggle will be updated dynamically
-            MenuOptions.Electrs_ToggleService =>                Markup.Escape("Toggle Electrs Service"),
-            MenuOptions.Electrs_ViewLogs =>                     Markup.Escape("View Logs"),
-            MenuOptions.Electrs_Settings =>                     Markup.Escape("Electrs Settings"),
-
-            // Docker
-            MenuOptions.Docker_CheckStatus =>                   Markup.Escape("Check Docker Status"),
-            MenuOptions.Docker_Setup =>                         Markup.Escape("Setup Docker"),
-
-            // General
             MenuOptions.General_Back =>                         Markup.Escape("<= Back"),
-
-            // Fallback
             _ => Markup.Escape(option.ToString())
         };
 }
@@ -120,6 +45,13 @@ class Program
 {
     private static readonly AppSettings _settings = new();
     private static DockerServiceManager? _dockerManager;
+    private static ServiceConfiguration? _serviceConfig;
+    private static DynamicServiceMenuBuilder? _dynamicMenuBuilder;
+
+    // Constants for hardcoded menu items
+    private const string MenuWallet = "[Wallet]    Wallet Management";
+    private const string MenuVanity = "[Vanity]    Vanity Address Generator";
+    private const string MenuExit = "[Exit]      Exit";
 
     private static DockerServiceManager GetDockerManager()
     {
@@ -128,6 +60,15 @@ class Program
             _dockerManager = new DockerServiceManager();
         }
         return _dockerManager;
+    }
+
+    private static DynamicServiceMenuBuilder GetDynamicMenuBuilder()
+    {
+        if (_dynamicMenuBuilder == null)
+        {
+            _dynamicMenuBuilder = new DynamicServiceMenuBuilder(_serviceConfig, _settings, GetDockerManager());
+        }
+        return _dynamicMenuBuilder;
     }
 
     /// <summary>
@@ -178,82 +119,69 @@ class Program
         // Load configuration if exists
         LoadConfiguration();
 
+        // Load service definitions from services.yaml
+        _serviceConfig = ServiceDefinitionLoader.LoadServices();
+        var dynamicMenuBuilder = GetDynamicMenuBuilder();
+        var dynamicServices = dynamicMenuBuilder.GetEnabledServices();
+
         // Main menu loop
         bool exit = false;
         while (!exit)
         {
-            var mainChoices = Enum.GetValues<MenuOptions>()
-                .Cast<MenuOptions>()
-                .Where(v => v.ToString().StartsWith("Main_"))
-                .ToArray();
-
-            // Get service statuses for display
-            var plotterStatus = await GetServiceStatusIndicatorAsync(_settings.PlotterContainerName);
-            var minerStatus = await GetServiceStatusIndicatorAsync(_settings.MinerContainerName);
-            var nodeStatus = await GetServiceStatusIndicatorAsync(_settings.BitcoinContainerName);
-            var electrsStatus = await GetServiceStatusIndicatorAsync(_settings.ElectrsContainerName);
+            // Build dynamic main menu choices
+            var menuChoices = new List<string>();
+            
+            // Add hardcoded items first (Wallet and Vanity)
+            menuChoices.Add(MenuWallet);
+            menuChoices.Add(MenuVanity);
+            
+            // Add dynamic services from services.yaml (sorted by menu order)
+            var serviceStatusMap = new Dictionary<string, string>();
+            foreach (var service in dynamicServices)
+            {
+                var status = await dynamicMenuBuilder.GetServiceStatusIndicatorAsync(service);
+                var label = $"{service.MenuLabel.PadRight(12)} {service.Name} {status}";
+                menuChoices.Add(label);
+                serviceStatusMap[label] = service.Id;
+            }
+            
+            // Add Exit at the end
+            menuChoices.Add(MenuExit);
 
             var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<MenuOptions>()
+                new SelectionPrompt<string>()
                     .Title("[bold green]Main Menu[/]")
-                    .PageSize(10)
-                    .AddChoices(mainChoices)
-                    .UseConverter(opt => opt switch
-                    {
-                        MenuOptions.Main_Plotting => $"[[Plot]]      Plotting {plotterStatus}",
-                        MenuOptions.Main_Mining => $"[[Mine]]      Mining {minerStatus}",
-                        MenuOptions.Main_BitcoinPoCXNode => $"[[Node]]      Bitcoin-PoCX Node {nodeStatus}",
-                        MenuOptions.Main_Electrs => $"[[Electrs]]   Electrs Server {electrsStatus}",
-                        _ => opt.ToDisplayString()
-                    })
+                    .PageSize(15)
+                    .AddChoices(menuChoices)
             );
 
             AnsiConsole.Clear();
             ShowBanner();
 
-            switch (choice)
+            // Handle menu choice
+            if (choice == MenuWallet)
             {
-                case MenuOptions.Main_WalletManagement:
-                    await ShowMenuAsync(
-                        "Wallet Management",
-                        Enum.GetValues<MenuOptions>().Cast<MenuOptions>().Where(v => v.ToString().StartsWith("Wallet_")).ToArray(),
-                        new Func<Task> []
-                        {
-                            async () => await WalletCommands.CreateNewWallet(), // CreateNewWallet
-                            async () => await WalletCommands.RestoreWallet(), // RestoreWallet
-                            () => { WalletCommands.ShowAddresses(); return Task.CompletedTask; }, // ShowAddresses
-                            async () => await TransactionCommands.CheckBalance(), // CheckBalance
-                            async () => await TransactionCommands.SendFunds(), // SendFunds
-                            async () => await TransactionCommands.ShowTransactionHistory() // TransactionHistory
-                        });
-                    break;
-
-                case MenuOptions.Main_Plotting:
-                    await ShowPlottingMenuAsync();
-                    break;
-
-                case MenuOptions.Main_Mining:
-                    await ShowMiningMenuAsync();
-                    break;
-
-                case MenuOptions.Main_VanityAddressGenerator:
-                    await VanityCommands.GenerateVanityAddressAsync();
-                    AnsiConsole.MarkupLine("\n<= Press ENTER to return");
-                    Console.ReadLine();
-                    break;
-
-                case MenuOptions.Main_BitcoinPoCXNode:
-                    await ShowNodeMenuAsync();
-                    break;
-
-                case MenuOptions.Main_Electrs:
-                    await ShowElectrsMenuAsync();
-                    break;
-
-                case MenuOptions.Main_Exit:
-                    exit = true;
-                    AnsiConsole.MarkupLine("[bold yellow]Goodbye![/]");
-                    break;
+                await ShowWalletMenuAsync();
+            }
+            else if (choice == MenuVanity)
+            {
+                await VanityCommands.GenerateVanityAddressAsync();
+                AnsiConsole.MarkupLine("\n<= Press ENTER to return");
+                Console.ReadLine();
+            }
+            else if (choice == MenuExit)
+            {
+                exit = true;
+                AnsiConsole.MarkupLine("[bold yellow]Goodbye![/]");
+            }
+            else if (serviceStatusMap.TryGetValue(choice, out var serviceId))
+            {
+                // Handle dynamic service menu
+                var service = dynamicServices.FirstOrDefault(s => s.Id == serviceId);
+                if (service != null)
+                {
+                    await dynamicMenuBuilder.ShowServiceMenuAsync(service, ShowBanner);
+                }
             }
 
             if (!exit)
@@ -277,6 +205,55 @@ class Program
 
         // Stop all background services on exit
         BackgroundServiceManager.StopAllServices();
+    }
+
+    /// <summary>
+    /// Show wallet management submenu
+    /// </summary>
+    static async Task ShowWalletMenuAsync()
+    {
+        var choices = new[]
+        {
+            "Create New Wallet",
+            "Restore Wallet from Mnemonic",
+            "Show Addresses",
+            "Check Balance",
+            "Send Funds",
+            "Transaction History",
+            "<= Back"
+        };
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold green]Wallet Management[/]")
+                .PageSize(10)
+                .AddChoices(choices)
+        );
+
+        AnsiConsole.Clear();
+        ShowBanner();
+
+        switch (choice)
+        {
+            case "Create New Wallet":
+                await WalletCommands.CreateNewWallet();
+                break;
+            case "Restore Wallet from Mnemonic":
+                await WalletCommands.RestoreWallet();
+                break;
+            case "Show Addresses":
+                WalletCommands.ShowAddresses();
+                break;
+            case "Check Balance":
+                await TransactionCommands.CheckBalance();
+                break;
+            case "Send Funds":
+                await TransactionCommands.SendFunds();
+                break;
+            case "Transaction History":
+                await TransactionCommands.ShowTransactionHistory();
+                break;
+        }
     }
 
     static void ShowBanner()

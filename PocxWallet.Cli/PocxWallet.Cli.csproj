@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.49.1" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -31,6 +32,7 @@
   <!-- Ensure appsettings.json is copied to output but excluded from single-file -->
   <ItemGroup>
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\services.yaml" Link="services.yaml" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!-- Pre-build target to build PoCX dependencies -->

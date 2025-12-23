@@ -1,0 +1,467 @@
+using YamlDotNet.Serialization;
+
+namespace PocxWallet.Cli.Configuration;
+
+/// <summary>
+/// Root model for the services.yaml configuration file
+/// </summary>
+public class ServiceConfiguration
+{
+    [YamlMember(Alias = "version")]
+    public string Version { get; set; } = "1.0";
+
+    [YamlMember(Alias = "defaults")]
+    public ServiceDefaults? Defaults { get; set; }
+
+    [YamlMember(Alias = "services")]
+    public List<ServiceDefinition> Services { get; set; } = new();
+
+    [YamlMember(Alias = "categories")]
+    public List<CategoryDefinition>? Categories { get; set; }
+
+    [YamlMember(Alias = "parameter_categories")]
+    public List<ParameterCategoryDefinition>? ParameterCategories { get; set; }
+}
+
+/// <summary>
+/// Default settings applied to all services
+/// </summary>
+public class ServiceDefaults
+{
+    [YamlMember(Alias = "docker_network")]
+    public string DockerNetwork { get; set; } = "pocx";
+
+    [YamlMember(Alias = "restart_policy")]
+    public string RestartPolicy { get; set; } = "unless-stopped";
+
+    [YamlMember(Alias = "log_driver")]
+    public string LogDriver { get; set; } = "json-file";
+
+    [YamlMember(Alias = "log_max_size")]
+    public string LogMaxSize { get; set; } = "10m";
+
+    [YamlMember(Alias = "log_max_files")]
+    public int LogMaxFiles { get; set; } = 3;
+}
+
+/// <summary>
+/// Individual service definition from services.yaml
+/// </summary>
+public class ServiceDefinition
+{
+    [YamlMember(Alias = "id")]
+    public string Id { get; set; } = "";
+
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+
+    [YamlMember(Alias = "category")]
+    public string Category { get; set; } = "";
+
+    [YamlMember(Alias = "menu_label")]
+    public string MenuLabel { get; set; } = "";
+
+    [YamlMember(Alias = "documentation_url")]
+    public string? DocumentationUrl { get; set; }
+
+    [YamlMember(Alias = "enabled")]
+    public bool Enabled { get; set; } = true;
+
+    [YamlMember(Alias = "container")]
+    public ContainerConfig? Container { get; set; }
+
+    [YamlMember(Alias = "source")]
+    public SourceConfig? Source { get; set; }
+
+    [YamlMember(Alias = "ports")]
+    public List<PortMapping>? Ports { get; set; }
+
+    [YamlMember(Alias = "volumes")]
+    public List<VolumeMapping>? Volumes { get; set; }
+
+    [YamlMember(Alias = "environment")]
+    public List<EnvironmentVariable>? Environment { get; set; }
+
+    [YamlMember(Alias = "parameters")]
+    public List<ServiceParameter>? Parameters { get; set; }
+
+    [YamlMember(Alias = "config_file")]
+    public ConfigFileDefinition? ConfigFile { get; set; }
+
+    [YamlMember(Alias = "depends_on")]
+    public List<ServiceDependency>? DependsOn { get; set; }
+
+    [YamlMember(Alias = "health_check")]
+    public HealthCheckConfig? HealthCheck { get; set; }
+
+    [YamlMember(Alias = "menu")]
+    public MenuConfig? Menu { get; set; }
+
+    [YamlMember(Alias = "settings")]
+    public List<ServiceSetting>? Settings { get; set; }
+
+    /// <summary>
+    /// Get the container name for this service
+    /// </summary>
+    public string GetContainerName()
+    {
+        return Container?.ContainerNameSetting ?? $"pocx-{Id}";
+    }
+}
+
+/// <summary>
+/// Container configuration for a service
+/// </summary>
+public class ContainerConfig
+{
+    [YamlMember(Alias = "image")]
+    public string Image { get; set; } = "";
+
+    [YamlMember(Alias = "repository")]
+    public string Repository { get; set; } = "";
+
+    [YamlMember(Alias = "default_tag")]
+    public string DefaultTag { get; set; } = "latest";
+
+    [YamlMember(Alias = "container_name_setting")]
+    public string? ContainerNameSetting { get; set; }
+
+    [YamlMember(Alias = "working_dir")]
+    public string? WorkingDir { get; set; }
+
+    [YamlMember(Alias = "entrypoint")]
+    public string? Entrypoint { get; set; }
+
+    [YamlMember(Alias = "command")]
+    public string? Command { get; set; }
+}
+
+/// <summary>
+/// Source code repository configuration
+/// </summary>
+public class SourceConfig
+{
+    [YamlMember(Alias = "repository")]
+    public string Repository { get; set; } = "";
+
+    [YamlMember(Alias = "branch")]
+    public string Branch { get; set; } = "master";
+
+    [YamlMember(Alias = "build_command")]
+    public string? BuildCommand { get; set; }
+
+    [YamlMember(Alias = "binary_paths")]
+    public List<string>? BinaryPaths { get; set; }
+}
+
+/// <summary>
+/// Port mapping configuration
+/// </summary>
+public class PortMapping
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "container_port")]
+    public int ContainerPort { get; set; }
+
+    [YamlMember(Alias = "host_port_setting")]
+    public string? HostPortSetting { get; set; }
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+
+    [YamlMember(Alias = "protocol")]
+    public string Protocol { get; set; } = "tcp";
+
+    [YamlMember(Alias = "optional")]
+    public bool Optional { get; set; }
+}
+
+/// <summary>
+/// Volume mapping configuration
+/// </summary>
+public class VolumeMapping
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "host_path_setting")]
+    public string? HostPathSetting { get; set; }
+
+    [YamlMember(Alias = "container_path")]
+    public string ContainerPath { get; set; } = "";
+
+    [YamlMember(Alias = "read_only")]
+    public bool ReadOnly { get; set; }
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+
+    [YamlMember(Alias = "is_file")]
+    public bool IsFile { get; set; }
+}
+
+/// <summary>
+/// Environment variable configuration
+/// </summary>
+public class EnvironmentVariable
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "value")]
+    public string Value { get; set; } = "";
+
+    [YamlMember(Alias = "description")]
+    public string? Description { get; set; }
+
+    [YamlMember(Alias = "sensitive")]
+    public bool Sensitive { get; set; }
+}
+
+/// <summary>
+/// Service parameter (CLI flag)
+/// </summary>
+public class ServiceParameter
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "cli_flag")]
+    public string? CliFlag { get; set; }
+
+    [YamlMember(Alias = "cli_alias")]
+    public string? CliAlias { get; set; }
+
+    [YamlMember(Alias = "type")]
+    public string Type { get; set; } = "string";
+
+    [YamlMember(Alias = "default")]
+    public object? Default { get; set; }
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+
+    [YamlMember(Alias = "category")]
+    public string? Category { get; set; }
+
+    [YamlMember(Alias = "required")]
+    public bool Required { get; set; }
+
+    [YamlMember(Alias = "sensitive")]
+    public bool Sensitive { get; set; }
+
+    [YamlMember(Alias = "enum")]
+    public List<string>? Enum { get; set; }
+
+    [YamlMember(Alias = "validation")]
+    public ValidationConfig? Validation { get; set; }
+
+    [YamlMember(Alias = "feature")]
+    public string? Feature { get; set; }
+
+    [YamlMember(Alias = "hidden")]
+    public bool Hidden { get; set; }
+}
+
+/// <summary>
+/// Validation configuration for parameters
+/// </summary>
+public class ValidationConfig
+{
+    [YamlMember(Alias = "min")]
+    public int? Min { get; set; }
+
+    [YamlMember(Alias = "max")]
+    public int? Max { get; set; }
+}
+
+/// <summary>
+/// Configuration file definition
+/// </summary>
+public class ConfigFileDefinition
+{
+    [YamlMember(Alias = "format")]
+    public string Format { get; set; } = "yaml";
+
+    [YamlMember(Alias = "path_setting")]
+    public string? PathSetting { get; set; }
+
+    [YamlMember(Alias = "options")]
+    public List<ConfigOption>? Options { get; set; }
+}
+
+/// <summary>
+/// Configuration file option
+/// </summary>
+public class ConfigOption
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "type")]
+    public string Type { get; set; } = "string";
+
+    [YamlMember(Alias = "default")]
+    public object? Default { get; set; }
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+
+    [YamlMember(Alias = "category")]
+    public string? Category { get; set; }
+
+    [YamlMember(Alias = "optional")]
+    public bool Optional { get; set; }
+
+    [YamlMember(Alias = "properties")]
+    public List<ConfigOption>? Properties { get; set; }
+
+    [YamlMember(Alias = "items")]
+    public ConfigOptionItems? Items { get; set; }
+}
+
+/// <summary>
+/// Config option items for array types
+/// </summary>
+public class ConfigOptionItems
+{
+    [YamlMember(Alias = "type")]
+    public string Type { get; set; } = "string";
+
+    [YamlMember(Alias = "properties")]
+    public List<ConfigOption>? Properties { get; set; }
+}
+
+/// <summary>
+/// Service dependency configuration
+/// </summary>
+public class ServiceDependency
+{
+    [YamlMember(Alias = "service_id")]
+    public string ServiceId { get; set; } = "";
+
+    [YamlMember(Alias = "condition")]
+    public string Condition { get; set; } = "running";
+
+    [YamlMember(Alias = "reason")]
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Health check configuration
+/// </summary>
+public class HealthCheckConfig
+{
+    [YamlMember(Alias = "command")]
+    public string Command { get; set; } = "";
+
+    [YamlMember(Alias = "interval_seconds")]
+    public int IntervalSeconds { get; set; } = 30;
+
+    [YamlMember(Alias = "timeout_seconds")]
+    public int TimeoutSeconds { get; set; } = 10;
+
+    [YamlMember(Alias = "retries")]
+    public int Retries { get; set; } = 3;
+
+    [YamlMember(Alias = "start_period_seconds")]
+    public int StartPeriodSeconds { get; set; } = 60;
+}
+
+/// <summary>
+/// Menu configuration for a service
+/// </summary>
+public class MenuConfig
+{
+    [YamlMember(Alias = "main_menu_order")]
+    public int MainMenuOrder { get; set; }
+
+    [YamlMember(Alias = "submenu")]
+    public List<SubmenuItem>? Submenu { get; set; }
+}
+
+/// <summary>
+/// Submenu item configuration
+/// </summary>
+public class SubmenuItem
+{
+    [YamlMember(Alias = "action")]
+    public string Action { get; set; } = "";
+
+    [YamlMember(Alias = "id")]
+    public string? Id { get; set; }
+
+    [YamlMember(Alias = "label")]
+    public string? Label { get; set; }
+
+    [YamlMember(Alias = "label_running")]
+    public string? LabelRunning { get; set; }
+
+    [YamlMember(Alias = "label_stopped")]
+    public string? LabelStopped { get; set; }
+
+    [YamlMember(Alias = "handler")]
+    public string? Handler { get; set; }
+}
+
+/// <summary>
+/// Service setting configuration (editable in UI)
+/// </summary>
+public class ServiceSetting
+{
+    [YamlMember(Alias = "key")]
+    public string Key { get; set; } = "";
+
+    [YamlMember(Alias = "setting_path")]
+    public string SettingPath { get; set; } = "";
+
+    [YamlMember(Alias = "type")]
+    public string Type { get; set; } = "string";
+
+    [YamlMember(Alias = "category")]
+    public string? Category { get; set; }
+
+    [YamlMember(Alias = "description")]
+    public string? Description { get; set; }
+
+    [YamlMember(Alias = "validation")]
+    public ValidationConfig? Validation { get; set; }
+}
+
+/// <summary>
+/// Category definition
+/// </summary>
+public class CategoryDefinition
+{
+    [YamlMember(Alias = "id")]
+    public string Id { get; set; } = "";
+
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+
+    [YamlMember(Alias = "order")]
+    public int Order { get; set; }
+}
+
+/// <summary>
+/// Parameter category definition
+/// </summary>
+public class ParameterCategoryDefinition
+{
+    [YamlMember(Alias = "id")]
+    public string Id { get; set; } = "";
+
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    [YamlMember(Alias = "description")]
+    public string Description { get; set; } = "";
+}
