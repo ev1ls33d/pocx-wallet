@@ -1,3 +1,4 @@
+using PocxWallet.Cli.Resources;
 using PocxWallet.Cli.Services;
 using Spectre.Console;
 
@@ -48,10 +49,16 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Get the container name for a service
+    /// Get the container name for a service (uses override if set)
     /// </summary>
     public string GetContainerName(ServiceDefinition service)
     {
+        // First check for user override
+        if (!string.IsNullOrEmpty(service.ContainerNameOverride))
+        {
+            return service.ContainerNameOverride;
+        }
+
         // Try to resolve from container_name_setting if it references AppSettings
         if (service.Container?.ContainerNameSetting != null)
         {
@@ -68,22 +75,6 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Get repository URL for a service
-    /// </summary>
-    public string GetRepository(ServiceDefinition service)
-    {
-        return service.Container?.Repository ?? "ghcr.io/ev1ls33d/pocx-wallet";
-    }
-
-    /// <summary>
-    /// Get image tag for a service
-    /// </summary>
-    public string GetImageTag(ServiceDefinition service)
-    {
-        return service.Container?.DefaultTag ?? "latest";
-    }
-
-    /// <summary>
     /// Get image name for a service
     /// </summary>
     public string GetImageName(ServiceDefinition service)
@@ -92,7 +83,7 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Build port mappings dictionary for Docker
+    /// Build port mappings dictionary for Docker using overrides when available
     /// </summary>
     public Dictionary<int, int> BuildPortMappings(ServiceDefinition service)
     {
@@ -110,7 +101,7 @@ public class DynamicServiceMenuBuilder
                 continue; // Skip optional ports for now
             }
 
-            var hostPort = GetPortFromSetting(port.HostPortSetting) ?? port.ContainerPort;
+            var hostPort = GetPortValue(service, port);
             mappings[hostPort] = port.ContainerPort;
         }
 
@@ -118,7 +109,7 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Build volume mappings dictionary for Docker
+    /// Build volume mappings dictionary for Docker using overrides when available
     /// </summary>
     public Dictionary<string, string> BuildVolumeMappings(ServiceDefinition service)
     {
@@ -131,7 +122,7 @@ public class DynamicServiceMenuBuilder
 
         foreach (var volume in service.Volumes)
         {
-            var hostPath = GetPathFromSetting(volume.HostPathSetting);
+            var hostPath = GetVolumePath(service, volume);
             if (!string.IsNullOrEmpty(hostPath))
             {
                 mappings[hostPath] = volume.ContainerPath;
@@ -202,7 +193,7 @@ public class DynamicServiceMenuBuilder
         while (!back)
         {
             var isRunning = await IsServiceRunningAsync(service);
-            var statusIndicator = isRunning ? "[green]●[/]" : "[red]●[/]";
+            var statusIndicator = isRunning ? Strings.Status.Running : Strings.Status.Stopped;
             
             // Build dynamic submenu from service definition
             var choices = new List<string>();
@@ -213,9 +204,10 @@ public class DynamicServiceMenuBuilder
                 {
                     var label = item.Action switch
                     {
-                        "toggle" => isRunning ? (item.LabelRunning ?? "Stop Service") : (item.LabelStopped ?? "Start Service"),
-                        "logs" => item.Label ?? "View Logs",
-                        "settings" => item.Label ?? "Settings",
+                        "toggle" => isRunning ? (item.LabelRunning ?? Strings.ServiceMenu.StopService) : (item.LabelStopped ?? Strings.ServiceMenu.StartService),
+                        "logs" => item.Label ?? Strings.ServiceMenu.ViewLogs,
+                        "parameters" => item.Label ?? Strings.ServiceMenu.Parameters,
+                        "settings" => item.Label ?? Strings.ServiceMenu.Settings,
                         "custom" => item.Label ?? item.Id ?? "Custom Action",
                         _ => item.Label ?? item.Action
                     };
@@ -225,15 +217,17 @@ public class DynamicServiceMenuBuilder
             else
             {
                 // Default menu if not defined
-                choices.Add(isRunning ? "Stop Service" : "Start Service");
-                choices.Add("View Logs");
+                choices.Add(isRunning ? Strings.ServiceMenu.StopService : Strings.ServiceMenu.StartService);
+                choices.Add(Strings.ServiceMenu.ViewLogs);
+                choices.Add(Strings.ServiceMenu.Parameters);
+                choices.Add(Strings.ServiceMenu.Settings);
             }
             
-            choices.Add("<= Back");
+            choices.Add(Strings.ServiceMenu.Back);
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold green]{service.Name} - Service: {statusIndicator}[/]")
+                    .Title(string.Format(Strings.ServiceMenu.TitleFormat, service.Name, statusIndicator))
                     .PageSize(10)
                     .AddChoices(choices)
             );
@@ -241,7 +235,7 @@ public class DynamicServiceMenuBuilder
             AnsiConsole.Clear();
             showBanner();
 
-            if (choice == "<= Back")
+            if (choice == Strings.ServiceMenu.Back)
             {
                 back = true;
                 continue;
@@ -254,10 +248,10 @@ public class DynamicServiceMenuBuilder
                 await HandleSubmenuActionAsync(service, selectedItem, isRunning, showBanner);
             }
 
-            if (!back && selectedItem?.Action != "settings")
+            if (!back && selectedItem?.Action != "settings" && selectedItem?.Action != "parameters")
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");
+                AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
                 Console.ReadLine();
                 AnsiConsole.Clear();
                 showBanner();
@@ -274,9 +268,17 @@ public class DynamicServiceMenuBuilder
             {
                 return new SubmenuItem { Action = "toggle" };
             }
-            if (choice == "View Logs")
+            if (choice == Strings.ServiceMenu.ViewLogs)
             {
                 return new SubmenuItem { Action = "logs" };
+            }
+            if (choice == Strings.ServiceMenu.Parameters)
+            {
+                return new SubmenuItem { Action = "parameters" };
+            }
+            if (choice == Strings.ServiceMenu.Settings)
+            {
+                return new SubmenuItem { Action = "settings" };
             }
             return null;
         }
@@ -285,9 +287,10 @@ public class DynamicServiceMenuBuilder
         {
             var label = item.Action switch
             {
-                "toggle" => isRunning ? (item.LabelRunning ?? "Stop Service") : (item.LabelStopped ?? "Start Service"),
-                "logs" => item.Label ?? "View Logs",
-                "settings" => item.Label ?? "Settings",
+                "toggle" => isRunning ? (item.LabelRunning ?? Strings.ServiceMenu.StopService) : (item.LabelStopped ?? Strings.ServiceMenu.StartService),
+                "logs" => item.Label ?? Strings.ServiceMenu.ViewLogs,
+                "parameters" => item.Label ?? Strings.ServiceMenu.Parameters,
+                "settings" => item.Label ?? Strings.ServiceMenu.Settings,
                 "custom" => item.Label ?? item.Id ?? "Custom Action",
                 _ => item.Label ?? item.Action
             };
@@ -320,6 +323,10 @@ public class DynamicServiceMenuBuilder
                 await ViewServiceLogsAsync(service);
                 break;
 
+            case "parameters":
+                ShowServiceParameters(service, showBanner);
+                break;
+
             case "settings":
                 ShowServiceSettings(service, showBanner);
                 break;
@@ -331,22 +338,22 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Start a service container
+    /// Start a service container using settings from services.yaml
     /// </summary>
     public async Task StartServiceAsync(ServiceDefinition service)
     {
         var containerName = GetContainerName(service);
         var imageName = GetImageName(service);
-        var repository = GetRepository(service);
-        var tag = GetImageTag(service);
-        var network = _serviceConfig?.Defaults?.DockerNetwork ?? _settings.DockerNetwork;
+        var repository = GetServiceRepository(service);
+        var tag = GetServiceTag(service);
+        var network = GetServiceNetwork(service);
 
-        AnsiConsole.MarkupLine($"[bold]Starting {service.Name}...[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.Container.StartingFormat, service.Name));
 
         // Ensure network exists
         await _dockerManager.EnsureNetworkExistsAsync(network);
 
-        // Build volume mappings
+        // Build volume mappings from service settings
         var volumes = BuildVolumeMappings(service);
         
         // Ensure volume directories/files exist
@@ -354,7 +361,7 @@ public class DynamicServiceMenuBuilder
         {
             foreach (var volume in service.Volumes)
             {
-                var hostPath = GetPathFromSetting(volume.HostPathSetting);
+                var hostPath = GetVolumePath(service, volume);
                 if (string.IsNullOrEmpty(hostPath)) continue;
                 
                 if (!Directory.Exists(hostPath) && !File.Exists(hostPath))
@@ -368,18 +375,18 @@ public class DynamicServiceMenuBuilder
                             if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
                             {
                                 Directory.CreateDirectory(parentDir);
-                                AnsiConsole.MarkupLine($"[dim]Created directory: {Markup.Escape(parentDir)}[/]");
+                                AnsiConsole.MarkupLine(string.Format(Strings.Container.CreatedDirectoryFormat, Markup.Escape(parentDir)));
                             }
                         }
                         else
                         {
                             Directory.CreateDirectory(hostPath);
-                            AnsiConsole.MarkupLine($"[dim]Created directory: {Markup.Escape(hostPath)}[/]");
+                            AnsiConsole.MarkupLine(string.Format(Strings.Container.CreatedDirectoryFormat, Markup.Escape(hostPath)));
                         }
                     }
                     catch (Exception ex)
                     {
-                        AnsiConsole.MarkupLine($"[yellow]Warning: Could not create path {Markup.Escape(hostPath)}: {Markup.Escape(ex.Message)}[/]");
+                        AnsiConsole.MarkupLine(string.Format(Strings.Container.CouldNotCreatePathFormat, Markup.Escape(hostPath), Markup.Escape(ex.Message)));
                     }
                 }
             }
@@ -404,11 +411,11 @@ public class DynamicServiceMenuBuilder
 
         if (success)
         {
-            AnsiConsole.MarkupLine($"[green]✓[/] {service.Name} started successfully");
+            AnsiConsole.MarkupLine(string.Format(Strings.Container.StartedSuccessFormat, service.Name));
         }
         else
         {
-            AnsiConsole.MarkupLine($"[red]✗[/] Failed to start {service.Name}");
+            AnsiConsole.MarkupLine(string.Format(Strings.Container.StartFailedFormat, service.Name));
         }
     }
 
@@ -418,17 +425,17 @@ public class DynamicServiceMenuBuilder
     public async Task StopServiceAsync(ServiceDefinition service)
     {
         var containerName = GetContainerName(service);
-        AnsiConsole.MarkupLine($"[bold]Stopping {service.Name}...[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.Container.StoppingFormat, service.Name));
 
         var success = await _dockerManager.StopContainerAsync(containerName);
 
         if (success)
         {
-            AnsiConsole.MarkupLine($"[green]✓[/] {service.Name} stopped successfully");
+            AnsiConsole.MarkupLine(string.Format(Strings.Container.StoppedSuccessFormat, service.Name));
         }
         else
         {
-            AnsiConsole.MarkupLine($"[yellow]⚠[/] {service.Name} may not have been running");
+            AnsiConsole.MarkupLine(string.Format(Strings.Container.MayNotBeRunningFormat, service.Name));
         }
     }
 
@@ -442,14 +449,14 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Show service settings menu based on parameters from services.yaml
+    /// Show service parameters menu (CLI flags from services.yaml)
     /// Shows only parameters that have user-set values, plus an "Add" option for unset parameters
     /// </summary>
-    public void ShowServiceSettings(ServiceDefinition service, Action showBanner)
+    public void ShowServiceParameters(ServiceDefinition service, Action showBanner)
     {
         if (service.Parameters == null || service.Parameters.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No parameters available for this service[/]");
+            AnsiConsole.MarkupLine(Strings.ParametersMenu.NoParametersAvailable);
             return;
         }
 
@@ -478,14 +485,14 @@ public class DynamicServiceMenuBuilder
             
             if (unsetParameters.Count > 0)
             {
-                choices.Add("[Add Parameter]");
+                choices.Add(Strings.ParametersMenu.AddParameter);
             }
             
-            choices.Add("<= Back");
+            choices.Add(Strings.ServiceMenu.Back);
 
             var title = setParameters.Count > 0 
-                ? $"[bold green]{service.Name} Settings[/]"
-                : $"[bold green]{service.Name} Settings[/] [dim](no parameters set)[/]";
+                ? string.Format(Strings.ParametersMenu.TitleFormat, service.Name)
+                : string.Format(Strings.ParametersMenu.TitleNoParamsFormat, service.Name);
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
@@ -494,13 +501,13 @@ public class DynamicServiceMenuBuilder
                     .AddChoices(choices)
             );
 
-            if (choice == "<= Back")
+            if (choice == Strings.ServiceMenu.Back)
             {
                 back = true;
                 continue;
             }
 
-            if (choice == "[Add Parameter]")
+            if (choice == Strings.ParametersMenu.AddParameter)
             {
                 ShowAddParameterMenu(service, unsetParameters, showBanner);
                 AnsiConsole.Clear();
@@ -519,6 +526,246 @@ public class DynamicServiceMenuBuilder
                 showBanner();
             }
         }
+    }
+
+    /// <summary>
+    /// Show service settings menu (Docker service-level: repository, tag, volumes, ports, etc.)
+    /// </summary>
+    public void ShowServiceSettings(ServiceDefinition service, Action showBanner)
+    {
+        bool back = false;
+        while (!back)
+        {
+            var choices = new List<string>();
+            
+            // Repository
+            var repo = GetServiceRepository(service);
+            choices.Add($"{Strings.SettingsMenu.Repository.PadRight(20)} [cyan]{Markup.Escape(repo)}[/]");
+            
+            // Tag
+            var tag = GetServiceTag(service);
+            choices.Add($"{Strings.SettingsMenu.Tag.PadRight(20)} [cyan]{Markup.Escape(tag)}[/]");
+            
+            // Container Name
+            var containerName = GetContainerName(service);
+            choices.Add($"{Strings.SettingsMenu.ContainerName.PadRight(20)} [cyan]{Markup.Escape(containerName)}[/]");
+            
+            // Network
+            var network = GetServiceNetwork(service);
+            choices.Add($"{Strings.SettingsMenu.Network.PadRight(20)} [cyan]{Markup.Escape(network)}[/]");
+            
+            // Volumes count
+            var volumeCount = service.Volumes?.Count ?? 0;
+            choices.Add($"{Strings.SettingsMenu.Volumes.PadRight(20)} [cyan]{volumeCount} configured[/]");
+            
+            // Ports count
+            var portCount = service.Ports?.Count ?? 0;
+            choices.Add($"{Strings.SettingsMenu.Ports.PadRight(20)} [cyan]{portCount} configured[/]");
+            
+            choices.Add(Strings.ServiceMenu.Back);
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title(string.Format(Strings.SettingsMenu.TitleFormat, service.Name))
+                    .PageSize(15)
+                    .AddChoices(choices)
+            );
+
+            if (choice == Strings.ServiceMenu.Back)
+            {
+                back = true;
+                continue;
+            }
+
+            // Find which setting was selected
+            var selectedIndex = choices.IndexOf(choice);
+            switch (selectedIndex)
+            {
+                case 0: // Repository
+                    EditServiceSetting(service, "repository", Strings.SettingsMenu.Repository, showBanner);
+                    break;
+                case 1: // Tag
+                    EditServiceSetting(service, "tag", Strings.SettingsMenu.Tag, showBanner);
+                    break;
+                case 2: // Container Name
+                    EditServiceSetting(service, "container_name", Strings.SettingsMenu.ContainerName, showBanner);
+                    break;
+                case 3: // Network
+                    EditServiceSetting(service, "network", Strings.SettingsMenu.Network, showBanner);
+                    break;
+                case 4: // Volumes
+                    ShowVolumesMenu(service, showBanner);
+                    break;
+                case 5: // Ports
+                    ShowPortsMenu(service, showBanner);
+                    break;
+            }
+            
+            AnsiConsole.Clear();
+            showBanner();
+        }
+    }
+
+    /// <summary>
+    /// Edit a service-level setting
+    /// </summary>
+    private void EditServiceSetting(ServiceDefinition service, string settingType, string settingName, Action showBanner)
+    {
+        string currentValue = settingType switch
+        {
+            "repository" => GetServiceRepository(service),
+            "tag" => GetServiceTag(service),
+            "container_name" => GetContainerName(service),
+            "network" => GetServiceNetwork(service),
+            _ => ""
+        };
+
+        var newValue = AnsiConsole.Ask(string.Format(Strings.SettingsMenu.EnterValueFormat, settingName), currentValue);
+
+        // Update the service configuration
+        switch (settingType)
+        {
+            case "repository":
+                if (service.Container != null)
+                    service.Container.Repository = newValue;
+                break;
+            case "tag":
+                if (service.Container != null)
+                    service.Container.DefaultTag = newValue;
+                break;
+            case "container_name":
+                // Store as a custom setting value
+                service.ContainerNameOverride = newValue;
+                break;
+            case "network":
+                service.NetworkOverride = newValue;
+                break;
+        }
+
+        SaveServicesToYaml();
+        AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, settingName));
+    }
+
+    /// <summary>
+    /// Show volumes configuration menu
+    /// </summary>
+    private void ShowVolumesMenu(ServiceDefinition service, Action showBanner)
+    {
+        if (service.Volumes == null || service.Volumes.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No volumes configured for this service[/]");
+            return;
+        }
+
+        var choices = new List<string>();
+        foreach (var volume in service.Volumes)
+        {
+            var hostPath = GetVolumePath(service, volume);
+            choices.Add($"{volume.Name.PadRight(15)} {Markup.Escape(hostPath ?? Strings.Status.NotSet)} -> {Markup.Escape(volume.ContainerPath)}");
+        }
+        choices.Add(Strings.ServiceMenu.Back);
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold green]{service.Name} Volumes[/]")
+                .PageSize(15)
+                .AddChoices(choices)
+        );
+
+        if (choice != Strings.ServiceMenu.Back)
+        {
+            var selectedIndex = choices.IndexOf(choice);
+            if (selectedIndex >= 0 && selectedIndex < service.Volumes.Count)
+            {
+                var volume = service.Volumes[selectedIndex];
+                var currentPath = GetVolumePath(service, volume) ?? "";
+                var newPath = AnsiConsole.Ask($"Enter host path for {volume.Name}:", currentPath);
+                volume.HostPathOverride = newPath;
+                SaveServicesToYaml();
+                AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, volume.Name));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Show ports configuration menu
+    /// </summary>
+    private void ShowPortsMenu(ServiceDefinition service, Action showBanner)
+    {
+        if (service.Ports == null || service.Ports.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No ports configured for this service[/]");
+            return;
+        }
+
+        var choices = new List<string>();
+        foreach (var port in service.Ports)
+        {
+            var hostPort = GetPortValue(service, port);
+            choices.Add($"{port.Name.PadRight(15)} {hostPort}:{port.ContainerPort}");
+        }
+        choices.Add(Strings.ServiceMenu.Back);
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold green]{service.Name} Ports[/]")
+                .PageSize(15)
+                .AddChoices(choices)
+        );
+
+        if (choice != Strings.ServiceMenu.Back)
+        {
+            var selectedIndex = choices.IndexOf(choice);
+            if (selectedIndex >= 0 && selectedIndex < service.Ports.Count)
+            {
+                var port = service.Ports[selectedIndex];
+                var currentPort = GetPortValue(service, port);
+                var newPort = AnsiConsole.Ask($"Enter host port for {port.Name}:", currentPort);
+                port.HostPortOverride = newPort;
+                SaveServicesToYaml();
+                AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, port.Name));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Get service repository (from override or default)
+    /// </summary>
+    private string GetServiceRepository(ServiceDefinition service)
+    {
+        return service.Container?.Repository ?? "ghcr.io/ev1ls33d/pocx-wallet";
+    }
+
+    /// <summary>
+    /// Get service tag (from override or default)
+    /// </summary>
+    private string GetServiceTag(ServiceDefinition service)
+    {
+        return service.Container?.DefaultTag ?? "latest";
+    }
+
+    /// <summary>
+    /// Get service network (from override or default)
+    /// </summary>
+    private string GetServiceNetwork(ServiceDefinition service)
+    {
+        return service.NetworkOverride ?? _serviceConfig?.Defaults?.DockerNetwork ?? _settings.DockerNetwork;
+    }
+
+    /// <summary>
+    /// Get volume path (from override or setting)
+    /// </summary>
+    private string? GetVolumePath(ServiceDefinition service, VolumeMapping volume)
+    {
+        return volume.HostPathOverride ?? GetPathFromSetting(volume.HostPathSetting);
+    }
+
+    /// <summary>
+    /// Get port value (from override or setting)
+    /// </summary>
+    private int GetPortValue(ServiceDefinition service, PortMapping port)
+    {
+        return port.HostPortOverride ?? GetPortFromSetting(port.HostPortSetting) ?? port.ContainerPort;
     }
 
     /// <summary>

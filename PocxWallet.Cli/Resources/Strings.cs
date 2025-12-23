@@ -1,0 +1,166 @@
+namespace PocxWallet.Cli.Resources;
+
+/// <summary>
+/// Centralized string resources for the CLI application.
+/// This allows for easy refactoring and potential localization.
+/// </summary>
+public static class Strings
+{
+    // ========================================
+    // Main Menu
+    // ========================================
+    public static class MainMenu
+    {
+        public const string Title = "[bold green]Main Menu[/]";
+        public const string WalletLabel = "[Wallet]";
+        public const string WalletDescription = "Wallet Management";
+        public const string VanityLabel = "[Vanity]";
+        public const string VanityDescription = "Vanity Address Generator";
+        public const string ExitLabel = "[Exit]";
+        public const string ExitDescription = "Exit";
+        public const string Goodbye = "[bold yellow]Goodbye![/]";
+        public const string PressEnterToReturn = "[dim]Press ENTER to return to the main menu...[/]";
+        public const string BackgroundServicesHeader = "[bold]Background Services:[/]";
+    }
+
+    // ========================================
+    // Service Menu
+    // ========================================
+    public static class ServiceMenu
+    {
+        public const string TitleFormat = "[bold green]{0} - Service: {1}[/]";
+        public const string StopService = "Stop Service";
+        public const string StartService = "Start Service";
+        public const string ViewLogs = "View Logs";
+        public const string Parameters = "Parameters";
+        public const string Settings = "Settings";
+        public const string Back = "<= Back";
+        public const string PressEnterToContinue = "[dim]Press ENTER to continue...[/]";
+    }
+
+    // ========================================
+    // Parameters Menu (CLI flags)
+    // ========================================
+    public static class ParametersMenu
+    {
+        public const string TitleFormat = "[bold green]{0} Parameters[/]";
+        public const string TitleNoParamsFormat = "[bold green]{0} Parameters[/] [dim](no parameters set)[/]";
+        public const string AddParameter = "[Add Parameter]";
+        public const string AddParameterTitleFormat = "[bold green]Add Parameter to {0}[/]";
+        public const string NoParametersAvailable = "[yellow]No parameters available for this service[/]";
+        public const string ToggleValue = "Toggle Value";
+        public const string EditValue = "Edit Value";
+        public const string RemoveParameter = "[red]Remove Parameter[/]";
+        public const string ParameterSetFormat = "[green]✓[/] {0} set to {1}";
+        public const string ParameterRemovedFormat = "[green]✓[/] {0} removed";
+    }
+
+    // ========================================
+    // Settings Menu (Docker service level)
+    // ========================================
+    public static class SettingsMenu
+    {
+        public const string TitleFormat = "[bold green]{0} Settings[/]";
+        public const string Repository = "Repository";
+        public const string Tag = "Tag";
+        public const string ContainerName = "Container Name";
+        public const string WorkingDirectory = "Working Directory";
+        public const string Network = "Network";
+        public const string Volumes = "Volumes";
+        public const string Ports = "Ports";
+        public const string SettingUpdatedFormat = "[green]✓[/] {0} updated";
+        public const string EnterValueFormat = "Enter {0}:";
+    }
+
+    // ========================================
+    // Status Indicators
+    // ========================================
+    public static class Status
+    {
+        public const string Running = "[green]●[/]";
+        public const string Stopped = "[red]●[/]";
+        public const string BoolTrue = "[green]true[/]";
+        public const string BoolFalse = "[red]false[/]";
+        public const string Empty = "[dim](empty)[/]";
+        public const string NotSet = "[dim](not set)[/]";
+    }
+
+    // ========================================
+    // Container Operations
+    // ========================================
+    public static class Container
+    {
+        public const string StartingFormat = "[bold]Starting {0}...[/]";
+        public const string StoppingFormat = "[bold]Stopping {0}...[/]";
+        public const string StartedSuccessFormat = "[green]✓[/] {0} started successfully";
+        public const string StartFailedFormat = "[red]✗[/] Failed to start {0}";
+        public const string StoppedSuccessFormat = "[green]✓[/] {0} stopped successfully";
+        public const string MayNotBeRunningFormat = "[yellow]⚠[/] {0} may not have been running";
+        public const string CreatedDirectoryFormat = "[dim]Created directory: {0}[/]";
+        public const string CouldNotCreatePathFormat = "[yellow]Warning: Could not create path {0}: {1}[/]";
+    }
+
+    // ========================================
+    // Wallet Menu
+    // ========================================
+    public static class WalletMenu
+    {
+        public const string Title = "[bold green]Wallet Management[/]";
+        public const string CreateNewWallet = "Create New Wallet";
+        public const string RestoreFromMnemonic = "Restore Wallet from Mnemonic";
+        public const string ShowAddresses = "Show Addresses";
+        public const string CheckBalance = "Check Balance";
+        public const string SendFunds = "Send Funds";
+        public const string TransactionHistory = "Transaction History";
+    }
+
+    // ========================================
+    // Validation Messages
+    // ========================================
+    public static class Validation
+    {
+        public const string ValueMustBeAtLeastFormat = "[yellow]Value must be at least {0}. Please try again.[/]";
+        public const string ValueMustBeAtMostFormat = "[yellow]Value must be at most {0}. Please try again.[/]";
+    }
+
+    // ========================================
+    // File Operations
+    // ========================================
+    public static class Files
+    {
+        public const string SettingsSavedFormat = "[dim]Settings saved to {0}[/]";
+        public const string ErrorSavingFormat = "[red]Error saving {0}: {1}[/]";
+        public const string NotFoundFormat = "[dim]Note: {0} not found at '{1}'. Dynamic services will not be available.[/]";
+        public const string FailedToLoadFormat = "[yellow]Warning: Failed to load {0}: {1}[/]";
+    }
+
+    // ========================================
+    // Custom Actions
+    // ========================================
+    public static class CustomActions
+    {
+        public const string NotImplementedFormat = "[yellow]Custom action '{0}' is not yet implemented[/]";
+        public const string RequiresImplementation = "[dim]This action is defined in services.yaml but requires code implementation.[/]";
+        public const string HandlerReferenceFormat = "[dim]Handler reference: {0}[/]";
+    }
+
+    // ========================================
+    // Banner
+    // ========================================
+    public static class Banner
+    {
+        public const string Title = "[red]PoCX HD Wallet[/]";
+    }
+
+    // ========================================
+    // Common
+    // ========================================
+    public static class Common
+    {
+        public const string PressEnterToReturn = "\n<= Press ENTER to return";
+        public const string EnableFormat = "Enable {0}?";
+        public const string EnterFormat = "Enter {0}:";
+        public const string SelectFormat = "Select {0}:";
+        public const string EnterCommaSeparatedFormat = "Enter {0} (comma-separated):";
+    }
+}

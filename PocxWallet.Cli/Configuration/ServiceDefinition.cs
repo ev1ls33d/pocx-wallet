@@ -104,6 +104,18 @@ public class ServiceDefinition
     public List<ServiceSetting>? Settings { get; set; }
 
     /// <summary>
+    /// User override for container name
+    /// </summary>
+    [YamlMember(Alias = "container_name_override")]
+    public string? ContainerNameOverride { get; set; }
+
+    /// <summary>
+    /// User override for network
+    /// </summary>
+    [YamlMember(Alias = "network_override")]
+    public string? NetworkOverride { get; set; }
+
+    /// <summary>
     /// Get the container name for this service
     /// </summary>
     public string GetContainerName()
@@ -179,6 +191,12 @@ public class PortMapping
 
     [YamlMember(Alias = "optional")]
     public bool Optional { get; set; }
+
+    /// <summary>
+    /// User override for host port
+    /// </summary>
+    [YamlMember(Alias = "host_port_override")]
+    public int? HostPortOverride { get; set; }
 }
 
 /// <summary>
@@ -203,6 +221,12 @@ public class VolumeMapping
 
     [YamlMember(Alias = "is_file")]
     public bool IsFile { get; set; }
+
+    /// <summary>
+    /// User override for host path
+    /// </summary>
+    [YamlMember(Alias = "host_path_override")]
+    public string? HostPathOverride { get; set; }
 }
 
 /// <summary>

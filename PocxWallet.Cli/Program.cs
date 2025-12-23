@@ -1,5 +1,6 @@
 ﻿using PocxWallet.Cli.Commands;
 using PocxWallet.Cli.Configuration;
+using PocxWallet.Cli.Resources;
 using PocxWallet.Cli.Services;
 using Spectre.Console;
 using System;
@@ -16,9 +17,9 @@ class Program
     private static DynamicServiceMenuBuilder? _dynamicMenuBuilder;
 
     // Constants for hardcoded menu items
-    private static string MenuWallet = $"{Markup.Escape("[Wallet]").PadRight(15)} Wallet Management";
-    private static string MenuVanity = $"{Markup.Escape("[Vanity]").PadRight(15)} Vanity Address Generator";
-    private static string MenuExit   = $"{Markup.Escape("[Exit]").PadRight(15)} Exit";
+    private static string MenuWallet = $"{Markup.Escape(Strings.MainMenu.WalletLabel).PadRight(15)} {Strings.MainMenu.WalletDescription}";
+    private static string MenuVanity = $"{Markup.Escape(Strings.MainMenu.VanityLabel).PadRight(15)} {Strings.MainMenu.VanityDescription}";
+    private static string MenuExit   = $"{Markup.Escape(Strings.MainMenu.ExitLabel).PadRight(15)} {Strings.MainMenu.ExitDescription}";
 
     private static DockerServiceManager GetDockerManager()
     {
@@ -88,7 +89,7 @@ class Program
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[bold green]Main Menu[/]")
+                    .Title(Strings.MainMenu.Title)
                     .PageSize(15)
                     .AddChoices(menuChoices)
             );
@@ -104,13 +105,13 @@ class Program
             else if (choice == MenuVanity)
             {
                 await VanityCommands.GenerateVanityAddressAsync();
-                AnsiConsole.MarkupLine("\n<= Press ENTER to return");
+                AnsiConsole.MarkupLine(Strings.Common.PressEnterToReturn);
                 Console.ReadLine();
             }
             else if (choice == MenuExit)
             {
                 exit = true;
-                AnsiConsole.MarkupLine("[bold yellow]Goodbye![/]");
+                AnsiConsole.MarkupLine(Strings.MainMenu.Goodbye);
             }
             else if (serviceStatusMap.TryGetValue(choice, out var serviceId))
             {
@@ -125,14 +126,14 @@ class Program
             if (!exit)
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[dim]Press ENTER to return to the main menu...[/]");
+                AnsiConsole.MarkupLine(Strings.MainMenu.PressEnterToReturn);
                 Console.ReadLine();
 
                 // Show background services status
                 if (BackgroundServiceManager.HasRunningServices())
                 {
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[bold]Background Services:[/]");
+                    AnsiConsole.MarkupLine(Strings.MainMenu.BackgroundServicesHeader);
                     BackgroundServiceManager.DisplayServices();
                 }
 
@@ -152,18 +153,18 @@ class Program
     {
         var choices = new[]
         {
-            "Create New Wallet",
-            "Restore Wallet from Mnemonic",
-            "Show Addresses",
-            "Check Balance",
-            "Send Funds",
-            "Transaction History",
-            "<= Back"
+            Strings.WalletMenu.CreateNewWallet,
+            Strings.WalletMenu.RestoreFromMnemonic,
+            Strings.WalletMenu.ShowAddresses,
+            Strings.WalletMenu.CheckBalance,
+            Strings.WalletMenu.SendFunds,
+            Strings.WalletMenu.TransactionHistory,
+            Strings.ServiceMenu.Back
         };
 
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Wallet Management[/]")
+                .Title(Strings.WalletMenu.Title)
                 .PageSize(10)
                 .AddChoices(choices)
         );
@@ -173,22 +174,22 @@ class Program
 
         switch (choice)
         {
-            case "Create New Wallet":
+            case var c when c == Strings.WalletMenu.CreateNewWallet:
                 await WalletCommands.CreateNewWallet();
                 break;
-            case "Restore Wallet from Mnemonic":
+            case var c when c == Strings.WalletMenu.RestoreFromMnemonic:
                 await WalletCommands.RestoreWallet();
                 break;
-            case "Show Addresses":
+            case var c when c == Strings.WalletMenu.ShowAddresses:
                 WalletCommands.ShowAddresses();
                 break;
-            case "Check Balance":
+            case var c when c == Strings.WalletMenu.CheckBalance:
                 await TransactionCommands.CheckBalance();
                 break;
-            case "Send Funds":
+            case var c when c == Strings.WalletMenu.SendFunds:
                 await TransactionCommands.SendFunds();
                 break;
-            case "Transaction History":
+            case var c when c == Strings.WalletMenu.TransactionHistory:
                 await TransactionCommands.ShowTransactionHistory();
                 break;
         }
@@ -196,7 +197,7 @@ class Program
 
     static void ShowBanner()
     {
-        var rule = new Rule("[red]PoCX HD Wallet[/]");
+        var rule = new Rule(Strings.Banner.Title);
         var ruleLine = new Rule();
         ruleLine.RuleStyle("blue dim");
         rule.RuleStyle("blue dim");
@@ -237,7 +238,7 @@ class Program
     static void SaveConfiguration()
     {
         SettingsManager.SaveSettings(_settings);
-        AnsiConsole.MarkupLine($"[green]√[/] Configuration saved to: appsettings.json");
+        AnsiConsole.MarkupLine(string.Format(Strings.Files.SettingsSavedFormat, "appsettings.json"));
     }
 
 }
