@@ -201,9 +201,9 @@ public static class WalletCommands
             var address = wallet.GetPoCXAddress(0, 0, isTestnet);
 
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[bold]Importing wallet:[/] {walletName}");
+            AnsiConsole.MarkupLine($"[bold]Importing wallet:[/] {Markup.Escape(walletName)}");
             AnsiConsole.MarkupLine($"[bold]Network:[/] {networkName}");
-            AnsiConsole.MarkupLine($"[bold]Address:[/] {address}");
+            AnsiConsole.MarkupLine($"[bold]Address:[/] {Markup.Escape(address)}");
             AnsiConsole.WriteLine();
 
             var success = await NodeCommands.ImportWalletFromWIFAsync(settings, walletName, wif, address, isTestnet);
@@ -256,7 +256,7 @@ public static class WalletCommands
             {
                 var address = wallet.GetPoCXAddress(0, i);
                 var pubKey = wallet.GetPublicKey(0, i);
-                table.AddRow(i.ToString(), address, pubKey[..16] + "...");
+                table.AddRow(i.ToString(), address, Markup.Escape(pubKey[..16] + "..."));
             }
 
             AnsiConsole.Write(table);

@@ -102,7 +102,7 @@ public static class VanityCommands
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine($"[bold]Network:[/] {(useTestnet ? "[green]Testnet[/]" : "[blue]Mainnet[/]")}");
-                AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{result.Address}[/]");
+                AnsiConsole.MarkupLine($"[bold]Address:[/] [green]{Markup.Escape(result.Address)}[/]");
                 AnsiConsole.MarkupLine($"[dim]Format: Bech32 ({(useTestnet ? "tpocx1q..." : "pocx1q...")})[/]");
 
                 // Generate WIF and descriptor for the selected network
@@ -111,10 +111,10 @@ public static class VanityCommands
                 var descriptor = restoredWallet.GetDescriptor(useTestnet, 0, 0);
 
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[bold]WIF ({(useTestnet ? "Testnet" : "Mainnet")}):[/] [dim]{wif}[/]");
+                AnsiConsole.MarkupLine($"[bold]WIF ({(useTestnet ? "Testnet" : "Mainnet")}):[/] [dim]{Markup.Escape(wif)}[/]");
 
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"[bold]Descriptor:[/] [dim]{descriptor}[/]");
+                AnsiConsole.MarkupLine($"[bold]Descriptor:[/] [dim]{Markup.Escape(descriptor)}[/]");
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]");

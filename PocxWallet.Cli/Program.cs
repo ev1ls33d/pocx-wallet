@@ -190,9 +190,9 @@ class Program
                     .AddChoices(mainChoices)
                     .UseConverter(opt => opt switch
                     {
-                        MenuOptions.Main_Plotting => $"[Plot]      Plotting {plotterStatus}",
-                        MenuOptions.Main_Mining => $"[Mine]      Mining {minerStatus}",
-                        MenuOptions.Main_BitcoinPoCXNode => $"[Node]      Bitcoin-PoCX Node {nodeStatus} {electrsStatus}",
+                        MenuOptions.Main_Plotting => $"[[Plot]]      Plotting {plotterStatus}",
+                        MenuOptions.Main_Mining => $"[[Mine]]      Mining {minerStatus}",
+                        MenuOptions.Main_BitcoinPoCXNode => $"[[Node]]      Bitcoin-PoCX Node {nodeStatus} {electrsStatus}",
                         _ => opt.ToDisplayString()
                     })
             );
