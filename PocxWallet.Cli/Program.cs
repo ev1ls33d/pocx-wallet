@@ -8,8 +8,7 @@ using Spectre.Console;
 
 namespace PocxWallet.Cli;
 
-// Legacy enum - kept for compatibility but main menu now uses string-based dynamic choices
-// This enum is only used internally for wallet submenu type safety if needed
+// Legacy enum - kept for potential future use but main menu now uses string-based dynamic choices
 enum MenuOptions
 {
     // Wallet submenu

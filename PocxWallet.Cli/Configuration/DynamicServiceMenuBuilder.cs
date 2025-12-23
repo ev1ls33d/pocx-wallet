@@ -349,19 +349,38 @@ public class DynamicServiceMenuBuilder
         // Build volume mappings
         var volumes = BuildVolumeMappings(service);
         
-        // Ensure volume directories exist
-        foreach (var (hostPath, _) in volumes)
+        // Ensure volume directories/files exist
+        if (service.Volumes != null)
         {
-            if (!Directory.Exists(hostPath) && !File.Exists(hostPath))
+            foreach (var volume in service.Volumes)
             {
-                try
+                var hostPath = GetPathFromSetting(volume.HostPathSetting);
+                if (string.IsNullOrEmpty(hostPath)) continue;
+                
+                if (!Directory.Exists(hostPath) && !File.Exists(hostPath))
                 {
-                    Directory.CreateDirectory(hostPath);
-                    AnsiConsole.MarkupLine($"[dim]Created directory: {Markup.Escape(hostPath)}[/]");
-                }
-                catch (Exception ex)
-                {
-                    AnsiConsole.MarkupLine($"[yellow]Warning: Could not create directory {Markup.Escape(hostPath)}: {Markup.Escape(ex.Message)}[/]");
+                    try
+                    {
+                        if (volume.IsFile)
+                        {
+                            // For file volumes, create the parent directory
+                            var parentDir = Path.GetDirectoryName(hostPath);
+                            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
+                            {
+                                Directory.CreateDirectory(parentDir);
+                                AnsiConsole.MarkupLine($"[dim]Created directory: {Markup.Escape(parentDir)}[/]");
+                            }
+                        }
+                        else
+                        {
+                            Directory.CreateDirectory(hostPath);
+                            AnsiConsole.MarkupLine($"[dim]Created directory: {Markup.Escape(hostPath)}[/]");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[yellow]Warning: Could not create path {Markup.Escape(hostPath)}: {Markup.Escape(ex.Message)}[/]");
+                    }
                 }
             }
         }
@@ -447,12 +466,17 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Handle custom actions defined in services.yaml
+    /// Handle custom actions defined in services.yaml.
+    /// NOTE: Custom actions are placeholders for future implementation.
+    /// The handler string in services.yaml specifies which method should be called,
+    /// but actual implementation requires extending this method with reflection
+    /// or a command registry pattern.
     /// </summary>
     private async Task HandleCustomActionAsync(ServiceDefinition service, SubmenuItem item)
     {
-        AnsiConsole.MarkupLine($"[yellow]Custom action '{item.Id}' requires implementation[/]");
-        AnsiConsole.MarkupLine($"[dim]Handler: {item.Handler}[/]");
+        AnsiConsole.MarkupLine($"[yellow]Custom action '{item.Id}' is not yet implemented[/]");
+        AnsiConsole.MarkupLine($"[dim]This action is defined in services.yaml but requires code implementation.[/]");
+        AnsiConsole.MarkupLine($"[dim]Handler reference: {item.Handler}[/]");
         await Task.CompletedTask;
     }
 
