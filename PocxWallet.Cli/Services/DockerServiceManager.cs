@@ -11,6 +11,10 @@ public class DockerServiceManager
 {
     // Maximum log size to display before truncation
     private const int MaxLogDisplaySize = 5000;
+    
+    // Container startup/shutdown delays
+    private const int ContainerStartupDelayMs = 1000;
+    private const int ContainerShutdownDelayMs = 500;
 
     public DockerServiceManager()
     {
@@ -226,7 +230,7 @@ public class DockerServiceManager
         if (result.exitCode == 0)
         {
             // Wait a moment for container to fully start
-            await Task.Delay(1000);
+            await Task.Delay(ContainerStartupDelayMs);
             
             // Verify container is running
             var status = await GetContainerStatusAsync(containerName);
@@ -237,13 +241,13 @@ public class DockerServiceManager
             }
             else
             {
-                AnsiConsole.MarkupLine($"[yellow]⚠[/] Container created but status is: {status}");
-                return true; // Still return true as container was created
+                AnsiConsole.MarkupLine($"[yellow]⚠[/] Container created but status is: {Markup.Escape(status)}");
+                return false; // Return false if not running
             }
         }
         else
         {
-            AnsiConsole.MarkupLine($"[red]Failed to start container:[/] {result.output}");
+            AnsiConsole.MarkupLine($"[red]Failed to start container:[/] {Markup.Escape(result.output)}");
             return false;
         }
     }
@@ -261,7 +265,7 @@ public class DockerServiceManager
         if (result.exitCode == 0)
         {
             // Wait a moment for container to fully stop
-            await Task.Delay(500);
+            await Task.Delay(ContainerShutdownDelayMs);
             AnsiConsole.MarkupLine("[green]✓[/] Container stopped successfully");
             return true;
         }
