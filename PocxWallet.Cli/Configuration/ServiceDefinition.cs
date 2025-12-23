@@ -266,6 +266,17 @@ public class ServiceParameter
 
     [YamlMember(Alias = "hidden")]
     public bool Hidden { get; set; }
+
+    /// <summary>
+    /// User-set value for this parameter (null if not set by user)
+    /// </summary>
+    [YamlMember(Alias = "value")]
+    public object? Value { get; set; }
+
+    /// <summary>
+    /// Check if this parameter has been set by the user
+    /// </summary>
+    public bool HasUserValue => Value != null;
 }
 
 /// <summary>

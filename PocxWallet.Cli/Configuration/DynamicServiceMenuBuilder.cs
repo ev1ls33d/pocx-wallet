@@ -442,34 +442,54 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Show service settings menu with inline editing
+    /// Show service settings menu based on parameters from services.yaml
+    /// Shows only parameters that have user-set values, plus an "Add" option for unset parameters
     /// </summary>
     public void ShowServiceSettings(ServiceDefinition service, Action showBanner)
     {
-        if (service.Settings == null || service.Settings.Count == 0)
+        if (service.Parameters == null || service.Parameters.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No settings available for this service[/]");
+            AnsiConsole.MarkupLine("[yellow]No parameters available for this service[/]");
             return;
         }
 
         bool back = false;
         while (!back)
         {
-            // Build menu choices with current values
+            // Get parameters with user-set values (not hidden)
+            var setParameters = service.Parameters
+                .Where(p => !p.Hidden && p.HasUserValue)
+                .ToList();
+
+            // Build menu choices
             var choices = new List<string>();
-            foreach (var setting in service.Settings)
+            
+            // Add set parameters with their values
+            foreach (var param in setParameters)
             {
-                var currentValue = GetSettingValue(setting.SettingPath) ?? "(not set)";
-                var displayValue = setting.Type == "bool" 
-                    ? (currentValue.ToLower() == "true" ? "[green]On[/]" : "[red]Off[/]")
-                    : $"[dim]{Markup.Escape(currentValue)}[/]";
-                choices.Add($"{setting.Key.PadRight(20)} {displayValue}");
+                var displayValue = FormatParameterValue(param);
+                choices.Add($"{param.Name.PadRight(20)} {displayValue}");
             }
+            
+            // Add option to add new parameters
+            var unsetParameters = service.Parameters
+                .Where(p => !p.Hidden && !p.HasUserValue)
+                .ToList();
+            
+            if (unsetParameters.Count > 0)
+            {
+                choices.Add("[Add Parameter]");
+            }
+            
             choices.Add("<= Back");
+
+            var title = setParameters.Count > 0 
+                ? $"[bold green]{service.Name} Settings[/]"
+                : $"[bold green]{service.Name} Settings[/] [dim](no parameters set)[/]";
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold green]{service.Name} Settings[/]")
+                    .Title(title)
                     .PageSize(15)
                     .AddChoices(choices)
             );
@@ -480,12 +500,20 @@ public class DynamicServiceMenuBuilder
                 continue;
             }
 
-            // Find the selected setting
-            var selectedIndex = choices.IndexOf(choice);
-            if (selectedIndex >= 0 && selectedIndex < service.Settings.Count)
+            if (choice == "[Add Parameter]")
             {
-                var setting = service.Settings[selectedIndex];
-                EditSetting(setting);
+                ShowAddParameterMenu(service, unsetParameters, showBanner);
+                AnsiConsole.Clear();
+                showBanner();
+                continue;
+            }
+
+            // Find the selected parameter
+            var selectedIndex = choices.IndexOf(choice);
+            if (selectedIndex >= 0 && selectedIndex < setParameters.Count)
+            {
+                var param = setParameters[selectedIndex];
+                EditParameter(service, param);
                 
                 AnsiConsole.Clear();
                 showBanner();
@@ -494,198 +522,206 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Edit a single setting value
+    /// Format a parameter value for display
     /// </summary>
-    private void EditSetting(ServiceSetting setting)
+    private string FormatParameterValue(ServiceParameter param)
     {
-        var currentValue = GetSettingValue(setting.SettingPath);
-
-        switch (setting.Type.ToLower())
+        var value = param.Value;
+        
+        switch (param.Type.ToLower())
         {
             case "bool":
-                // Toggle boolean value
-                var currentBool = currentValue?.ToLower() == "true";
-                var newBool = !currentBool;
-                SetSettingValue(setting.SettingPath, newBool.ToString());
-                AnsiConsole.MarkupLine($"[green]✓[/] {setting.Key} set to {(newBool ? "[green]On[/]" : "[red]Off[/]")}");
+                var boolVal = value?.ToString()?.ToLower() == "true";
+                return boolVal ? "[green]true[/]" : "[red]false[/]";
+            
+            case "int":
+                return $"[cyan]{value}[/]";
+            
+            case "string[]":
+                if (value is List<object> list)
+                    return $"[cyan][{string.Join(", ", list)}][/]";
+                return $"[cyan]{value}[/]";
+            
+            default:
+                return $"[cyan]{Markup.Escape(value?.ToString() ?? "")}[/]";
+        }
+    }
+
+    /// <summary>
+    /// Show menu to add a new parameter
+    /// </summary>
+    private void ShowAddParameterMenu(ServiceDefinition service, List<ServiceParameter> unsetParameters, Action showBanner)
+    {
+        // Group by category for better organization
+        var grouped = unsetParameters
+            .GroupBy(p => p.Category ?? "general")
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        var choices = new List<string>();
+        var paramMap = new Dictionary<string, ServiceParameter>();
+        
+        foreach (var group in grouped)
+        {
+            foreach (var param in group)
+            {
+                var label = $"[dim]{group.Key}:[/] {param.Name}";
+                choices.Add(label);
+                paramMap[label] = param;
+            }
+        }
+        
+        choices.Add("<= Back");
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold green]Add Parameter to {service.Name}[/]")
+                .PageSize(20)
+                .AddChoices(choices)
+        );
+
+        if (choice == "<= Back")
+        {
+            return;
+        }
+
+        if (paramMap.TryGetValue(choice, out var selectedParam))
+        {
+            // Show description before setting
+            AnsiConsole.MarkupLine($"[dim]{Markup.Escape(selectedParam.Description)}[/]");
+            AnsiConsole.WriteLine();
+            
+            // Set the parameter value
+            SetParameterValue(service, selectedParam);
+        }
+    }
+
+    /// <summary>
+    /// Edit an existing parameter value (toggle for bool, or remove option)
+    /// </summary>
+    private void EditParameter(ServiceDefinition service, ServiceParameter param)
+    {
+        AnsiConsole.MarkupLine($"[dim]{Markup.Escape(param.Description)}[/]");
+        AnsiConsole.WriteLine();
+
+        var choices = new List<string>();
+        
+        if (param.Type.ToLower() == "bool")
+        {
+            choices.Add("Toggle Value");
+        }
+        else
+        {
+            choices.Add("Edit Value");
+        }
+        choices.Add("[red]Remove Parameter[/]");
+        choices.Add("<= Back");
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold]{param.Name}[/]: {FormatParameterValue(param)}")
+                .AddChoices(choices)
+        );
+
+        switch (choice)
+        {
+            case "Toggle Value":
+                var currentBool = param.Value?.ToString()?.ToLower() == "true";
+                param.Value = !currentBool;
+                SaveServicesToYaml();
+                AnsiConsole.MarkupLine($"[green]✓[/] {param.Name} set to {FormatParameterValue(param)}");
+                break;
+            
+            case "Edit Value":
+                SetParameterValue(service, param);
+                break;
+            
+            case "[red]Remove Parameter[/]":
+                param.Value = null;
+                SaveServicesToYaml();
+                AnsiConsole.MarkupLine($"[green]✓[/] {param.Name} removed");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Set a parameter value based on its type
+    /// </summary>
+    private void SetParameterValue(ServiceDefinition service, ServiceParameter param)
+    {
+        switch (param.Type.ToLower())
+        {
+            case "bool":
+                var defaultBool = param.Default?.ToString()?.ToLower() == "true";
+                param.Value = AnsiConsole.Confirm($"Enable {param.Name}?", defaultBool);
                 break;
 
             case "int":
-                var currentInt = int.TryParse(currentValue, out var intVal) ? intVal : 0;
-                int newInt;
+                var defaultInt = 0;
+                if (param.Default != null && int.TryParse(param.Default.ToString(), out var di))
+                    defaultInt = di;
                 
-                // Loop until valid input is provided
                 while (true)
                 {
-                    newInt = AnsiConsole.Ask($"Enter {setting.Key}:", currentInt);
+                    var newInt = AnsiConsole.Ask($"Enter {param.Name}:", defaultInt);
                     
-                    // Validate if min/max specified
-                    if (setting.Validation != null)
+                    if (param.Validation != null)
                     {
-                        if (setting.Validation.Min.HasValue && newInt < setting.Validation.Min.Value)
+                        if (param.Validation.Min.HasValue && newInt < param.Validation.Min.Value)
                         {
-                            AnsiConsole.MarkupLine($"[yellow]Value must be at least {setting.Validation.Min.Value}. Please try again.[/]");
+                            AnsiConsole.MarkupLine($"[yellow]Value must be at least {param.Validation.Min.Value}. Please try again.[/]");
                             continue;
                         }
-                        if (setting.Validation.Max.HasValue && newInt > setting.Validation.Max.Value)
+                        if (param.Validation.Max.HasValue && newInt > param.Validation.Max.Value)
                         {
-                            AnsiConsole.MarkupLine($"[yellow]Value must be at most {setting.Validation.Max.Value}. Please try again.[/]");
+                            AnsiConsole.MarkupLine($"[yellow]Value must be at most {param.Validation.Max.Value}. Please try again.[/]");
                             continue;
                         }
                     }
+                    param.Value = newInt;
                     break;
                 }
-                
-                SetSettingValue(setting.SettingPath, newInt.ToString());
-                AnsiConsole.MarkupLine($"[green]✓[/] {setting.Key} updated");
                 break;
 
-            case "path":
+            case "string[]":
+                var defaultArray = param.Default as List<object> ?? new List<object>();
+                var input = AnsiConsole.Ask($"Enter {param.Name} (comma-separated):", string.Join(",", defaultArray));
+                param.Value = input.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+                break;
+
             case "string":
             default:
-                var newString = AnsiConsole.Ask($"Enter {setting.Key}:", currentValue ?? "");
-                SetSettingValue(setting.SettingPath, newString);
-                AnsiConsole.MarkupLine($"[green]✓[/] {setting.Key} updated");
+                var defaultStr = param.Default?.ToString() ?? "";
+                
+                // Handle enum values
+                if (param.Enum != null && param.Enum.Count > 0)
+                {
+                    param.Value = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title($"Select {param.Name}:")
+                            .AddChoices(param.Enum)
+                    );
+                }
+                else
+                {
+                    param.Value = AnsiConsole.Ask($"Enter {param.Name}:", defaultStr);
+                }
                 break;
         }
 
-        // Save settings to appsettings.json
-        SaveSettings();
+        SaveServicesToYaml();
+        AnsiConsole.MarkupLine($"[green]✓[/] {param.Name} set to {FormatParameterValue(param)}");
     }
 
     /// <summary>
-    /// Set a setting value by path
+    /// Save service configuration to services.yaml
     /// </summary>
-    private void SetSettingValue(string settingPath, string value)
+    private void SaveServicesToYaml()
     {
-        switch (settingPath)
+        if (_serviceConfig != null)
         {
-            // Root-level settings
-            case "PlotDirectory":
-                _settings.PlotDirectory = value;
-                break;
-            case "MinerConfigPath":
-                _settings.MinerConfigPath = value;
-                break;
-            case "WalletFilePath":
-                _settings.WalletFilePath = value;
-                break;
-            case "DockerNetwork":
-                _settings.DockerNetwork = value;
-                break;
-            case "BitcoinContainerName":
-                _settings.BitcoinContainerName = value;
-                break;
-            case "MinerContainerName":
-                _settings.MinerContainerName = value;
-                break;
-            case "PlotterContainerName":
-                _settings.PlotterContainerName = value;
-                break;
-            case "ElectrsContainerName":
-                _settings.ElectrsContainerName = value;
-                break;
-
-            // Bitcoin Node settings
-            case "BitcoinNode.Repository":
-                _settings.BitcoinNode.Repository = value;
-                break;
-            case "BitcoinNode.Tag":
-                _settings.BitcoinNode.Tag = value;
-                break;
-            case "BitcoinNode.RpcPort":
-                if (int.TryParse(value, out var rpcPort))
-                    _settings.BitcoinNode.RpcPort = rpcPort;
-                break;
-            case "BitcoinNode.P2PPort":
-                if (int.TryParse(value, out var p2pPort))
-                    _settings.BitcoinNode.P2PPort = p2pPort;
-                break;
-            case "BitcoinNode.DataDirectory":
-                _settings.BitcoinNode.DataDirectory = value;
-                break;
-            case "BitcoinNode.AdditionalParams":
-                _settings.BitcoinNode.AdditionalParams = value;
-                break;
-
-            // Electrs settings
-            case "Electrs.Repository":
-                _settings.Electrs.Repository = value;
-                break;
-            case "Electrs.Tag":
-                _settings.Electrs.Tag = value;
-                break;
-            case "Electrs.HttpPort":
-                if (int.TryParse(value, out var httpPort))
-                    _settings.Electrs.HttpPort = httpPort;
-                break;
-            case "Electrs.RpcPort":
-                if (int.TryParse(value, out var electrsRpcPort))
-                    _settings.Electrs.RpcPort = electrsRpcPort;
-                break;
-            case "Electrs.TestnetPort":
-                if (int.TryParse(value, out var testnetPort))
-                    _settings.Electrs.TestnetPort = testnetPort;
-                break;
-            case "Electrs.DataDirectory":
-                _settings.Electrs.DataDirectory = value;
-                break;
-            case "Electrs.AdditionalParams":
-                _settings.Electrs.AdditionalParams = value;
-                break;
-
-            // Miner settings
-            case "Miner.Repository":
-                _settings.Miner.Repository = value;
-                break;
-            case "Miner.Tag":
-                _settings.Miner.Tag = value;
-                break;
-            case "Miner.CpuThreads":
-                if (int.TryParse(value, out var cpuThreads))
-                    _settings.Miner.CpuThreads = cpuThreads;
-                break;
-            case "Miner.UseDirectIO":
-                _settings.Miner.UseDirectIO = value.ToLower() == "true";
-                break;
-            case "Miner.ShowProgress":
-                _settings.Miner.ShowProgress = value.ToLower() == "true";
-                break;
-            case "Miner.AdditionalParams":
-                _settings.Miner.AdditionalParams = value;
-                break;
-
-            // Plotter settings
-            case "Plotter.Repository":
-                _settings.Plotter.Repository = value;
-                break;
-            case "Plotter.Tag":
-                _settings.Plotter.Tag = value;
-                break;
-            case "Plotter.DefaultWarps":
-                if (int.TryParse(value, out var warps))
-                    _settings.Plotter.DefaultWarps = warps;
-                break;
-            case "Plotter.CpuThreads":
-                if (int.TryParse(value, out var plotterCpuThreads))
-                    _settings.Plotter.CpuThreads = plotterCpuThreads;
-                break;
-            case "Plotter.UseDirectIO":
-                _settings.Plotter.UseDirectIO = value.ToLower() == "true";
-                break;
-            case "Plotter.AdditionalParams":
-                _settings.Plotter.AdditionalParams = value;
-                break;
+            ServiceDefinitionLoader.SaveServices(_serviceConfig);
         }
-    }
-
-    /// <summary>
-    /// Save settings to appsettings.json
-    /// </summary>
-    private void SaveSettings()
-    {
-        SettingsManager.SaveSettings(_settings);
-        AnsiConsole.MarkupLine("[dim]Settings saved to appsettings.json[/]");
     }
 
     /// <summary>

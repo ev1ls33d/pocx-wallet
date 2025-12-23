@@ -49,6 +49,36 @@ public static class ServiceDefinitionLoader
     }
 
     /// <summary>
+    /// Save service configuration to the default services.yaml file
+    /// </summary>
+    public static void SaveServices(ServiceConfiguration config)
+    {
+        SaveServices(config, DefaultServicesPath);
+    }
+
+    /// <summary>
+    /// Save service configuration to a specified path
+    /// </summary>
+    public static void SaveServices(ServiceConfiguration config, string servicesPath)
+    {
+        try
+        {
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
+                .Build();
+
+            var yaml = serializer.Serialize(config);
+            File.WriteAllText(servicesPath, yaml);
+            AnsiConsole.MarkupLine($"[dim]Settings saved to services.yaml[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error saving services.yaml: {Markup.Escape(ex.Message)}[/]");
+        }
+    }
+
+    /// <summary>
     /// Get enabled services sorted by menu order
     /// </summary>
     public static List<ServiceDefinition> GetEnabledServices(ServiceConfiguration? config)
