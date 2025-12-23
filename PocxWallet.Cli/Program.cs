@@ -181,14 +181,7 @@ class Program
                         {
                             async () => await PlottingCommands.CreatePlotAsync(_settings),
                             async () => await PlottingCommands.ViewLogsAsync(_settings),
-                            () =>
-                            {
-                                AnsiConsole.MarkupLine("[bold yellow]Plotter Settings (Service-specific)[/]");
-                                AnsiConsole.MarkupLine("[dim]Configure plotter-specific environment variables and parameters here[/]");
-                                AnsiConsole.MarkupLine("[dim]Press ENTER to return[/]");
-                                Console.ReadLine();
-                                return Task.CompletedTask;
-                            }
+                            async () => await ShowPlotterSettingsMenuAsync()
                         });
                     break;
 
@@ -206,14 +199,7 @@ class Program
                             async () => await MiningCommands.ShowMiningStatusAsync(_settings),
                             async () => await MiningCommands.ViewLogsAsync(_settings),
                             () => { MiningCommands.CreateMinerConfig(_settings.MinerConfigPath); return Task.CompletedTask; },
-                            () =>
-                            {
-                                AnsiConsole.MarkupLine("[bold yellow]Miner Settings (Service-specific)[/]");
-                                AnsiConsole.MarkupLine("[dim]Configure miner-specific environment variables and parameters here[/]");
-                                AnsiConsole.MarkupLine("[dim]Press ENTER to return[/]");
-                                Console.ReadLine();
-                                return Task.CompletedTask;
-                            }
+                            async () => await ShowMinerSettingsMenuAsync()
                         });
                     break;
 
@@ -245,17 +231,10 @@ class Program
                                 _settings.EnableElectrs = !_settings.EnableElectrs;
                                 AnsiConsole.MarkupLine($"[green]✓[/] Electrs: {(_settings.EnableElectrs ? "Enabled" : "Disabled")}");
                                 AnsiConsole.MarkupLine("[dim]Electrs will {0} with the node on next start[/]", _settings.EnableElectrs ? "start" : "not start");
+                                SaveConfiguration();
                                 return Task.CompletedTask;
                             },
-                            () =>
-                            {
-                                AnsiConsole.MarkupLine("[bold yellow]Node Settings (Service-specific)[/]");
-                                AnsiConsole.MarkupLine($"[dim]Electrs Enabled: {_settings.EnableElectrs}[/]");
-                                AnsiConsole.MarkupLine("[dim]Configure node-specific environment variables and parameters here[/]");
-                                AnsiConsole.MarkupLine("[dim]Press ENTER to return[/]");
-                                Console.ReadLine();
-                                return Task.CompletedTask;
-                            }
+                            async () => await ShowNodeSettingsMenuAsync()
                         });
                     break;
 
@@ -417,5 +396,239 @@ class Program
                 AnsiConsole.WriteLine();
             }
         }
+    }
+
+    /// <summary>
+    /// Show Node Settings submenu with editable settings
+    /// </summary>
+    static Task ShowNodeSettingsMenuAsync()
+    {
+        bool back = false;
+        while (!back)
+        {
+            var settingOptions = new[]
+            {
+                "Repository",
+                "Tag",
+                "RPC Port",
+                "P2P Port",
+                "Data Directory",
+                "Additional Parameters",
+                "<= Back"
+            };
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold green]Node Settings[/]")
+                    .PageSize(10)
+                    .AddChoices(settingOptions)
+            );
+
+            AnsiConsole.Clear();
+            ShowBanner();
+
+            switch (choice)
+            {
+                case "Repository":
+                    _settings.BitcoinNode.Repository = AnsiConsole.Ask("Enter Docker repository URL:", _settings.BitcoinNode.Repository);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Repository updated");
+                    break;
+                case "Tag":
+                    _settings.BitcoinNode.Tag = AnsiConsole.Ask("Enter Docker image tag:", _settings.BitcoinNode.Tag);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Tag updated");
+                    break;
+                case "RPC Port":
+                    _settings.BitcoinNode.RpcPort = AnsiConsole.Ask("Enter RPC port:", _settings.BitcoinNode.RpcPort);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] RPC Port updated");
+                    break;
+                case "P2P Port":
+                    _settings.BitcoinNode.P2PPort = AnsiConsole.Ask("Enter P2P port:", _settings.BitcoinNode.P2PPort);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] P2P Port updated");
+                    break;
+                case "Data Directory":
+                    _settings.BitcoinNode.DataDirectory = AnsiConsole.Ask("Enter data directory path:", _settings.BitcoinNode.DataDirectory);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Data Directory updated");
+                    break;
+                case "Additional Parameters":
+                    _settings.BitcoinNode.AdditionalParams = AnsiConsole.Ask("Enter additional bitcoind parameters:", _settings.BitcoinNode.AdditionalParams);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Additional Parameters updated");
+                    break;
+                case "<= Back":
+                    back = true;
+                    break;
+            }
+
+            if (!back)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");
+                Console.ReadLine();
+                AnsiConsole.Clear();
+                ShowBanner();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Show Miner Settings submenu with editable settings
+    /// </summary>
+    static Task ShowMinerSettingsMenuAsync()
+    {
+        bool back = false;
+        while (!back)
+        {
+            var settingOptions = new[]
+            {
+                "Repository",
+                "Tag",
+                "CPU Threads",
+                "Use Direct I/O",
+                "Show Progress",
+                "Additional Parameters",
+                "<= Back"
+            };
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold green]Miner Settings[/]")
+                    .PageSize(10)
+                    .AddChoices(settingOptions)
+            );
+
+            AnsiConsole.Clear();
+            ShowBanner();
+
+            switch (choice)
+            {
+                case "Repository":
+                    _settings.Miner.Repository = AnsiConsole.Ask("Enter Docker repository URL:", _settings.Miner.Repository);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Repository updated");
+                    break;
+                case "Tag":
+                    _settings.Miner.Tag = AnsiConsole.Ask("Enter Docker image tag:", _settings.Miner.Tag);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Tag updated");
+                    break;
+                case "CPU Threads":
+                    _settings.Miner.CpuThreads = AnsiConsole.Ask("Enter number of CPU threads:", _settings.Miner.CpuThreads);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] CPU Threads updated");
+                    break;
+                case "Use Direct I/O":
+                    _settings.Miner.UseDirectIO = AnsiConsole.Confirm($"Use Direct I/O? (currently: {_settings.Miner.UseDirectIO})", _settings.Miner.UseDirectIO);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Use Direct I/O updated");
+                    break;
+                case "Show Progress":
+                    _settings.Miner.ShowProgress = AnsiConsole.Confirm($"Show Progress? (currently: {_settings.Miner.ShowProgress})", _settings.Miner.ShowProgress);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Show Progress updated");
+                    break;
+                case "Additional Parameters":
+                    _settings.Miner.AdditionalParams = AnsiConsole.Ask("Enter additional miner parameters:", _settings.Miner.AdditionalParams);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Additional Parameters updated");
+                    break;
+                case "<= Back":
+                    back = true;
+                    break;
+            }
+
+            if (!back)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");
+                Console.ReadLine();
+                AnsiConsole.Clear();
+                ShowBanner();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Show Plotter Settings submenu with editable settings
+    /// </summary>
+    static Task ShowPlotterSettingsMenuAsync()
+    {
+        bool back = false;
+        while (!back)
+        {
+            var settingOptions = new[]
+            {
+                "Repository",
+                "Tag",
+                "Default Warps",
+                "CPU Threads",
+                "Use Direct I/O",
+                "Additional Parameters",
+                "<= Back"
+            };
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold green]Plotter Settings[/]")
+                    .PageSize(10)
+                    .AddChoices(settingOptions)
+            );
+
+            AnsiConsole.Clear();
+            ShowBanner();
+
+            switch (choice)
+            {
+                case "Repository":
+                    _settings.Plotter.Repository = AnsiConsole.Ask("Enter Docker repository URL:", _settings.Plotter.Repository);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Repository updated");
+                    break;
+                case "Tag":
+                    _settings.Plotter.Tag = AnsiConsole.Ask("Enter Docker image tag:", _settings.Plotter.Tag);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Tag updated");
+                    break;
+                case "Default Warps":
+                    _settings.Plotter.DefaultWarps = AnsiConsole.Ask("Enter default number of warps (1 warp ≈ 1GB):", _settings.Plotter.DefaultWarps);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Default Warps updated");
+                    break;
+                case "CPU Threads":
+                    _settings.Plotter.CpuThreads = AnsiConsole.Ask("Enter number of CPU threads:", _settings.Plotter.CpuThreads);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] CPU Threads updated");
+                    break;
+                case "Use Direct I/O":
+                    _settings.Plotter.UseDirectIO = AnsiConsole.Confirm($"Use Direct I/O? (currently: {_settings.Plotter.UseDirectIO})", _settings.Plotter.UseDirectIO);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Use Direct I/O updated");
+                    break;
+                case "Additional Parameters":
+                    _settings.Plotter.AdditionalParams = AnsiConsole.Ask("Enter additional plotter parameters:", _settings.Plotter.AdditionalParams);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Additional Parameters updated");
+                    break;
+                case "<= Back":
+                    back = true;
+                    break;
+            }
+
+            if (!back)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");
+                Console.ReadLine();
+                AnsiConsole.Clear();
+                ShowBanner();
+            }
+        }
+        return Task.CompletedTask;
     }
 }
