@@ -282,16 +282,22 @@ public class HDWallet
     /// <summary>
     /// Export wallet data as JSON for backup
     /// </summary>
+    /// <param name="passphrase">Optional passphrase to include in the export. WARNING: Storing passphrases creates a security risk!</param>
     /// <returns>JSON string containing wallet information</returns>
-    public string ExportToJson()
+    public string ExportToJson(string? passphrase = null)
     {
+        // Note: Including passphrase in export is a security risk but allows full restoration
+        // Users should be aware and protect this file appropriately
         var walletData = new
         {
             mnemonic = MnemonicPhrase,
+            passphrase = passphrase ?? "", // WARNING: Security risk - protect this file!
             masterPublicKey = MasterPublicKey,
             testnetPublicKey = TestnetPublicKey,
             mainnetDescriptor = GetDescriptor(false),
             testnetDescriptor = GetDescriptor(true),
+            mainnetAddress = GetPoCXAddress(0, 0, false),
+            testnetAddress = GetPoCXAddress(0, 0, true),
             created = DateTime.UtcNow.ToString("o")
         };
         return System.Text.Json.JsonSerializer.Serialize(walletData, new System.Text.Json.JsonSerializerOptions

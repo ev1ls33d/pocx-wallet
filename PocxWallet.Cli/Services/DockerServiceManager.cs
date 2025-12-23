@@ -9,16 +9,15 @@ namespace PocxWallet.Cli.Services;
 /// </summary>
 public class DockerServiceManager
 {
-    private readonly string _registry;
-    private readonly string _defaultImageTag;
-    
     // Maximum log size to display before truncation
     private const int MaxLogDisplaySize = 5000;
+    
+    // Container startup/shutdown delays
+    private const int ContainerStartupDelayMs = 1000;
+    private const int ContainerShutdownDelayMs = 500;
 
-    public DockerServiceManager(string registry, string imageTag)
+    public DockerServiceManager()
     {
-        _registry = registry;
-        _defaultImageTag = imageTag;
     }
 
     /// <summary>
@@ -161,35 +160,21 @@ public class DockerServiceManager
     public async Task<bool> StartContainerAsync(
         string containerName,
         string imageName,
+        string repository,
+        string imageTag,
         Dictionary<string, string>? environmentVars = null,
         Dictionary<string, string>? volumeMounts = null,
         Dictionary<int, int>? portMappings = null,
         string? command = null,
-        string? imageTag = null,
         string? network = null,
         List<string>? readOnlyVolumes = null)
     {
-        var fullImageName = $"{_registry}/{imageName}:{imageTag ?? _defaultImageTag}";
+        var fullImageName = $"{repository}/{imageName}:{imageTag}";
         
-        // Check if container already exists
-        var existsResult = await ExecuteCommandAsync("docker", $"ps -a -q -f name={containerName}");
-        if (!string.IsNullOrWhiteSpace(existsResult.output))
-        {
-            // Container exists, check if it's running
-            var runningResult = await ExecuteCommandAsync("docker", $"ps -q -f name={containerName}");
-            if (!string.IsNullOrWhiteSpace(runningResult.output))
-            {
-                AnsiConsole.MarkupLine($"[yellow]Container {containerName} is already running[/]");
-                return true;
-            }
-            else
-            {
-                // Container exists but not running, start it
-                AnsiConsole.MarkupLine($"[bold]Starting existing container:[/] {containerName}");
-                var startResult = await ExecuteCommandAsync("docker", $"start {containerName}");
-                return startResult.exitCode == 0;
-            }
-        }
+        // Always stop and remove existing container to ensure settings changes are applied
+        AnsiConsole.MarkupLine($"[dim]Cleaning up existing container if present...[/]");
+        await ExecuteCommandAsync("docker", $"stop --time=10 {containerName}", suppressOutput: true);
+        await ExecuteCommandAsync("docker", $"rm {containerName}", suppressOutput: true);
 
         // Build docker run command
         var args = new List<string> { "run", "-dit", "--name", containerName };
@@ -244,12 +229,25 @@ public class DockerServiceManager
 
         if (result.exitCode == 0)
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Container started successfully");
-            return true;
+            // Wait a moment for container to fully start
+            await Task.Delay(ContainerStartupDelayMs);
+            
+            // Verify container is running
+            var status = await GetContainerStatusAsync(containerName);
+            if (status == "running")
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Container started successfully");
+                return true;
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[yellow]⚠[/] Container created but status is: {Markup.Escape(status)}");
+                return false; // Return false if not running
+            }
         }
         else
         {
-            AnsiConsole.MarkupLine($"[red]Failed to start container:[/] {result.output}");
+            AnsiConsole.MarkupLine($"[red]Failed to start container:[/] {Markup.Escape(result.output)}");
             return false;
         }
     }
@@ -266,6 +264,8 @@ public class DockerServiceManager
         
         if (result.exitCode == 0)
         {
+            // Wait a moment for container to fully stop
+            await Task.Delay(ContainerShutdownDelayMs);
             AnsiConsole.MarkupLine("[green]✓[/] Container stopped successfully");
             return true;
         }
@@ -307,7 +307,7 @@ public class DockerServiceManager
     public async Task<string> GetContainerStatusAsync(string containerName)
     {
         ValidateContainerName(containerName);
-        var result = await ExecuteCommandAsync("docker", $"inspect -f '{{{{.State.Status}}}}' {containerName}");
+        var result = await ExecuteCommandAsync("docker", $"inspect -f {{{{.State.Status}}}} {containerName}");
         return result.exitCode == 0 ? result.output.Trim() : "not found";
     }
 
@@ -349,7 +349,10 @@ public class DockerServiceManager
             logs = "...\n" + logs.Substring(logs.Length - MaxLogDisplaySize);
         }
 
-        var panel = new Panel(logs)
+        // Escape brackets in logs to prevent markup interpretation
+        var escapedLogs = Markup.Escape(logs);
+
+        var panel = new Panel(escapedLogs)
         {
             Header = new PanelHeader($"[bold]{title} (last {tailLines} lines)[/]"),
             Border = BoxBorder.Rounded,
@@ -381,7 +384,7 @@ public class DockerServiceManager
         
         var result = await ExecuteCommandAsync("docker", 
             "ps -a --filter name=pocx-node --filter name=miner --filter name=plotter --filter name=electrs " +
-            "--format '{{.Names}}|{{.Status}}|{{.Ports}}'");
+            "--format {{.Names}}|{{.Status}}|{{.Ports}}");
 
         if (result.exitCode == 0 && !string.IsNullOrWhiteSpace(result.output))
         {
@@ -417,7 +420,7 @@ public class DockerServiceManager
     /// <summary>
     /// Execute a shell command
     /// </summary>
-    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments)
+    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments, bool suppressOutput = false)
     {
         var psi = new ProcessStartInfo
         {

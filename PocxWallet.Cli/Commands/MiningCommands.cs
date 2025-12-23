@@ -11,39 +11,31 @@ namespace PocxWallet.Cli.Commands;
 /// </summary>
 public static class MiningCommands
 {
-    private static MinerWrapper? _activeMiner;
     private const string SERVICE_ID = "miner";
     private static DockerServiceManager? _dockerManager;
 
-    private static DockerServiceManager GetDockerManager(AppSettings settings)
+    private static DockerServiceManager GetDockerManager()
     {
         if (_dockerManager == null)
         {
-            _dockerManager = new DockerServiceManager(settings.DockerRegistry, settings.DockerImageTag);
+            _dockerManager = new DockerServiceManager();
         }
         return _dockerManager;
     }
 
     public static async Task StartMiningAsync(AppSettings settings)
     {
-        if (settings.UseDocker)
-        {
-            await StartMiningDockerAsync(settings);
-        }
-        else
-        {
-            StartMiningNative(settings.PoCXBinariesPath, settings.MinerConfigPath);
-        }
+        await StartMiningDockerAsync(settings);
     }
 
     private static async Task StartMiningDockerAsync(AppSettings settings)
     {
-        var docker = GetDockerManager(settings);
+        var docker = GetDockerManager();
 
         if (!await docker.IsDockerAvailableAsync())
         {
             AnsiConsole.MarkupLine("[red]Docker is not available.[/]");
-            AnsiConsole.MarkupLine("[dim]Install Docker or disable Docker mode in Settings[/]");
+            AnsiConsole.MarkupLine("[dim]Install Docker using the Docker setup menu option[/]");
             return;
         }
 
@@ -51,14 +43,6 @@ public static class MiningCommands
         {
             AnsiConsole.MarkupLine($"[red]Config file not found at: {settings.MinerConfigPath}[/]");
             AnsiConsole.MarkupLine("[dim]Create a config.yaml file first.[/]");
-            return;
-        }
-
-        // Check if container is already running
-        var status = await docker.GetContainerStatusAsync(settings.MinerContainerName);
-        if (status == "running")
-        {
-            AnsiConsole.MarkupLine("[yellow]Miner container is already running![/]");
             return;
         }
 
@@ -88,6 +72,8 @@ public static class MiningCommands
         var success = await docker.StartContainerAsync(
             settings.MinerContainerName,
             "pocx",
+            settings.Miner.Repository,
+            settings.Miner.Tag,
             environmentVars: envVars.Count > 0 ? envVars : null,
             volumeMounts: volumeMounts,
             command: command
@@ -103,111 +89,28 @@ public static class MiningCommands
         }
     }
 
-    private static void StartMiningNative(string binariesPath, string configPath)
-    {
-        if (_activeMiner?.IsRunning == true)
-        {
-            AnsiConsole.MarkupLine("[yellow]Miner is already running![/]");
-            return;
-        }
-
-        if (!File.Exists(configPath))
-        {
-            AnsiConsole.MarkupLine($"[red]Config file not found at: {configPath}[/]");
-            AnsiConsole.MarkupLine("[dim]Create a config.yaml file first.[/]");
-            return;
-        }
-
-        var minerPath = Path.Combine(binariesPath, "pocx_miner");
-        if (!File.Exists(minerPath))
-        {
-            AnsiConsole.MarkupLine($"[red]Miner binary not found at: {minerPath}[/]");
-            return;
-        }
-
-        try
-        {
-            _activeMiner = new MinerWrapper(minerPath);
-
-            AnsiConsole.MarkupLine("[bold green]Starting miner as background service...[/]");
-            AnsiConsole.MarkupLine($"[dim]Config: {configPath}[/]");
-            AnsiConsole.WriteLine();
-
-            _activeMiner.StartMining(
-                configPath,
-                onOutput: output => { }, // Silent in background
-                onError: error => { });
-
-            // Register as background service
-            BackgroundServiceManager.RegisterService(SERVICE_ID, "PoCX Miner");
-
-            AnsiConsole.MarkupLine("[green]√[/] Miner started as background service!");
-            AnsiConsole.MarkupLine("[dim]Check 'Background Services' section in main menu[/]");
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
-        }
-    }
-
     public static async Task StopMiningAsync(AppSettings settings)
     {
-        if (settings.UseDocker)
-        {
-            await StopMiningDockerAsync(settings);
-        }
-        else
-        {
-            StopMiningNative();
-        }
+        await StopMiningDockerAsync(settings);
     }
 
     private static async Task StopMiningDockerAsync(AppSettings settings)
     {
-        var docker = GetDockerManager(settings);
+        var docker = GetDockerManager();
         
         await docker.StopContainerAsync(settings.MinerContainerName);
         
         BackgroundServiceManager.RemoveService(settings.MinerContainerName);
     }
 
-    private static void StopMiningNative()
-    {
-        if (_activeMiner?.IsRunning != true)
-        {
-            AnsiConsole.MarkupLine("[yellow]No active miner to stop[/]");
-            return;
-        }
-
-        AnsiConsole.Status()
-            .Start("Stopping miner...", ctx =>
-            {
-                _activeMiner.StopProcess();
-                _activeMiner.Dispose();
-                _activeMiner = null;
-                
-                // Remove from background services
-                BackgroundServiceManager.RemoveService(SERVICE_ID);
-            });
-
-        AnsiConsole.MarkupLine("[green]√[/] Miner stopped");
-    }
-
     public static async Task ShowMiningStatusAsync(AppSettings settings)
     {
-        if (settings.UseDocker)
-        {
-            await ShowMiningStatusDockerAsync(settings);
-        }
-        else
-        {
-            ShowMiningStatusNative();
-        }
+        await ShowMiningStatusDockerAsync(settings);
     }
 
     private static async Task ShowMiningStatusDockerAsync(AppSettings settings)
     {
-        var docker = GetDockerManager(settings);
+        var docker = GetDockerManager();
         var status = await docker.GetContainerStatusAsync(settings.MinerContainerName);
 
         if (status == "not found")
@@ -232,18 +135,6 @@ public static class MiningCommands
             };
             
             AnsiConsole.Write(panel);
-        }
-    }
-
-    private static void ShowMiningStatusNative()
-    {
-        if (_activeMiner?.IsRunning == true)
-        {
-            AnsiConsole.MarkupLine("[green]√[/] Miner is running");
-        }
-        else
-        {
-            AnsiConsole.MarkupLine("[dim]Miner is not running[/]");
         }
     }
 
@@ -279,16 +170,8 @@ show_progress: true
 
     public static async Task ViewLogsAsync(AppSettings settings)
     {
-        if (settings.UseDocker)
-        {
-            var docker = GetDockerManager(settings);
-            var lines = AnsiConsole.Ask("How many log lines to display?", 50);
-            await docker.DisplayContainerLogsAsync(settings.MinerContainerName, lines, "Miner Logs");
-        }
-        else
-        {
-            AnsiConsole.MarkupLine("[yellow]Log viewing is only available in Docker mode[/]");
-            AnsiConsole.MarkupLine("[dim]Enable Docker mode in Settings to use this feature[/]");
-        }
+        var docker = GetDockerManager();
+        var lines = AnsiConsole.Ask("How many log lines to display?", 50);
+        await docker.DisplayContainerLogsAsync(settings.MinerContainerName, lines, "Miner Logs");
     }
 }

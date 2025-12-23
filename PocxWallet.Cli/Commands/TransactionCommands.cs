@@ -33,11 +33,7 @@ public static class TransactionCommands
             await AnsiConsole.Status()
                 .StartAsync("Fetching balance...", async ctx =>
                 {
-                    var balance = settings.UseDocker
-                        ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getbalance")
-                        : (NodeCommands.GetCliWrapper() != null 
-                            ? await NodeCommands.GetCliWrapper()!.GetBalanceAsync()
-                            : "Error: CLI wrapper not available");
+                    var balance = await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getbalance");
 
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine($"[bold]Wallet Balance:[/] [green]{balance}[/]");
@@ -45,11 +41,7 @@ public static class TransactionCommands
 
             // Also show wallet info
             AnsiConsole.WriteLine();
-            var walletInfo = settings.UseDocker
-                ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getwalletinfo")
-                : (NodeCommands.GetCliWrapper() != null 
-                    ? await NodeCommands.GetCliWrapper()!.GetWalletInfoAsync()
-                    : "Error: CLI wrapper not available");
+            var walletInfo = await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "getwalletinfo");
 
             var panel = new Panel(walletInfo)
             {
@@ -68,14 +60,6 @@ public static class TransactionCommands
     {
         AnsiConsole.MarkupLine("[bold green]Send Funds[/]");
         
-        // Check if node is running
-        if (!NodeCommands.IsNodeRunning())
-        {
-            AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction broadcasting requires a running Bitcoin-PoCX node.");
-            AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
-            return;
-        }
-
         var walletName = AnsiConsole.Ask<string>("Enter wallet name:", "pocx_wallet");
         
         // Load settings
@@ -105,11 +89,7 @@ public static class TransactionCommands
             await AnsiConsole.Status()
                 .StartAsync("Broadcasting transaction...", async ctx =>
                 {
-                    var txid = settings.UseDocker
-                        ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "sendtoaddress", toAddress, amount.ToString())
-                        : (NodeCommands.GetCliWrapper() != null 
-                            ? await NodeCommands.GetCliWrapper()!.SendToAddressAsync(toAddress, amount)
-                            : "Error: CLI wrapper not available");
+                    var txid = await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "sendtoaddress", toAddress, amount.ToString());
 
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[green]√[/] Transaction sent!");
@@ -126,14 +106,6 @@ public static class TransactionCommands
     {
         AnsiConsole.MarkupLine("[bold green]Transaction History[/]");
         
-        // Check if node is running
-        if (!NodeCommands.IsNodeRunning())
-        {
-            AnsiConsole.MarkupLine("[yellow]Note:[/] Transaction history requires a running Bitcoin-PoCX node.");
-            AnsiConsole.MarkupLine("[dim]Start the node from [[Node]] Bitcoin-PoCX Node menu[/]");
-            return;
-        }
-
         var walletName = AnsiConsole.Ask<string>("Enter wallet name:", "pocx_wallet");
         var count = AnsiConsole.Ask<int>("How many recent transactions to display?", 10);
         
@@ -155,11 +127,7 @@ public static class TransactionCommands
             await AnsiConsole.Status()
                 .StartAsync("Fetching transactions...", async ctx =>
                 {
-                    var txs = settings.UseDocker
-                        ? await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "listtransactions", "*", count.ToString())
-                        : (NodeCommands.GetCliWrapper() != null 
-                            ? await NodeCommands.GetCliWrapper()!.ListTransactionsAsync(count)
-                            : "Error: CLI wrapper not available");
+                    var txs = await NodeCommands.ExecuteBitcoinCliDockerAsync(settings, "listtransactions", "*", count.ToString());
 
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine($"[bold]Recent Transactions (last {count}):[/]");
