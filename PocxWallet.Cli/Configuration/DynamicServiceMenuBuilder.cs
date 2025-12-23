@@ -538,9 +538,9 @@ public class DynamicServiceMenuBuilder
                 return $"[cyan]{value}[/]";
             
             case "string[]":
-                if (value is List<object> list)
-                    return $"[cyan][{string.Join(", ", list)}][/]";
-                return $"[cyan]{value}[/]";
+                if (value is List<object> list && list.Count > 0)
+                    return $"[cyan]{string.Join(", ", list)}[/]";
+                return "[dim](empty)[/]";
             
             default:
                 return $"[cyan]{Markup.Escape(value?.ToString() ?? "")}[/]";
@@ -686,7 +686,10 @@ public class DynamicServiceMenuBuilder
             case "string[]":
                 var defaultArray = param.Default as List<object> ?? new List<object>();
                 var input = AnsiConsole.Ask($"Enter {param.Name} (comma-separated):", string.Join(",", defaultArray));
-                param.Value = input.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+                // Store as List<object> for consistent serialization
+                param.Value = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => (object)s.Trim())
+                    .ToList();
                 break;
 
             case "string":
