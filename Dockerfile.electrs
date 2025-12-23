@@ -17,7 +17,7 @@ WORKDIR /build/electrs-pocx
 RUN cargo build --release --bin electrs
 
 # Stage 2: Runtime - Use same base to ensure glibc compatibility
-FROM rust:bookworm-slim
+FROM rust:bookworm
 
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y \
