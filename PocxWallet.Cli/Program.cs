@@ -1,10 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using PocxWallet.Cli.Commands;
+﻿using PocxWallet.Cli.Commands;
 using PocxWallet.Cli.Configuration;
 using PocxWallet.Cli.Services;
+using PocxWallet.Core.Wallet;
 using Spectre.Console;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PocxWallet.Cli;
 
@@ -48,9 +49,9 @@ class Program
     private static DynamicServiceMenuBuilder? _dynamicMenuBuilder;
 
     // Constants for hardcoded menu items
-    private const string MenuWallet = "[Wallet]    Wallet Management";
-    private const string MenuVanity = "[Vanity]    Vanity Address Generator";
-    private const string MenuExit = "[Exit]      Exit";
+    private static string MenuWallet = $"{Markup.Escape("[Wallet]").PadRight(15)} Wallet Management";
+    private static string MenuVanity = $"{Markup.Escape("[Vanity]").PadRight(15)} Vanity Address Generator";
+    private static string MenuExit   = $"{Markup.Escape("[Exit]").PadRight(15)} Exit";
 
     private static DockerServiceManager GetDockerManager()
     {
@@ -139,7 +140,7 @@ class Program
             foreach (var service in dynamicServices)
             {
                 var status = await dynamicMenuBuilder.GetServiceStatusIndicatorAsync(service);
-                var label = $"{service.MenuLabel.PadRight(12)} {service.Name} {status}";
+                var label = $"{Markup.Escape(service.MenuLabel).PadRight(15)} {service.Name} {status}";
                 menuChoices.Add(label);
                 serviceStatusMap[label] = service.Id;
             }
