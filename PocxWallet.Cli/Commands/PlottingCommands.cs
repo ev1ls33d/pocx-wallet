@@ -84,6 +84,15 @@ public static class PlottingCommands
         }
     }
 
+    public static async Task StopPlotterAsync(AppSettings settings)
+    {
+        var docker = GetDockerManager();
+        AnsiConsole.MarkupLine("[bold]Stopping Plotter...[/]");
+        await docker.StopContainerAsync(settings.PlotterContainerName);
+        BackgroundServiceManager.RemoveService(settings.PlotterContainerName);
+        AnsiConsole.MarkupLine("[green]✓[/] Plotter stopped");
+    }
+
     public static async Task ViewLogsAsync(AppSettings settings)
     {
         var docker = GetDockerManager();
