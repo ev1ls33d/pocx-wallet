@@ -251,7 +251,7 @@ public class DynamicServiceMenuBuilder
             var selectedItem = FindSubmenuItem(service, choice, isRunning);
             if (selectedItem != null)
             {
-                await HandleSubmenuActionAsync(service, selectedItem, isRunning);
+                await HandleSubmenuActionAsync(service, selectedItem, isRunning, showBanner);
             }
 
             if (!back && selectedItem?.Action != "settings")
@@ -301,7 +301,7 @@ public class DynamicServiceMenuBuilder
         return null;
     }
 
-    private async Task HandleSubmenuActionAsync(ServiceDefinition service, SubmenuItem item, bool isRunning)
+    private async Task HandleSubmenuActionAsync(ServiceDefinition service, SubmenuItem item, bool isRunning, Action showBanner)
     {
         switch (item.Action)
         {
@@ -321,7 +321,7 @@ public class DynamicServiceMenuBuilder
                 break;
 
             case "settings":
-                ShowServiceSettings(service);
+                ShowServiceSettings(service, showBanner);
                 break;
 
             case "custom":
@@ -442,9 +442,9 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Show service settings menu
+    /// Show service settings menu with inline editing
     /// </summary>
-    public void ShowServiceSettings(ServiceDefinition service)
+    public void ShowServiceSettings(ServiceDefinition service, Action showBanner)
     {
         if (service.Settings == null || service.Settings.Count == 0)
         {
@@ -452,17 +452,233 @@ public class DynamicServiceMenuBuilder
             return;
         }
 
-        AnsiConsole.MarkupLine($"[bold]{service.Name} Settings[/]");
-        AnsiConsole.WriteLine();
-
-        foreach (var setting in service.Settings)
+        bool back = false;
+        while (!back)
         {
-            var currentValue = GetSettingValue(setting.SettingPath) ?? "(not set)";
-            AnsiConsole.MarkupLine($"  {setting.Key}: [dim]{Markup.Escape(currentValue)}[/]");
+            // Build menu choices with current values
+            var choices = new List<string>();
+            foreach (var setting in service.Settings)
+            {
+                var currentValue = GetSettingValue(setting.SettingPath) ?? "(not set)";
+                var displayValue = setting.Type == "bool" 
+                    ? (currentValue.ToLower() == "true" ? "[green]On[/]" : "[red]Off[/]")
+                    : $"[dim]{Markup.Escape(currentValue)}[/]";
+                choices.Add($"{setting.Key.PadRight(20)} {displayValue}");
+            }
+            choices.Add("<= Back");
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[bold green]{service.Name} Settings[/]")
+                    .PageSize(15)
+                    .AddChoices(choices)
+            );
+
+            if (choice == "<= Back")
+            {
+                back = true;
+                continue;
+            }
+
+            // Find the selected setting
+            var selectedIndex = choices.IndexOf(choice);
+            if (selectedIndex >= 0 && selectedIndex < service.Settings.Count)
+            {
+                var setting = service.Settings[selectedIndex];
+                EditSetting(setting);
+                
+                AnsiConsole.Clear();
+                showBanner();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Edit a single setting value
+    /// </summary>
+    private void EditSetting(ServiceSetting setting)
+    {
+        var currentValue = GetSettingValue(setting.SettingPath);
+
+        switch (setting.Type.ToLower())
+        {
+            case "bool":
+                // Toggle boolean value
+                var currentBool = currentValue?.ToLower() == "true";
+                var newBool = !currentBool;
+                SetSettingValue(setting.SettingPath, newBool.ToString());
+                AnsiConsole.MarkupLine($"[green]✓[/] {setting.Key} set to {(newBool ? "[green]On[/]" : "[red]Off[/]")}");
+                break;
+
+            case "int":
+                var currentInt = int.TryParse(currentValue, out var intVal) ? intVal : 0;
+                var newInt = AnsiConsole.Ask($"Enter {setting.Key}:", currentInt);
+                
+                // Validate if min/max specified
+                if (setting.Validation != null)
+                {
+                    if (setting.Validation.Min.HasValue && newInt < setting.Validation.Min.Value)
+                    {
+                        AnsiConsole.MarkupLine($"[yellow]Value must be at least {setting.Validation.Min.Value}[/]");
+                        return;
+                    }
+                    if (setting.Validation.Max.HasValue && newInt > setting.Validation.Max.Value)
+                    {
+                        AnsiConsole.MarkupLine($"[yellow]Value must be at most {setting.Validation.Max.Value}[/]");
+                        return;
+                    }
+                }
+                
+                SetSettingValue(setting.SettingPath, newInt.ToString());
+                AnsiConsole.MarkupLine($"[green]✓[/] {setting.Key} updated");
+                break;
+
+            case "path":
+            case "string":
+            default:
+                var newString = AnsiConsole.Ask($"Enter {setting.Key}:", currentValue ?? "");
+                SetSettingValue(setting.SettingPath, newString);
+                AnsiConsole.MarkupLine($"[green]✓[/] {setting.Key} updated");
+                break;
         }
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[dim]Settings editing is available through appsettings.json[/]");
+        // Save settings to appsettings.json
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// Set a setting value by path
+    /// </summary>
+    private void SetSettingValue(string settingPath, string value)
+    {
+        switch (settingPath)
+        {
+            // Root-level settings
+            case "PlotDirectory":
+                _settings.PlotDirectory = value;
+                break;
+            case "MinerConfigPath":
+                _settings.MinerConfigPath = value;
+                break;
+            case "WalletFilePath":
+                _settings.WalletFilePath = value;
+                break;
+            case "DockerNetwork":
+                _settings.DockerNetwork = value;
+                break;
+            case "BitcoinContainerName":
+                _settings.BitcoinContainerName = value;
+                break;
+            case "MinerContainerName":
+                _settings.MinerContainerName = value;
+                break;
+            case "PlotterContainerName":
+                _settings.PlotterContainerName = value;
+                break;
+            case "ElectrsContainerName":
+                _settings.ElectrsContainerName = value;
+                break;
+
+            // Bitcoin Node settings
+            case "BitcoinNode.Repository":
+                _settings.BitcoinNode.Repository = value;
+                break;
+            case "BitcoinNode.Tag":
+                _settings.BitcoinNode.Tag = value;
+                break;
+            case "BitcoinNode.RpcPort":
+                if (int.TryParse(value, out var rpcPort))
+                    _settings.BitcoinNode.RpcPort = rpcPort;
+                break;
+            case "BitcoinNode.P2PPort":
+                if (int.TryParse(value, out var p2pPort))
+                    _settings.BitcoinNode.P2PPort = p2pPort;
+                break;
+            case "BitcoinNode.DataDirectory":
+                _settings.BitcoinNode.DataDirectory = value;
+                break;
+            case "BitcoinNode.AdditionalParams":
+                _settings.BitcoinNode.AdditionalParams = value;
+                break;
+
+            // Electrs settings
+            case "Electrs.Repository":
+                _settings.Electrs.Repository = value;
+                break;
+            case "Electrs.Tag":
+                _settings.Electrs.Tag = value;
+                break;
+            case "Electrs.HttpPort":
+                if (int.TryParse(value, out var httpPort))
+                    _settings.Electrs.HttpPort = httpPort;
+                break;
+            case "Electrs.RpcPort":
+                if (int.TryParse(value, out var electrsRpcPort))
+                    _settings.Electrs.RpcPort = electrsRpcPort;
+                break;
+            case "Electrs.TestnetPort":
+                if (int.TryParse(value, out var testnetPort))
+                    _settings.Electrs.TestnetPort = testnetPort;
+                break;
+            case "Electrs.DataDirectory":
+                _settings.Electrs.DataDirectory = value;
+                break;
+            case "Electrs.AdditionalParams":
+                _settings.Electrs.AdditionalParams = value;
+                break;
+
+            // Miner settings
+            case "Miner.Repository":
+                _settings.Miner.Repository = value;
+                break;
+            case "Miner.Tag":
+                _settings.Miner.Tag = value;
+                break;
+            case "Miner.CpuThreads":
+                if (int.TryParse(value, out var cpuThreads))
+                    _settings.Miner.CpuThreads = cpuThreads;
+                break;
+            case "Miner.UseDirectIO":
+                _settings.Miner.UseDirectIO = value.ToLower() == "true";
+                break;
+            case "Miner.ShowProgress":
+                _settings.Miner.ShowProgress = value.ToLower() == "true";
+                break;
+            case "Miner.AdditionalParams":
+                _settings.Miner.AdditionalParams = value;
+                break;
+
+            // Plotter settings
+            case "Plotter.Repository":
+                _settings.Plotter.Repository = value;
+                break;
+            case "Plotter.Tag":
+                _settings.Plotter.Tag = value;
+                break;
+            case "Plotter.DefaultWarps":
+                if (int.TryParse(value, out var warps))
+                    _settings.Plotter.DefaultWarps = warps;
+                break;
+            case "Plotter.CpuThreads":
+                if (int.TryParse(value, out var plotterCpuThreads))
+                    _settings.Plotter.CpuThreads = plotterCpuThreads;
+                break;
+            case "Plotter.UseDirectIO":
+                _settings.Plotter.UseDirectIO = value.ToLower() == "true";
+                break;
+            case "Plotter.AdditionalParams":
+                _settings.Plotter.AdditionalParams = value;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Save settings to appsettings.json
+    /// </summary>
+    private void SaveSettings()
+    {
+        SettingsManager.SaveSettings(_settings);
+        AnsiConsole.MarkupLine("[dim]Settings saved to appsettings.json[/]");
     }
 
     /// <summary>

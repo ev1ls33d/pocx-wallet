@@ -52,7 +52,7 @@ services:
     ports:
       - name: "rpc"
         container_port: 18332
-        host_port_setting: "BitcoinNode. RpcPort"
+        host_port_setting: "BitcoinNode.RpcPort"
         description: "JSON-RPC API port for wallet and mining communication"
         protocol: "tcp"
       - name: "p2p"
@@ -62,7 +62,7 @@ services:
         protocol:  "tcp"
       - name: "zmq-block"
         container_port: 28332
-        host_port_setting: "BitcoinNode. ZmqBlockPort"
+        host_port_setting: "BitcoinNode.ZmqBlockPort"
         description:  "ZeroMQ block notification port"
         protocol: "tcp"
         optional: true
@@ -75,7 +75,7 @@ services:
     
     volumes:
       - name: "data"
-        host_path_setting: "BitcoinNode. DataDirectory"
+        host_path_setting: "BitcoinNode.DataDirectory"
         container_path:  "/root/.bitcoin"
         read_only: false
         description: "Blockchain data, wallet files, and node configuration"
@@ -416,7 +416,7 @@ services:
           min: 1024
           max: 65535
       - key: "P2P Port"
-        setting_path: "BitcoinNode. P2PPort"
+        setting_path: "BitcoinNode.P2PPort"
         type: "int"
         category: "network"
         validation:
@@ -481,7 +481,7 @@ services:
     
     volumes: 
       - name: "data"
-        host_path_setting:  "Electrs. DataDirectory"
+        host_path_setting:  "Electrs.DataDirectory"
         container_path: "/data"
         read_only: false
         description: "Electrs index database storage"
@@ -692,7 +692,7 @@ services:
         type:  "int"
         category: "network"
       - key:  "Data Directory"
-        setting_path:  "Electrs. DataDirectory"
+        setting_path:  "Electrs.DataDirectory"
         type: "path"
         category: "storage"
       - key: "Additional Parameters"
@@ -1412,7 +1412,7 @@ services:
         type:  "string"
         category: "container"
       - key:  "Default Warps"
-        setting_path:  "Plotter. DefaultWarps"
+        setting_path:  "Plotter.DefaultWarps"
         type: "int"
         category:  "plotting"
         validation: 
