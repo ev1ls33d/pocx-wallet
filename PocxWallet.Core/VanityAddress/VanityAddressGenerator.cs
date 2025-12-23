@@ -6,23 +6,21 @@ using PocxWallet.Core.Wallet;
 namespace PocxWallet.Core.VanityAddress;
 
 /// <summary>
-/// Generates vanity addresses with multi-threading and optional GPU acceleration
+/// Generates vanity addresses with multi-threading
 /// </summary>
 public class VanityAddressGenerator
 {
     private readonly string _pattern;
-    private readonly bool _useGpu;
     private readonly bool _testnet;
     private readonly int _threadCount;
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public VanityAddressGenerator(string pattern, bool useGpu = false, bool testnet = false, int? threadCount = null)
+    public VanityAddressGenerator(string pattern, bool testnet = false, int? threadCount = null)
     {
         if (string.IsNullOrWhiteSpace(pattern))
             throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
 
         _pattern = pattern;
-        _useGpu = useGpu;
         _testnet = testnet;
         _threadCount = threadCount ?? Environment.ProcessorCount;
     }
@@ -40,27 +38,7 @@ public class VanityAddressGenerator
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var token = _cancellationTokenSource.Token;
 
-        if (_useGpu)
-        {
-            return await GenerateGpuAsync(progress, token);
-        }
-        else
-        {
-            return await GenerateMultiThreadedAsync(progress, token);
-        }
-    }
-
-    /// <summary>
-    /// GPU-accelerated vanity generation using parallel processing
-    /// </summary>
-    private async Task<(string Mnemonic, string Address)> GenerateGpuAsync(
-        IProgress<long>? progress,
-        CancellationToken cancellationToken)
-    {
-        // For now, use high-parallelism CPU implementation as GPU fallback
-        // True GPU acceleration would require OpenCL/CUDA kernel implementation
-        Console.WriteLine($"GPU mode: Using {_threadCount * 2} parallel tasks for maximum throughput");
-        return await GenerateMultiThreadedAsync(progress, cancellationToken, _threadCount * 2);
+        return await GenerateMultiThreadedAsync(progress, token);
     }
 
     /// <summary>

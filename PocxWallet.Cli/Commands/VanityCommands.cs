@@ -54,14 +54,8 @@ public static class VanityCommands
         }
 
         var useTestnet = AnsiConsole.Confirm("Generate for [green]testnet[/]?", false);
-        var useGpu = AnsiConsole.Confirm("Use GPU acceleration?", false);
 
-        if (useGpu)
-        {
-            AnsiConsole.MarkupLine("[yellow]Note: GPU acceleration is not yet fully implemented[/]");
-        }
-
-        var generator = new VanityAddressGenerator(pattern, useGpu, useTestnet);
+        var generator = new VanityAddressGenerator(pattern, useTestnet);
         var cts = new CancellationTokenSource();
 
         try

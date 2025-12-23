@@ -68,41 +68,8 @@ public static class WalletCommands
         if (AnsiConsole.Confirm("Save wallet to file?", true))
         {
             var filePath = AnsiConsole.Ask<string>("Enter file path:", "./wallet.json");
-            File.WriteAllText(filePath, wallet.ExportToJson());
+            File.WriteAllText(filePath, wallet.ExportToJson(passphrase));
             AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
-        }
-
-        // Ask if user wants to import into bitcoin node
-        AnsiConsole.WriteLine();
-        if (AnsiConsole.Confirm("Import this wallet into Bitcoin node?", true))
-        {
-            await ImportWalletIntoBitcoinNode(wallet);
-        }
-    }
-
-    private static async Task ImportWalletIntoBitcoinNode(HDWallet wallet)
-    {
-        var walletName = AnsiConsole.Ask<string>("Enter wallet name for Bitcoin node:", "pocx_wallet");
-        var useTestnet = AnsiConsole.Confirm("Use testnet?", false);
-        
-        var wif = wallet.GetDescriptor(useTestnet);
-        var address = wallet.GetPoCXAddress(0, 0, useTestnet);
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]Importing wallet:[/] {walletName}");
-        AnsiConsole.MarkupLine($"[bold]Address:[/] {address}");
-        AnsiConsole.WriteLine();
-
-        // Get settings to pass to NodeCommands
-        var settings = SettingsManager.LoadSettings();
-
-        var success = await NodeCommands.ImportWalletFromWIFAsync(settings, walletName, wif, address, useTestnet);
-        
-        if (success)
-        {
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[green]✓[/] Wallet successfully imported into Bitcoin node!");
-            AnsiConsole.MarkupLine("[dim]You can now use the wallet for transactions through the node[/]");
         }
     }
 
@@ -155,15 +122,81 @@ public static class WalletCommands
             if (AnsiConsole.Confirm("Save wallet to file?", true))
             {
                 var filePath = AnsiConsole.Ask<string>("Enter file path:", "./wallet.json");
-                File.WriteAllText(filePath, wallet.ExportToJson());
+                File.WriteAllText(filePath, wallet.ExportToJson(passphrase));
                 AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
             }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+        }
+    }
 
-            // Ask if user wants to import into bitcoin node
-            AnsiConsole.WriteLine();
-            if (AnsiConsole.Confirm("Import this wallet into Bitcoin node?", false))
+    /// <summary>
+    /// Import wallet from wallet.json file into Bitcoin node (called from Node menu)
+    /// </summary>
+    public static async Task ImportWalletFromFileAsync(AppSettings settings)
+    {
+        var walletPath = AnsiConsole.Ask<string>("Enter wallet file path:", "./wallet.json");
+
+        if (!File.Exists(walletPath))
+        {
+            AnsiConsole.MarkupLine("[red]Wallet file not found![/]");
+            return;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(walletPath);
+            var walletData = System.Text.Json.JsonDocument.Parse(json);
+            
+            var mnemonicElement = walletData.RootElement.GetProperty("mnemonic");
+            var mnemonic = mnemonicElement.GetString();
+
+            if (string.IsNullOrEmpty(mnemonic))
             {
-                await ImportWalletIntoBitcoinNode(wallet);
+                AnsiConsole.MarkupLine("[red]Invalid wallet file - mnemonic not found![/]");
+                return;
+            }
+
+            // Try to get passphrase from wallet file
+            string? passphrase = null;
+            if (walletData.RootElement.TryGetProperty("passphrase", out var passphraseElement))
+            {
+                passphrase = passphraseElement.GetString();
+                if (!string.IsNullOrEmpty(passphrase))
+                {
+                    AnsiConsole.MarkupLine("[yellow]Wallet has a passphrase - it will be used for restoration[/]");
+                }
+            }
+
+            var wallet = HDWallet.FromMnemonic(mnemonic, passphrase);
+            
+            // Detect network mode from node settings
+            var isTestnet = settings.BitcoinNode.AdditionalParams.Contains("-testnet");
+            var networkName = isTestnet ? "testnet" : "mainnet";
+            
+            AnsiConsole.MarkupLine($"[bold]Detected network mode:[/] [green]{networkName}[/]");
+            AnsiConsole.MarkupLine($"[dim](from node AdditionalParams: {settings.BitcoinNode.AdditionalParams})[/]");
+            
+            var walletName = AnsiConsole.Ask<string>("Enter wallet name for Bitcoin node:", "pocx_wallet");
+            
+            var wif = wallet.GetDescriptor(isTestnet);
+            var address = wallet.GetPoCXAddress(0, 0, isTestnet);
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"[bold]Importing wallet:[/] {walletName}");
+            AnsiConsole.MarkupLine($"[bold]Network:[/] {networkName}");
+            AnsiConsole.MarkupLine($"[bold]Address:[/] {address}");
+            AnsiConsole.WriteLine();
+
+            var success = await NodeCommands.ImportWalletFromWIFAsync(settings, walletName, wif, address, isTestnet);
+            
+            if (success)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[green]✓[/] Wallet successfully imported into Bitcoin node!");
+                AnsiConsole.MarkupLine("[dim]You can now use the wallet for transactions through the node[/]");
             }
         }
         catch (Exception ex)
