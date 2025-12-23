@@ -70,6 +70,10 @@ public static class WalletCommands
             var filePath = AnsiConsole.Ask<string>("Enter file path:", "./wallet.json");
             File.WriteAllText(filePath, wallet.ExportToJson(passphrase));
             AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
+            if (!string.IsNullOrEmpty(passphrase))
+            {
+                AnsiConsole.MarkupLine("[yellow]⚠[/] [bold red]WARNING:[/] Passphrase is stored in the file - protect it carefully!");
+            }
         }
     }
 
@@ -124,6 +128,10 @@ public static class WalletCommands
                 var filePath = AnsiConsole.Ask<string>("Enter file path:", "./wallet.json");
                 File.WriteAllText(filePath, wallet.ExportToJson(passphrase));
                 AnsiConsole.MarkupLine($"[green]√[/] Wallet saved to: {filePath}");
+                if (!string.IsNullOrEmpty(passphrase))
+                {
+                    AnsiConsole.MarkupLine("[yellow]⚠[/] [bold red]WARNING:[/] Passphrase is stored in the file - protect it carefully!");
+                }
             }
         }
         catch (Exception ex)
@@ -173,11 +181,19 @@ public static class WalletCommands
             var wallet = HDWallet.FromMnemonic(mnemonic, passphrase);
             
             // Detect network mode from node settings
-            var isTestnet = settings.BitcoinNode.AdditionalParams.Contains("-testnet");
+            var isTestnet = settings.BitcoinNode.AdditionalParams.Contains("-testnet", StringComparison.OrdinalIgnoreCase);
             var networkName = isTestnet ? "testnet" : "mainnet";
             
+            AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"[bold]Detected network mode:[/] [green]{networkName}[/]");
-            AnsiConsole.MarkupLine($"[dim](from node AdditionalParams: {settings.BitcoinNode.AdditionalParams})[/]");
+            if (isTestnet)
+            {
+                AnsiConsole.MarkupLine($"[dim](detected from -testnet flag in node parameters)[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[dim](mainnet - no -testnet flag found in node parameters)[/]");
+            };
             
             var walletName = AnsiConsole.Ask<string>("Enter wallet name for Bitcoin node:", "pocx_wallet");
             
