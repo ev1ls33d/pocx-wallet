@@ -177,12 +177,24 @@ class Program
                 .Where(v => v.ToString().StartsWith("Main_"))
                 .ToArray();
 
+            // Get service statuses for display
+            var plotterStatus = await GetServiceStatusIndicatorAsync(_settings.PlotterContainerName);
+            var minerStatus = await GetServiceStatusIndicatorAsync(_settings.MinerContainerName);
+            var nodeStatus = await GetServiceStatusIndicatorAsync(_settings.BitcoinContainerName);
+            var electrsStatus = _settings.EnableElectrs ? "[green]E[/]" : "[dim]E[/]";
+
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<MenuOptions>()
                     .Title("[bold green]Main Menu[/]")
                     .PageSize(10)
                     .AddChoices(mainChoices)
-                    .UseConverter(opt => opt.ToDisplayString())
+                    .UseConverter(opt => opt switch
+                    {
+                        MenuOptions.Main_Plotting => $"[Plot]      Plotting {plotterStatus}",
+                        MenuOptions.Main_Mining => $"[Mine]      Mining {minerStatus}",
+                        MenuOptions.Main_BitcoinPoCXNode => $"[Node]      Bitcoin-PoCX Node {nodeStatus} {electrsStatus}",
+                        _ => opt.ToDisplayString()
+                    })
             );
 
             AnsiConsole.Clear();
