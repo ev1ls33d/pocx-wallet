@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y \
 
 # Clone the repository
 WORKDIR /build
-RUN git clone -b pocx-v30-RC2 --single-branch https://github.com/PoC-Consortium/bitcoin.git .
+RUN git clone -b pocx-v30-RC3 --single-branch https://github.com/PoC-Consortium/bitcoin.git .
 
 # Configure and build with CMake
 RUN cmake -B build \
