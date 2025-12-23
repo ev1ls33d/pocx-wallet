@@ -818,16 +818,16 @@ public class DynamicServiceMenuBuilder
             }
         }
         
-        choices.Add("<= Back");
+        choices.Add(Strings.ServiceMenu.Back);
 
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title($"[bold green]Add Parameter to {service.Name}[/]")
+                .Title(string.Format(Strings.ParametersMenu.AddParameterTitleFormat, service.Name))
                 .PageSize(20)
                 .AddChoices(choices)
         );
 
-        if (choice == "<= Back")
+        if (choice == Strings.ServiceMenu.Back)
         {
             return;
         }
@@ -855,14 +855,14 @@ public class DynamicServiceMenuBuilder
         
         if (param.Type.ToLower() == "bool")
         {
-            choices.Add("Toggle Value");
+            choices.Add(Strings.ParametersMenu.ToggleValue);
         }
         else
         {
-            choices.Add("Edit Value");
+            choices.Add(Strings.ParametersMenu.EditValue);
         }
-        choices.Add("[red]Remove Parameter[/]");
-        choices.Add("<= Back");
+        choices.Add(Strings.ParametersMenu.RemoveParameter);
+        choices.Add(Strings.ServiceMenu.Back);
 
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -870,24 +870,22 @@ public class DynamicServiceMenuBuilder
                 .AddChoices(choices)
         );
 
-        switch (choice)
+        if (choice == Strings.ParametersMenu.ToggleValue)
         {
-            case "Toggle Value":
-                var currentBool = param.Value?.ToString()?.ToLower() == "true";
-                param.Value = !currentBool;
-                SaveServicesToYaml();
-                AnsiConsole.MarkupLine($"[green]✓[/] {param.Name} set to {FormatParameterValue(param)}");
-                break;
-            
-            case "Edit Value":
-                SetParameterValue(service, param);
-                break;
-            
-            case "[red]Remove Parameter[/]":
-                param.Value = null;
-                SaveServicesToYaml();
-                AnsiConsole.MarkupLine($"[green]✓[/] {param.Name} removed");
-                break;
+            var currentBool = param.Value?.ToString()?.ToLower() == "true";
+            param.Value = !currentBool;
+            SaveServicesToYaml();
+            AnsiConsole.MarkupLine(string.Format(Strings.ParametersMenu.ParameterSetFormat, param.Name, FormatParameterValue(param)));
+        }
+        else if (choice == Strings.ParametersMenu.EditValue)
+        {
+            SetParameterValue(service, param);
+        }
+        else if (choice == Strings.ParametersMenu.RemoveParameter)
+        {
+            param.Value = null;
+            SaveServicesToYaml();
+            AnsiConsole.MarkupLine(string.Format(Strings.ParametersMenu.ParameterRemovedFormat, param.Name));
         }
     }
 
@@ -900,7 +898,7 @@ public class DynamicServiceMenuBuilder
         {
             case "bool":
                 var defaultBool = param.Default?.ToString()?.ToLower() == "true";
-                param.Value = AnsiConsole.Confirm($"Enable {param.Name}?", defaultBool);
+                param.Value = AnsiConsole.Confirm(string.Format(Strings.Common.EnableFormat, param.Name), defaultBool);
                 break;
 
             case "int":
@@ -910,18 +908,18 @@ public class DynamicServiceMenuBuilder
                 
                 while (true)
                 {
-                    var newInt = AnsiConsole.Ask($"Enter {param.Name}:", defaultInt);
+                    var newInt = AnsiConsole.Ask(string.Format(Strings.Common.EnterFormat, param.Name), defaultInt);
                     
                     if (param.Validation != null)
                     {
                         if (param.Validation.Min.HasValue && newInt < param.Validation.Min.Value)
                         {
-                            AnsiConsole.MarkupLine($"[yellow]Value must be at least {param.Validation.Min.Value}. Please try again.[/]");
+                            AnsiConsole.MarkupLine(string.Format(Strings.Validation.ValueMustBeAtLeastFormat, param.Validation.Min.Value));
                             continue;
                         }
                         if (param.Validation.Max.HasValue && newInt > param.Validation.Max.Value)
                         {
-                            AnsiConsole.MarkupLine($"[yellow]Value must be at most {param.Validation.Max.Value}. Please try again.[/]");
+                            AnsiConsole.MarkupLine(string.Format(Strings.Validation.ValueMustBeAtMostFormat, param.Validation.Max.Value));
                             continue;
                         }
                     }
@@ -932,7 +930,7 @@ public class DynamicServiceMenuBuilder
 
             case "string[]":
                 var defaultArray = param.Default as List<object> ?? new List<object>();
-                var input = AnsiConsole.Ask($"Enter {param.Name} (comma-separated):", string.Join(",", defaultArray));
+                var input = AnsiConsole.Ask(string.Format(Strings.Common.EnterCommaSeparatedFormat, param.Name), string.Join(",", defaultArray));
                 // Store as List<object> for consistent serialization
                 param.Value = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(s => (object)s.Trim())
@@ -948,19 +946,19 @@ public class DynamicServiceMenuBuilder
                 {
                     param.Value = AnsiConsole.Prompt(
                         new SelectionPrompt<string>()
-                            .Title($"Select {param.Name}:")
+                            .Title(string.Format(Strings.Common.SelectFormat, param.Name))
                             .AddChoices(param.Enum)
                     );
                 }
                 else
                 {
-                    param.Value = AnsiConsole.Ask($"Enter {param.Name}:", defaultStr);
+                    param.Value = AnsiConsole.Ask(string.Format(Strings.Common.EnterFormat, param.Name), defaultStr);
                 }
                 break;
         }
 
         SaveServicesToYaml();
-        AnsiConsole.MarkupLine($"[green]✓[/] {param.Name} set to {FormatParameterValue(param)}");
+        AnsiConsole.MarkupLine(string.Format(Strings.ParametersMenu.ParameterSetFormat, param.Name, FormatParameterValue(param)));
     }
 
     /// <summary>
@@ -983,9 +981,9 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private async Task HandleCustomActionAsync(ServiceDefinition service, SubmenuItem item)
     {
-        AnsiConsole.MarkupLine($"[yellow]Custom action '{item.Id}' is not yet implemented[/]");
-        AnsiConsole.MarkupLine($"[dim]This action is defined in services.yaml but requires code implementation.[/]");
-        AnsiConsole.MarkupLine($"[dim]Handler reference: {item.Handler}[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.NotImplementedFormat, item.Id));
+        AnsiConsole.MarkupLine(Strings.CustomActions.RequiresImplementation);
+        AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.HandlerReferenceFormat, item.Handler));
         await Task.CompletedTask;
     }
 
