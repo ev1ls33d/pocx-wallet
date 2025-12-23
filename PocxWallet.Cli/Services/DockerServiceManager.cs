@@ -225,8 +225,21 @@ public class DockerServiceManager
 
         if (result.exitCode == 0)
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Container started successfully");
-            return true;
+            // Wait a moment for container to fully start
+            await Task.Delay(1000);
+            
+            // Verify container is running
+            var status = await GetContainerStatusAsync(containerName);
+            if (status == "running")
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Container started successfully");
+                return true;
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[yellow]⚠[/] Container created but status is: {status}");
+                return true; // Still return true as container was created
+            }
         }
         else
         {
@@ -247,6 +260,8 @@ public class DockerServiceManager
         
         if (result.exitCode == 0)
         {
+            // Wait a moment for container to fully stop
+            await Task.Delay(500);
             AnsiConsole.MarkupLine("[green]✓[/] Container stopped successfully");
             return true;
         }
@@ -330,7 +345,10 @@ public class DockerServiceManager
             logs = "...\n" + logs.Substring(logs.Length - MaxLogDisplaySize);
         }
 
-        var panel = new Panel(logs)
+        // Escape brackets in logs to prevent markup interpretation
+        var escapedLogs = Markup.Escape(logs);
+
+        var panel = new Panel(escapedLogs)
         {
             Header = new PanelHeader($"[bold]{title} (last {tailLines} lines)[/]"),
             Border = BoxBorder.Rounded,

@@ -380,9 +380,10 @@ class Program
                 
                 if (!string.IsNullOrWhiteSpace(logs))
                 {
-                    // Limit each log line display
+                    // Limit each log line display and escape brackets
                     var logLines = logs.Split('\n', StringSplitOptions.RemoveEmptyEntries).TakeLast(5);
-                    var panel = new Panel(string.Join("\n", logLines))
+                    var escapedLogs = string.Join("\n", logLines.Select(line => Markup.Escape(line)));
+                    var panel = new Panel(escapedLogs)
                     {
                         Header = new PanelHeader($"[dim]Last 5 log lines[/]"),
                         Border = BoxBorder.Rounded,
