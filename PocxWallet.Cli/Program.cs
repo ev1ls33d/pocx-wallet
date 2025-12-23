@@ -218,16 +218,10 @@ class Program
                     break;
 
                 case MenuOptions.Main_Plotting:
-                    // Show last 5 log lines if service is running
-                    await ShowServiceBannerAsync(_settings, "plotter");
-                    
                     await ShowPlottingMenuAsync();
                     break;
 
                 case MenuOptions.Main_Mining:
-                    // Show last 5 log lines if service is running
-                    await ShowServiceBannerAsync(_settings, "miner");
-                    
                     await ShowMiningMenuAsync();
                     break;
 
@@ -238,9 +232,6 @@ class Program
                     break;
 
                 case MenuOptions.Main_BitcoinPoCXNode:
-                    // Show last 5 log lines if service is running
-                    await ShowServiceBannerAsync(_settings);
-                    
                     await ShowNodeMenuAsync();
                     break;
 
@@ -650,9 +641,12 @@ class Program
             var statusIndicator = isRunning ? "[green]●[/]" : "[red]●[/]";
             var toggleText = isRunning ? "Stop Plotter" : "Start Plotter";
             
+            // Show banner and logs before menu
+            await ShowServiceBannerAsync(_settings, "plotter");
+            
             var choices = new[]
             {
-                $"{toggleText} {statusIndicator}",
+                toggleText,
                 "Create Plot",
                 "View Logs",
                 "Plotter Settings",
@@ -661,7 +655,7 @@ class Program
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold green]Plotting {statusIndicator}[/]")
+                    .Title($"[bold green]Plotting - Service: {statusIndicator}[/]")
                     .PageSize(10)
                     .AddChoices(choices)
             );
@@ -721,9 +715,12 @@ class Program
             var statusIndicator = isRunning ? "[green]●[/]" : "[red]●[/]";
             var toggleText = isRunning ? "Stop Miner" : "Start Miner";
             
+            // Show banner and logs before menu
+            await ShowServiceBannerAsync(_settings, "miner");
+            
             var choices = new[]
             {
-                $"{toggleText} {statusIndicator}",
+                toggleText,
                 "Create Miner Config",
                 "View Logs",
                 "Miner Settings",
@@ -732,7 +729,7 @@ class Program
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold green]Mining {statusIndicator}[/]")
+                    .Title($"[bold green]Mining - Service: {statusIndicator}[/]")
                     .PageSize(10)
                     .AddChoices(choices)
             );
@@ -794,9 +791,12 @@ class Program
             
             var electrsStatus = _settings.EnableElectrs ? "[green]enabled[/]" : "[red]disabled[/]";
             
+            // Show banner and logs before menu
+            await ShowServiceBannerAsync(_settings, "node");
+            
             var choices = new[]
             {
-                $"{toggleText} {statusIndicator}",
+                toggleText,
                 "Import Wallet from File",
                 "View Logs",
                 $"Toggle Electrs ({electrsStatus})",
@@ -806,7 +806,7 @@ class Program
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold green]Bitcoin-PoCX Node {statusIndicator} | Electrs: {electrsStatus}[/]")
+                    .Title($"[bold green]Bitcoin-PoCX Node - Service: {statusIndicator} | Electrs: {electrsStatus}[/]")
                     .PageSize(10)
                     .AddChoices(choices)
             );
