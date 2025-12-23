@@ -26,6 +26,7 @@ public static class ServiceDefinitionLoader
     {
         if (!File.Exists(servicesPath))
         {
+            AnsiConsole.MarkupLine($"[dim]Note: services.yaml not found at '{Markup.Escape(servicesPath)}'. Dynamic services will not be available.[/]");
             return null;
         }
 
