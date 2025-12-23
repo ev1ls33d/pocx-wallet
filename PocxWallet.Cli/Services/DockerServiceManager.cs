@@ -307,7 +307,7 @@ public class DockerServiceManager
     public async Task<string> GetContainerStatusAsync(string containerName)
     {
         ValidateContainerName(containerName);
-        var result = await ExecuteCommandAsync("docker", $"inspect -f '{{{{.State.Status}}}}' {containerName}");
+        var result = await ExecuteCommandAsync("docker", $"inspect -f {{{{.State.Status}}}} {containerName}");
         return result.exitCode == 0 ? result.output.Trim() : "not found";
     }
 
@@ -384,7 +384,7 @@ public class DockerServiceManager
         
         var result = await ExecuteCommandAsync("docker", 
             "ps -a --filter name=pocx-node --filter name=miner --filter name=plotter --filter name=electrs " +
-            "--format '{{.Names}}|{{.Status}}|{{.Ports}}'");
+            "--format {{.Names}}|{{.Status}}|{{.Ports}}");
 
         if (result.exitCode == 0 && !string.IsNullOrWhiteSpace(result.output))
         {
