@@ -512,21 +512,28 @@ public class DynamicServiceMenuBuilder
 
             case "int":
                 var currentInt = int.TryParse(currentValue, out var intVal) ? intVal : 0;
-                var newInt = AnsiConsole.Ask($"Enter {setting.Key}:", currentInt);
+                int newInt;
                 
-                // Validate if min/max specified
-                if (setting.Validation != null)
+                // Loop until valid input is provided
+                while (true)
                 {
-                    if (setting.Validation.Min.HasValue && newInt < setting.Validation.Min.Value)
+                    newInt = AnsiConsole.Ask($"Enter {setting.Key}:", currentInt);
+                    
+                    // Validate if min/max specified
+                    if (setting.Validation != null)
                     {
-                        AnsiConsole.MarkupLine($"[yellow]Value must be at least {setting.Validation.Min.Value}[/]");
-                        return;
+                        if (setting.Validation.Min.HasValue && newInt < setting.Validation.Min.Value)
+                        {
+                            AnsiConsole.MarkupLine($"[yellow]Value must be at least {setting.Validation.Min.Value}. Please try again.[/]");
+                            continue;
+                        }
+                        if (setting.Validation.Max.HasValue && newInt > setting.Validation.Max.Value)
+                        {
+                            AnsiConsole.MarkupLine($"[yellow]Value must be at most {setting.Validation.Max.Value}. Please try again.[/]");
+                            continue;
+                        }
                     }
-                    if (setting.Validation.Max.HasValue && newInt > setting.Validation.Max.Value)
-                    {
-                        AnsiConsole.MarkupLine($"[yellow]Value must be at most {setting.Validation.Max.Value}[/]");
-                        return;
-                    }
+                    break;
                 }
                 
                 SetSettingValue(setting.SettingPath, newInt.ToString());
