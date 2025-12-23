@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Electrs-PoCX (Electrum server)
 # Stage 1: Builder
-FROM rust:latest AS builder
+FROM rust:bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -16,8 +16,8 @@ RUN git clone --single-branch https://github.com/PoC-Consortium/electrs-pocx.git
 WORKDIR /build/electrs-pocx
 RUN cargo build --release --bin electrs
 
-# Stage 2: Runtime
-FROM debian:bookworm-slim
+# Stage 2: Runtime - Use same base to ensure glibc compatibility
+FROM rust:bookworm-slim
 
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y \

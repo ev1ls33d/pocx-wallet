@@ -17,6 +17,7 @@ enum MenuOptions
     Main_Mining,
     Main_VanityAddressGenerator,
     Main_BitcoinPoCXNode,
+    Main_Electrs,
     Main_Exit,
 
     // Wallet submenu
@@ -43,8 +44,12 @@ enum MenuOptions
     Node_ToggleService,
     Node_ImportWalletFromFile,
     Node_ViewLogs,
-    Node_ToggleElectrs,
     Node_Settings,
+
+    // Electrs submenu
+    Electrs_ToggleService,
+    Electrs_ViewLogs,
+    Electrs_Settings,
 
     // Docker submenu
     Docker_CheckStatus,
@@ -61,10 +66,11 @@ static class MenuOptionsExtensions
         {
             // Main - These will be dynamically updated with status in ShowMainMenu
             MenuOptions.Main_WalletManagement =>                Markup.Escape("[Wallet]    Wallet Management"),
-            MenuOptions.Main_Plotting =>                        Markup.Escape("[Plot]      Plotting"),
-            MenuOptions.Main_Mining =>                          Markup.Escape("[Mine]      Mining"),
+            MenuOptions.Main_Plotting =>                        Markup.Escape("[[Plot]]      Plotting"),
+            MenuOptions.Main_Mining =>                          Markup.Escape("[[Mine]]      Mining"),
             MenuOptions.Main_VanityAddressGenerator =>          Markup.Escape("[Vanity]    Vanity Address Generator"),
-            MenuOptions.Main_BitcoinPoCXNode =>                 Markup.Escape("[Node]      Bitcoin-PoCX Node"),
+            MenuOptions.Main_BitcoinPoCXNode =>                 Markup.Escape("[[Node]]      Bitcoin-PoCX Node"),
+            MenuOptions.Main_Electrs =>                         Markup.Escape("[[Electrs]]   Electrs Server"),
             MenuOptions.Main_Exit =>                            Markup.Escape("[Exit]      Exit"),
 
             // Wallet
@@ -91,8 +97,12 @@ static class MenuOptionsExtensions
             MenuOptions.Node_ToggleService =>                   Markup.Escape("Toggle Node Service"),
             MenuOptions.Node_ImportWalletFromFile =>            Markup.Escape("Import Wallet from File"),
             MenuOptions.Node_ViewLogs =>                        Markup.Escape("View Logs"),
-            MenuOptions.Node_ToggleElectrs =>                   Markup.Escape("Toggle Electrs (Electrum Server)"),
             MenuOptions.Node_Settings =>                        Markup.Escape("Node Settings"),
+
+            // Electrs - Toggle will be updated dynamically
+            MenuOptions.Electrs_ToggleService =>                Markup.Escape("Toggle Electrs Service"),
+            MenuOptions.Electrs_ViewLogs =>                     Markup.Escape("View Logs"),
+            MenuOptions.Electrs_Settings =>                     Markup.Escape("Electrs Settings"),
 
             // Docker
             MenuOptions.Docker_CheckStatus =>                   Markup.Escape("Check Docker Status"),
@@ -181,7 +191,7 @@ class Program
             var plotterStatus = await GetServiceStatusIndicatorAsync(_settings.PlotterContainerName);
             var minerStatus = await GetServiceStatusIndicatorAsync(_settings.MinerContainerName);
             var nodeStatus = await GetServiceStatusIndicatorAsync(_settings.BitcoinContainerName);
-            var electrsStatus = _settings.EnableElectrs ? "[green]E[/]" : "[dim]E[/]";
+            var electrsStatus = await GetServiceStatusIndicatorAsync(_settings.ElectrsContainerName);
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<MenuOptions>()
@@ -192,7 +202,8 @@ class Program
                     {
                         MenuOptions.Main_Plotting => $"[[Plot]]      Plotting {plotterStatus}",
                         MenuOptions.Main_Mining => $"[[Mine]]      Mining {minerStatus}",
-                        MenuOptions.Main_BitcoinPoCXNode => $"[[Node]]      Bitcoin-PoCX Node {nodeStatus} {electrsStatus}",
+                        MenuOptions.Main_BitcoinPoCXNode => $"[[Node]]      Bitcoin-PoCX Node {nodeStatus}",
+                        MenuOptions.Main_Electrs => $"[[Electrs]]   Electrs Server {electrsStatus}",
                         _ => opt.ToDisplayString()
                     })
             );
@@ -233,6 +244,10 @@ class Program
 
                 case MenuOptions.Main_BitcoinPoCXNode:
                     await ShowNodeMenuAsync();
+                    break;
+
+                case MenuOptions.Main_Electrs:
+                    await ShowElectrsMenuAsync();
                     break;
 
                 case MenuOptions.Main_Exit:
@@ -293,7 +308,6 @@ class Program
             _settings.MinerContainerName = loadedSettings.MinerContainerName;
             _settings.PlotterContainerName = loadedSettings.PlotterContainerName;
             _settings.ElectrsContainerName = loadedSettings.ElectrsContainerName;
-            _settings.EnableElectrs = loadedSettings.EnableElectrs;
             _settings.BitcoinNode = loadedSettings.BitcoinNode;
             _settings.Electrs = loadedSettings.Electrs;
             _settings.Miner = loadedSettings.Miner;
@@ -358,8 +372,6 @@ class Program
         if (serviceType == null || serviceType == "node")
         {
             containersToCheck.Add((settings.BitcoinContainerName, "Bitcoin Node"));
-            if (settings.EnableElectrs)
-                containersToCheck.Add((settings.ElectrsContainerName, "Electrs Server"));
         }
         else if (serviceType == "miner")
         {
@@ -368,6 +380,10 @@ class Program
         else if (serviceType == "plotter")
         {
             containersToCheck.Add((settings.PlotterContainerName, "Plotter"));
+        }
+        else if (serviceType == "electrs")
+        {
+            containersToCheck.Add((settings.ElectrsContainerName, "Electrs Server"));
         }
 
         foreach (var (containerName, label) in containersToCheck)
@@ -380,16 +396,12 @@ class Program
                 
                 if (!string.IsNullOrWhiteSpace(logs))
                 {
-                    // Limit each log line display and escape brackets
+                    // Display last 5 log lines without box
                     var logLines = logs.Split('\n', StringSplitOptions.RemoveEmptyEntries).TakeLast(5);
-                    var escapedLogs = string.Join("\n", logLines.Select(line => Markup.Escape(line)));
-                    var panel = new Panel(escapedLogs)
+                    foreach (var line in logLines)
                     {
-                        Header = new PanelHeader($"[dim]Last 5 log lines[/]"),
-                        Border = BoxBorder.Rounded,
-                        BorderStyle = new Style(Color.Grey)
-                    };
-                    AnsiConsole.Write(panel);
+                        AnsiConsole.MarkupLine($"[dim]{Markup.Escape(line)}[/]");
+                    }
                 }
                 AnsiConsole.WriteLine();
             }
@@ -631,6 +643,90 @@ class Program
     }
 
     /// <summary>
+    /// Show Electrs Settings submenu with editable settings
+    /// </summary>
+    static Task ShowElectrsSettingsMenuAsync()
+    {
+        bool back = false;
+        while (!back)
+        {
+            var settingOptions = new[]
+            {
+                "Repository",
+                "Tag",
+                "HTTP Port",
+                "RPC Port",
+                "Testnet Port",
+                "Data Directory",
+                "Additional Parameters",
+                "<= Back"
+            };
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold green]Electrs Settings[/]")
+                    .PageSize(10)
+                    .AddChoices(settingOptions)
+            );
+
+            AnsiConsole.Clear();
+            ShowBanner();
+
+            switch (choice)
+            {
+                case "Repository":
+                    _settings.Electrs.Repository = AnsiConsole.Ask("Enter Docker repository URL:", _settings.Electrs.Repository);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Repository updated");
+                    break;
+                case "Tag":
+                    _settings.Electrs.Tag = AnsiConsole.Ask("Enter Docker image tag:", _settings.Electrs.Tag);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Tag updated");
+                    break;
+                case "HTTP Port":
+                    _settings.Electrs.HttpPort = AnsiConsole.Ask("Enter HTTP API port:", _settings.Electrs.HttpPort);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] HTTP Port updated");
+                    break;
+                case "RPC Port":
+                    _settings.Electrs.RpcPort = AnsiConsole.Ask("Enter Electrum RPC port:", _settings.Electrs.RpcPort);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] RPC Port updated");
+                    break;
+                case "Testnet Port":
+                    _settings.Electrs.TestnetPort = AnsiConsole.Ask("Enter Testnet RPC port:", _settings.Electrs.TestnetPort);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Testnet Port updated");
+                    break;
+                case "Data Directory":
+                    _settings.Electrs.DataDirectory = AnsiConsole.Ask("Enter data directory path:", _settings.Electrs.DataDirectory);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Data Directory updated");
+                    break;
+                case "Additional Parameters":
+                    _settings.Electrs.AdditionalParams = AnsiConsole.Ask("Enter additional electrs parameters:", _settings.Electrs.AdditionalParams);
+                    SaveConfiguration();
+                    AnsiConsole.MarkupLine("[green]✓[/] Additional Parameters updated");
+                    break;
+                case "<= Back":
+                    back = true;
+                    break;
+            }
+
+            if (!back)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");
+                Console.ReadLine();
+                AnsiConsole.Clear();
+                ShowBanner();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Show Plotting submenu with status-aware toggle
     /// </summary>
     static async Task ShowPlottingMenuAsync()
@@ -790,8 +886,6 @@ class Program
             var statusIndicator = isRunning ? "[green]●[/]" : "[red]●[/]";
             var toggleText = isRunning ? "Stop Node" : "Start Node";
             
-            var electrsStatus = _settings.EnableElectrs ? "[green]enabled[/]" : "[red]disabled[/]";
-            
             // Show banner and logs before menu
             await ShowServiceBannerAsync(_settings, "node");
             
@@ -800,14 +894,13 @@ class Program
                 toggleText,
                 "Import Wallet from File",
                 "View Logs",
-                $"Toggle Electrs ({electrsStatus})",
                 "Node Settings",
                 "<= Back"
             };
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[bold green]Bitcoin-PoCX Node - Service: {statusIndicator} | Electrs: {electrsStatus}[/]")
+                    .Title($"[bold green]Bitcoin-PoCX Node - Service: {statusIndicator}[/]")
                     .PageSize(10)
                     .AddChoices(choices)
             );
@@ -835,13 +928,6 @@ class Program
             {
                 await NodeCommands.ViewLogsAsync(_settings);
             }
-            else if (choice.Contains("Toggle Electrs"))
-            {
-                _settings.EnableElectrs = !_settings.EnableElectrs;
-                AnsiConsole.MarkupLine($"[green]✓[/] Electrs: {(_settings.EnableElectrs ? "Enabled" : "Disabled")}");
-                AnsiConsole.MarkupLine("[dim]Electrs will {0} with the node on next start[/]", _settings.EnableElectrs ? "start" : "not start");
-                SaveConfiguration();
-            }
             else if (choice == "Node Settings")
             {
                 await ShowNodeSettingsMenuAsync();
@@ -853,6 +939,75 @@ class Program
             }
 
             if (!back && choice != "Node Settings")
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");
+                Console.ReadLine();
+                AnsiConsole.Clear();
+                ShowBanner();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Show Electrs submenu
+    /// </summary>
+    static async Task ShowElectrsMenuAsync()
+    {
+        bool back = false;
+        while (!back)
+        {
+            var isRunning = await IsServiceRunningAsync(_settings.ElectrsContainerName);
+            var statusIndicator = isRunning ? "[green]●[/]" : "[red]●[/]";
+            var toggleText = isRunning ? "Stop Electrs" : "Start Electrs";
+            
+            // Show banner and logs before menu
+            await ShowServiceBannerAsync(_settings, "electrs");
+            
+            var choices = new[]
+            {
+                toggleText,
+                "View Logs",
+                "Electrs Settings",
+                "<= Back"
+            };
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[bold green]Electrs Server - Service: {statusIndicator}[/]")
+                    .PageSize(10)
+                    .AddChoices(choices)
+            );
+
+            AnsiConsole.Clear();
+            ShowBanner();
+
+            if (choice.Contains("Stop") || choice.Contains("Start"))
+            {
+                if (isRunning)
+                {
+                    await ElectrsCommands.StopElectrsAsync(_settings);
+                }
+                else
+                {
+                    await ElectrsCommands.StartElectrsAsync(_settings);
+                }
+            }
+            else if (choice == "View Logs")
+            {
+                await ElectrsCommands.ViewLogsAsync(_settings);
+            }
+            else if (choice == "Electrs Settings")
+            {
+                await ShowElectrsSettingsMenuAsync();
+                continue; // Skip the "press ENTER" prompt
+            }
+            else if (choice == "<= Back")
+            {
+                back = true;
+            }
+
+            if (!back && choice != "Electrs Settings")
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[dim]Press ENTER to continue...[/]");

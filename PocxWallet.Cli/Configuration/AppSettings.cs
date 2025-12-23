@@ -56,11 +56,6 @@ public class AppSettings
     public string ElectrsContainerName { get; set; } = "pocx-electrs";
 
     /// <summary>
-    /// Enable Electrs (Electrum server) alongside the node
-    /// </summary>
-    public bool EnableElectrs { get; set; } = false;
-
-    /// <summary>
     /// Bitcoin node specific settings
     /// </summary>
     public BitcoinNodeSettings BitcoinNode { get; set; } = new();
