@@ -1,0 +1,1598 @@
+# ============================================================================
+# PoCX Wallet - Service Definitions
+# ============================================================================
+# This file defines all container services that can be managed by the wallet. 
+# Adding a new service is as simple as defining it here - no code changes needed. 
+#
+# Schema Version: 1.0
+# Generated from: PoC-Consortium/bitcoin, PoC-Consortium/pocx, PoC-Consortium/electrs-pocx
+# ============================================================================
+
+version: "1.0"
+
+# Global defaults applied to all services
+defaults:
+  docker_network: "pocx"
+  restart_policy: "unless-stopped"
+  log_driver: "json-file"
+  log_max_size: "10m"
+  log_max_files: 3
+
+# ============================================================================
+# SERVICES
+# ============================================================================
+services:
+
+  # ==========================================================================
+  # BITCOIN-POCX NODE
+  # ==========================================================================
+  - id: "bitcoin-node"
+    name:  "Bitcoin-PoCX Node"
+    description: "Full Bitcoin-PoCX node running bitcoind with PoC consensus"
+    category: "infrastructure"
+    menu_label: "[Node]"
+    documentation_url: "https://github.com/PoC-Consortium/bitcoin"
+    
+    container: 
+      image: "bitcoin"
+      repository: "ghcr.io/ev1ls33d/pocx-wallet"
+      default_tag: "latest"
+      container_name_setting: "BitcoinContainerName"
+      working_dir: "/root"
+      entrypoint: null
+      
+    source: 
+      repository: "https://github.com/PoC-Consortium/bitcoin. git"
+      branch: "pocx-v30-RC3"
+      build_command: "cmake -B build && cmake --build build"
+      binary_paths:
+        - "build/src/bitcoind"
+        - "build/src/bitcoin-cli"
+    
+    ports:
+      - name: "rpc"
+        container_port: 18332
+        host_port_setting: "BitcoinNode. RpcPort"
+        description: "JSON-RPC API port for wallet and mining communication"
+        protocol: "tcp"
+      - name: "p2p"
+        container_port: 18333
+        host_port_setting:  "BitcoinNode.P2PPort"
+        description:  "P2P network port for node communication"
+        protocol:  "tcp"
+      - name: "zmq-block"
+        container_port: 28332
+        host_port_setting: "BitcoinNode. ZmqBlockPort"
+        description:  "ZeroMQ block notification port"
+        protocol: "tcp"
+        optional: true
+      - name: "zmq-tx"
+        container_port: 28333
+        host_port_setting:  "BitcoinNode.ZmqTxPort"
+        description: "ZeroMQ transaction notification port"
+        protocol:  "tcp"
+        optional: true
+    
+    volumes:
+      - name: "data"
+        host_path_setting: "BitcoinNode. DataDirectory"
+        container_path:  "/root/.bitcoin"
+        read_only: false
+        description: "Blockchain data, wallet files, and node configuration"
+    
+    environment:  []
+    
+    # All available CLI parameters from bitcoind --help
+    parameters:
+      # === Network Selection ===
+      - name: "testnet"
+        cli_flag: "-testnet"
+        type: "bool"
+        default: true
+        description: "Use the test network (testnet3)"
+        category: "network"
+      - name: "regtest"
+        cli_flag: "-regtest"
+        type: "bool"
+        default: false
+        description: "Enter regression test mode"
+        category: "network"
+      - name: "signet"
+        cli_flag: "-signet"
+        type: "bool"
+        default: false
+        description: "Use the signet chain"
+        category:  "network"
+        
+      # === PoCX-Specific ===
+      - name: "miningserver"
+        cli_flag: "-miningserver"
+        type: "bool"
+        default:  true
+        description: "Enable PoC mining server RPC endpoints"
+        category:  "pocx"
+        
+      # === Connection Options ===
+      - name: "addnode"
+        cli_flag: "-addnode"
+        type: "string[]"
+        default:  []
+        description:  "Add nodes to connect to (can specify multiple)"
+        category: "connection"
+      - name: "connect"
+        cli_flag: "-connect"
+        type: "string[]"
+        default:  []
+        description:  "Connect only to specified nodes"
+        category: "connection"
+      - name: "listen"
+        cli_flag: "-listen"
+        type: "bool"
+        default:  true
+        description:  "Accept connections from outside"
+        category:  "connection"
+      - name: "maxconnections"
+        cli_flag: "-maxconnections"
+        type: "int"
+        default:  125
+        description: "Maximum number of inbound+outbound connections"
+        category: "connection"
+      - name: "port"
+        cli_flag: "-port"
+        type: "int"
+        default: 18333
+        description: "Listen for connections on this port"
+        category: "connection"
+      - name: "proxy"
+        cli_flag: "-proxy"
+        type: "string"
+        default: ""
+        description: "Connect through SOCKS5 proxy (ip:port)"
+        category: "connection"
+      - name: "onion"
+        cli_flag: "-onion"
+        type: "string"
+        default: ""
+        description: "Use separate SOCKS5 proxy for Tor hidden services"
+        category: "connection"
+      - name: "dns"
+        cli_flag: "-dns"
+        type: "bool"
+        default:  true
+        description:  "Allow DNS lookups for addnode, seed, connect"
+        category: "connection"
+      - name: "dnsseed"
+        cli_flag: "-dnsseed"
+        type: "bool"
+        default: true
+        description: "Query for peer addresses via DNS lookup"
+        category:  "connection"
+        
+      # === RPC Options ===
+      - name: "rpcport"
+        cli_flag: "-rpcport"
+        type: "int"
+        default: 18332
+        description:  "Listen for JSON-RPC connections on this port"
+        category: "rpc"
+      - name: "rpcbind"
+        cli_flag: "-rpcbind"
+        type: "string"
+        default:  "0.0.0.0"
+        description: "Bind to given address for JSON-RPC connections"
+        category: "rpc"
+      - name:  "rpcallowip"
+        cli_flag: "-rpcallowip"
+        type: "string[]"
+        default:  ["0.0.0.0/0"]
+        description: "Allow JSON-RPC connections from specified IPs/subnets"
+        category: "rpc"
+      - name: "rpcuser"
+        cli_flag: "-rpcuser"
+        type: "string"
+        default: ""
+        description: "Username for JSON-RPC connections"
+        category: "rpc"
+        sensitive: true
+      - name: "rpcpassword"
+        cli_flag: "-rpcpassword"
+        type: "string"
+        default: ""
+        description: "Password for JSON-RPC connections"
+        category: "rpc"
+        sensitive: true
+      - name: "rpcauth"
+        cli_flag: "-rpcauth"
+        type: "string"
+        default: ""
+        description: "Username and HMAC-SHA-256 hashed password (user:salt$hash)"
+        category: "rpc"
+        sensitive: true
+      - name:  "rpcthreads"
+        cli_flag: "-rpcthreads"
+        type:  "int"
+        default: 4
+        description: "Number of threads for RPC server"
+        category:  "rpc"
+        
+      # === Wallet Options ===
+      - name: "disablewallet"
+        cli_flag:  "-disablewallet"
+        type:  "bool"
+        default: false
+        description: "Do not load the wallet and disable wallet RPC calls"
+        category:  "wallet"
+      - name: "wallet"
+        cli_flag: "-wallet"
+        type: "string"
+        default: ""
+        description: "Specify wallet to load by name"
+        category: "wallet"
+      - name: "walletbroadcast"
+        cli_flag: "-walletbroadcast"
+        type:  "bool"
+        default: true
+        description: "Broadcast transactions submitted via RPC"
+        category: "wallet"
+        
+      # === Debugging/Testing Options ===
+      - name: "printtoconsole"
+        cli_flag: "-printtoconsole"
+        type: "bool"
+        default: true
+        description: "Print logs to console (stdout)"
+        category: "debug"
+      - name: "debug"
+        cli_flag: "-debug"
+        type: "string"
+        default:  ""
+        description:  "Output debug info (all, net, tor, mempool, http, bench, coindb, etc.)"
+        category: "debug"
+      - name:  "debugexclude"
+        cli_flag: "-debugexclude"
+        type: "string"
+        default: ""
+        description: "Exclude debug category from logging"
+        category:  "debug"
+      - name: "logips"
+        cli_flag: "-logips"
+        type:  "bool"
+        default:  false
+        description:  "Include IP addresses in debug output"
+        category:  "debug"
+      - name: "logtimestamps"
+        cli_flag: "-logtimestamps"
+        type: "bool"
+        default: true
+        description: "Prepend debug output with timestamp"
+        category: "debug"
+        
+      # === Chain Selection/Index ===
+      - name: "txindex"
+        cli_flag: "-txindex"
+        type: "bool"
+        default: false
+        description: "Maintain a full transaction index"
+        category: "index"
+      - name: "prune"
+        cli_flag: "-prune"
+        type: "int"
+        default:  0
+        description: "Reduce storage by pruning blocks (0=disable, 1=auto, N=target size MB)"
+        category: "index"
+      - name: "reindex"
+        cli_flag: "-reindex"
+        type: "bool"
+        default: false
+        description: "Rebuild block chain index from scratch"
+        category:  "index"
+        
+      # === Performance ===
+      - name: "dbcache"
+        cli_flag: "-dbcache"
+        type: "int"
+        default: 450
+        description: "Database cache size in MB"
+        category:  "performance"
+      - name: "par"
+        cli_flag: "-par"
+        type: "int"
+        default:  0
+        description: "Script verification threads (0=auto, -N=leave N cores free)"
+        category: "performance"
+      - name: "maxmempool"
+        cli_flag: "-maxmempool"
+        type: "int"
+        default: 300
+        description: "Maximum memory pool size in MB"
+        category:  "performance"
+      - name: "mempoolexpiry"
+        cli_flag: "-mempoolexpiry"
+        type: "int"
+        default: 336
+        description: "Memory pool transaction expiry in hours"
+        category:  "performance"
+        
+      # === ZeroMQ ===
+      - name: "zmqpubrawblock"
+        cli_flag: "-zmqpubrawblock"
+        type:  "string"
+        default: ""
+        description: "ZMQ endpoint for raw block publishing"
+        category:  "zmq"
+      - name: "zmqpubrawtx"
+        cli_flag: "-zmqpubrawtx"
+        type: "string"
+        default: ""
+        description: "ZMQ endpoint for raw transaction publishing"
+        category: "zmq"
+      - name: "zmqpubhashblock"
+        cli_flag: "-zmqpubhashblock"
+        type: "string"
+        default: ""
+        description: "ZMQ endpoint for block hash publishing"
+        category: "zmq"
+      - name: "zmqpubhashtx"
+        cli_flag: "-zmqpubhashtx"
+        type: "string"
+        default: ""
+        description: "ZMQ endpoint for transaction hash publishing"
+        category: "zmq"
+        
+      # === Notification Hooks ===
+      - name: "alertnotify"
+        cli_flag: "-alertnotify"
+        type: "string"
+        default:  ""
+        description:  "Execute command on alerts (%s in cmd is replaced by message)"
+        category: "hooks"
+      - name: "blocknotify"
+        cli_flag: "-blocknotify"
+        type: "string"
+        default:  ""
+        description:  "Execute command on best block change (%s = block hash)"
+        category: "hooks"
+      - name: "walletnotify"
+        cli_flag:  "-walletnotify"
+        type:  "string"
+        default: ""
+        description: "Execute command on wallet transaction (%s = TxID)"
+        category: "hooks"
+      - name:  "startupnotify"
+        cli_flag: "-startupnotify"
+        type: "string"
+        default: ""
+        description: "Execute command on startup"
+        category: "hooks"
+      - name: "shutdownnotify"
+        cli_flag: "-shutdownnotify"
+        type: "string"
+        default: ""
+        description: "Execute command on shutdown"
+        category: "hooks"
+    
+    depends_on:  []
+    
+    health_check:
+      command: "bitcoin-cli -testnet getblockchaininfo"
+      interval_seconds: 30
+      timeout_seconds: 10
+      retries:  3
+      start_period_seconds:  60
+    
+    menu: 
+      main_menu_order: 4
+      submenu: 
+        - action:  "toggle"
+          label_running: "Stop Node"
+          label_stopped: "Start Node"
+        - action: "custom"
+          id:  "import_wallet"
+          label:  "Import Wallet from File"
+          handler: "WalletCommands.ImportWalletFromFileAsync"
+        - action: "custom"
+          id:  "get_blockchain_info"
+          label: "Get Blockchain Info"
+          handler: "NodeCommands.GetBlockchainInfoAsync"
+        - action: "logs"
+          label:  "View Logs"
+        - action: "settings"
+          label:  "Node Settings"
+    
+    settings:
+      - key: "Repository"
+        setting_path: "BitcoinNode.Repository"
+        type: "string"
+        category: "container"
+      - key: "Tag"
+        setting_path: "BitcoinNode.Tag"
+        type: "string"
+        category: "container"
+      - key: "RPC Port"
+        setting_path: "BitcoinNode.RpcPort"
+        type: "int"
+        category: "network"
+        validation: 
+          min: 1024
+          max: 65535
+      - key: "P2P Port"
+        setting_path: "BitcoinNode. P2PPort"
+        type: "int"
+        category: "network"
+        validation:
+          min: 1024
+          max: 65535
+      - key: "Data Directory"
+        setting_path: "BitcoinNode.DataDirectory"
+        type: "path"
+        category:  "storage"
+      - key: "Additional Parameters"
+        setting_path: "BitcoinNode.AdditionalParams"
+        type:  "string"
+        category: "advanced"
+        description: "Extra command line arguments for bitcoind"
+
+  # ==========================================================================
+  # ELECTRS-POCX (Electrum Server)
+  # ==========================================================================
+  - id: "electrs"
+    name: "Electrs Server"
+    description:  "Electrum protocol server for lightweight wallet access and blockchain indexing"
+    category: "infrastructure"
+    menu_label: "[Electrs]"
+    documentation_url: "https://github.com/PoC-Consortium/electrs-pocx"
+    
+    container: 
+      image: "electrs"
+      repository: "ghcr.io/ev1ls33d/pocx-wallet"
+      default_tag:  "latest"
+      container_name_setting: "ElectrsContainerName"
+      working_dir: "/data"
+      
+    source:
+      repository: "https://github.com/PoC-Consortium/electrs-pocx.git"
+      branch: "master"
+      build_command: "cargo build --release --bin electrs"
+      binary_paths: 
+        - "target/release/electrs"
+    
+    ports: 
+      - name: "http"
+        container_port: 3000
+        host_port_setting: "Electrs.HttpPort"
+        description: "HTTP REST API for blockchain queries"
+        protocol: "tcp"
+      - name: "electrum-rpc"
+        container_port: 50001
+        host_port_setting: "Electrs.RpcPort"
+        description: "Electrum protocol RPC port (mainnet)"
+        protocol: "tcp"
+      - name: "electrum-testnet"
+        container_port: 60001
+        host_port_setting: "Electrs.TestnetPort"
+        description: "Electrum protocol RPC port (testnet)"
+        protocol: "tcp"
+      - name: "monitoring"
+        container_port: 4224
+        host_port_setting: "Electrs.MonitoringPort"
+        description: "Prometheus metrics endpoint"
+        protocol: "tcp"
+        optional: true
+    
+    volumes: 
+      - name: "data"
+        host_path_setting:  "Electrs. DataDirectory"
+        container_path: "/data"
+        read_only: false
+        description: "Electrs index database storage"
+      - name: "bitcoin-data"
+        host_path_setting:  "BitcoinNode.DataDirectory"
+        container_path:  "/root/.bitcoin"
+        read_only: true
+        description: "Bitcoin node data (read-only access for . cookie and blocks)"
+    
+    environment: []
+    
+    parameters:
+      # === Verbosity ===
+      - name: "verbosity"
+        cli_flag: "-v"
+        type:  "int"
+        default:  0
+        description: "Increase logging verbosity (can specify multiple times)"
+        category: "logging"
+      - name: "timestamp"
+        cli_flag: "--timestamp"
+        type: "bool"
+        default: false
+        description: "Prepend log lines with a timestamp"
+        category: "logging"
+        
+      # === Network Selection ===
+      - name: "network"
+        cli_flag: "--network"
+        type: "string"
+        default: "testnet"
+        description: "Select network type (mainnet, testnet, regtest, signet)"
+        category: "network"
+        enum:  ["mainnet", "testnet", "regtest", "signet"]
+        
+      # === Directory Paths ===
+      - name: "db_dir"
+        cli_flag: "--db-dir"
+        type: "string"
+        default: "/data"
+        description: "Directory to store index database"
+        category:  "storage"
+      - name: "daemon_dir"
+        cli_flag: "--daemon-dir"
+        type: "string"
+        default: "/root/.bitcoin"
+        description: "Data directory of bitcoind (for cookie auth)"
+        category: "storage"
+      - name: "blocks_dir"
+        cli_flag: "--blocks-dir"
+        type: "string"
+        default:  ""
+        description: "Directory containing blk*. dat files (default: daemon_dir/blocks)"
+        category: "storage"
+        
+      # === Daemon Connection ===
+      - name: "daemon_rpc_addr"
+        cli_flag: "--daemon-rpc-addr"
+        type: "string"
+        default: "127.0.0.1:18332"
+        description: "Bitcoin daemon JSON-RPC address"
+        category:  "connection"
+      - name: "cookie"
+        cli_flag: "--cookie"
+        type: "string"
+        default: ""
+        description: "JSONRPC authentication cookie (USER:PASSWORD)"
+        category: "connection"
+        sensitive: true
+        
+      # === Server Addresses ===
+      - name: "electrum_rpc_addr"
+        cli_flag:  "--electrum-rpc-addr"
+        type: "string"
+        default:  "0.0.0.0:50001"
+        description: "Electrum server JSONRPC address"
+        category: "server"
+      - name: "http_addr"
+        cli_flag: "--http-addr"
+        type: "string"
+        default:  "0.0.0.0:3000"
+        description: "HTTP server address for REST API"
+        category: "server"
+      - name: "monitoring_addr"
+        cli_flag: "--monitoring-addr"
+        type: "string"
+        default:  "127.0.0.1:4224"
+        description: "Prometheus monitoring address"
+        category:  "server"
+        
+      # === Performance Modes ===
+      - name: "jsonrpc_import"
+        cli_flag: "--jsonrpc-import"
+        type: "bool"
+        default:  false
+        description:  "Use JSONRPC instead of direct blk*.dat import (for remote node)"
+        category: "performance"
+      - name: "lightmode"
+        cli_flag: "--lightmode"
+        type: "bool"
+        default: false
+        description: "Enable light mode for reduced storage requirements"
+        category: "performance"
+        
+      # === Index Options ===
+      - name: "address_search"
+        cli_flag: "--address-search"
+        type: "bool"
+        default: false
+        description: "Enable prefix address search index"
+        category:  "index"
+      - name: "index_unspendables"
+        cli_flag: "--index-unspendables"
+        type: "bool"
+        default: false
+        description: "Enable indexing of provably unspendable outputs"
+        category:  "index"
+        
+      # === Limits ===
+      - name: "utxos_limit"
+        cli_flag: "--utxos-limit"
+        type:  "int"
+        default: 500
+        description: "Maximum number of UTXOs to process per address"
+        category:  "limits"
+      - name: "electrum_txs_limit"
+        cli_flag:  "--electrum-txs-limit"
+        type: "int"
+        default:  500
+        description: "Maximum transactions returned by Electrum history queries"
+        category:  "limits"
+        
+      # === Electrum Server Options ===
+      - name:  "electrum_banner"
+        cli_flag: "--electrum-banner"
+        type: "string"
+        default: ""
+        description: "Welcome banner shown to Electrum clients"
+        category:  "electrum"
+      - name: "electrum_rpc_logging"
+        cli_flag: "--electrum-rpc-logging"
+        type:  "string"
+        default:  ""
+        description: "RPC logging option (full, no-params)"
+        category: "electrum"
+        enum: ["full", "no-params"]
+        
+      # === HTTP Options ===
+      - name: "cors"
+        cli_flag: "--cors"
+        type: "string"
+        default:  ""
+        description:  "Origins allowed to make cross-site requests"
+        category: "http"
+      - name: "precache_scripts"
+        cli_flag: "--precache-scripts"
+        type: "string"
+        default: ""
+        description: "Path to file with list of scripts to pre-cache"
+        category: "http"
+    
+    depends_on: 
+      - service_id: "bitcoin-node"
+        condition: "healthy"
+        reason: "Electrs requires a synced Bitcoin node to index"
+    
+    health_check:
+      command: "curl -sf http://localhost:3000/blocks/tip/height || exit 1"
+      interval_seconds: 30
+      timeout_seconds: 10
+      retries: 3
+      start_period_seconds: 120
+    
+    menu:
+      main_menu_order: 5
+      submenu:
+        - action: "toggle"
+          label_running:  "Stop Electrs"
+          label_stopped: "Start Electrs"
+        - action: "custom"
+          id:  "check_sync"
+          label:  "Check Sync Status"
+          handler:  "ElectrsCommands.CheckSyncStatusAsync"
+        - action: "logs"
+          label:  "View Logs"
+        - action:  "settings"
+          label: "Electrs Settings"
+    
+    settings:
+      - key: "Repository"
+        setting_path: "Electrs.Repository"
+        type: "string"
+        category: "container"
+      - key: "Tag"
+        setting_path: "Electrs.Tag"
+        type: "string"
+        category: "container"
+      - key: "HTTP Port"
+        setting_path: "Electrs.HttpPort"
+        type:  "int"
+        category: "network"
+      - key: "RPC Port"
+        setting_path: "Electrs.RpcPort"
+        type: "int"
+        category: "network"
+      - key: "Testnet Port"
+        setting_path: "Electrs.TestnetPort"
+        type:  "int"
+        category: "network"
+      - key:  "Data Directory"
+        setting_path:  "Electrs. DataDirectory"
+        type: "path"
+        category: "storage"
+      - key: "Additional Parameters"
+        setting_path: "Electrs.AdditionalParams"
+        type: "string"
+        category: "advanced"
+
+  # ==========================================================================
+  # POCX AGGREGATOR
+  # ==========================================================================
+  - id:  "aggregator"
+    name: "PoCX Aggregator"
+    description:  "High-performance mining aggregator for PoCX protocol - aggregates multiple miners to a single upstream pool or wallet"
+    category:  "mining"
+    menu_label: "[Aggregator]"
+    documentation_url: "https://github.com/PoC-Consortium/pocx"
+    
+    container:
+      image:  "pocx"
+      repository: "ghcr.io/ev1ls33d/pocx-wallet"
+      default_tag: "latest"
+      container_name_setting: "AggregatorContainerName"
+      working_dir: "/config"
+      command: "pocx_aggregator"
+      
+    source:
+      repository:  "https://github.com/PoC-Consortium/pocx. git"
+      branch: "master"
+      build_command:  "cargo build --release -p pocx_aggregator"
+      binary_paths:
+        - "target/release/pocx_aggregator"
+    
+    ports:
+      - name: "api"
+        container_port: 8080
+        host_port_setting: "Aggregator.ApiPort"
+        description: "Mining API port for downstream miners"
+        protocol:  "tcp"
+      - name: "dashboard"
+        container_port: 8081
+        host_port_setting: "Aggregator.DashboardPort"
+        description: "Web dashboard port"
+        protocol: "tcp"
+        optional: true
+    
+    volumes:
+      - name: "config"
+        host_path_setting: "Aggregator.ConfigPath"
+        container_path: "/config/aggregator_config.yaml"
+        read_only: true
+        description: "Aggregator configuration file"
+        is_file: true
+      - name: "data"
+        host_path_setting: "Aggregator.DataDirectory"
+        container_path: "/data"
+        read_only: false
+        description: "Database and log storage"
+    
+    environment: []
+    
+    # CLI parameters
+    parameters:
+      - name: "config"
+        cli_flag: "-c"
+        cli_alias: "--config"
+        type: "string"
+        default:  "/config/aggregator_config.yaml"
+        description: "Path to aggregator configuration file"
+        category:  "config"
+    
+    # Configuration file options (aggregator_config.yaml)
+    config_file:
+      format: "yaml"
+      path_setting: "Aggregator.ConfigPath"
+      options:
+        # === Server Configuration ===
+        - name: "listen_address"
+          type: "string"
+          default: "0.0.0.0:8080"
+          description: "Address to listen on for miner connections"
+          category: "server"
+          
+        # === Upstream Configuration ===
+        - name: "upstream"
+          type: "object"
+          description: "Upstream pool or wallet configuration"
+          category: "upstream"
+          properties:
+            - name: "name"
+              type:  "string"
+              required: true
+              description: "Pool/wallet name for identification"
+            - name: "url"
+              type:  "string"
+              required: true
+              description: "Pool/wallet URL (e.g., http://pool.example.com:8080/pocx)"
+            - name: "auth_token"
+              type: "string"
+              default: ""
+              description: "Optional authentication token"
+              sensitive: true
+            - name:  "submission_mode"
+              type:  "string"
+              default:  "pool"
+              description:  "Submission mode:  pool (per-account best) or wallet (global best)"
+              enum: ["pool", "wallet"]
+              
+        # === Timing Configuration ===
+        - name: "block_time_secs"
+          type: "int"
+          default:  120
+          description: "Expected block time in seconds (used for capacity estimation)"
+          category:  "timing"
+          
+        # === Cache Configuration ===
+        - name: "cache"
+          type: "object"
+          description:  "Cache settings"
+          category: "cache"
+          properties:
+            - name: "mining_info_ttl_secs"
+              type: "int"
+              default: 5
+              description: "How long to cache mining info (in seconds)"
+            - name: "pool_timeout_secs"
+              type: "int"
+              default:  30
+              description: "Pool request timeout (in seconds)"
+              
+        # === Database Configuration ===
+        - name: "database"
+          type:  "object"
+          description: "Database settings"
+          category:  "database"
+          properties:
+            - name: "path"
+              type:  "string"
+              default: "aggregator.db"
+              description: "Database file path"
+            - name: "retention_days"
+              type:  "int"
+              default: 7
+              description: "Retention period in days (0 = keep forever)"
+              
+        # === Dashboard Configuration ===
+        - name: "dashboard"
+          type:  "object"
+          description: "Dashboard settings (optional)"
+          category: "dashboard"
+          optional: true
+          properties:
+            - name: "enabled"
+              type: "bool"
+              default:  true
+              description: "Enable web dashboard"
+            - name: "listen_address"
+              type: "string"
+              default: "0.0.0.0:8081"
+              description:  "Dashboard listen address"
+              
+        # === Logging Configuration ===
+        - name: "logging"
+          type:  "object"
+          description: "Logging configuration"
+          category:  "logging"
+          properties:
+            - name: "level"
+              type: "string"
+              default: "info"
+              description: "Log level"
+              enum: ["trace", "debug", "info", "warn", "error"]
+            - name: "file"
+              type:  "string"
+              default: "aggregator.log"
+              description: "Log file path"
+    
+    depends_on:  []
+    
+    health_check: 
+      command: "curl -sf http://localhost:8080/api/info || exit 1"
+      interval_seconds: 30
+      timeout_seconds: 10
+      retries: 3
+      start_period_seconds: 10
+    
+    menu:
+      main_menu_order: 3
+      submenu: 
+        - action:  "toggle"
+          label_running: "Stop Aggregator"
+          label_stopped: "Start Aggregator"
+        - action: "custom"
+          id: "create_config"
+          label:  "Create Aggregator Config"
+          handler:  "AggregatorCommands.CreateConfigAsync"
+        - action:  "custom"
+          id: "show_stats"
+          label:  "Show Statistics"
+          handler: "AggregatorCommands.ShowStatsAsync"
+        - action: "logs"
+          label: "View Logs"
+        - action: "settings"
+          label:  "Aggregator Settings"
+    
+    settings:
+      - key: "Repository"
+        setting_path: "Aggregator.Repository"
+        type: "string"
+        category: "container"
+      - key: "Tag"
+        setting_path: "Aggregator.Tag"
+        type: "string"
+        category: "container"
+      - key: "API Port"
+        setting_path: "Aggregator.ApiPort"
+        type: "int"
+        category: "network"
+        validation:
+          min: 1024
+          max: 65535
+      - key: "Dashboard Port"
+        setting_path: "Aggregator.DashboardPort"
+        type: "int"
+        category: "network"
+        validation:
+          min:  1024
+          max: 65535
+      - key:  "Data Directory"
+        setting_path: "Aggregator.DataDirectory"
+        type:  "path"
+        category: "storage"
+      - key:  "Config Path"
+        setting_path: "Aggregator.ConfigPath"
+        type: "path"
+        category:  "config"
+
+  # ==========================================================================
+  # POCX MINER
+  # ==========================================================================
+  - id:  "miner"
+    name: "PoCX Miner"
+    description:  "High-performance Proof-of-Capacity mining client with SIMD optimization"
+    category:  "mining"
+    menu_label: "[Mine]"
+    documentation_url: "https://github.com/PoC-Consortium/pocx"
+    
+    container:
+      image:  "pocx"
+      repository: "ghcr.io/ev1ls33d/pocx-wallet"
+      default_tag: "latest"
+      container_name_setting: "MinerContainerName"
+      working_dir: "/config"
+      command: "pocx_miner"
+      
+    source:
+      repository:  "https://github.com/PoC-Consortium/pocx.git"
+      branch: "master"
+      build_command: "cargo build --release -p pocx_miner"
+      binary_paths:
+        - "target/release/pocx_miner"
+    
+    ports:  []
+    
+    volumes:
+      - name: "plots"
+        host_path_setting: "PlotDirectory"
+        container_path: "/plots"
+        read_only: true
+        description: "Directory containing plot files"
+      - name: "config"
+        host_path_setting: "MinerConfigPath"
+        container_path: "/config/config.yaml"
+        read_only: true
+        description: "Miner configuration file"
+        is_file: true
+    
+    environment: []
+    
+    parameters:
+      - name: "config"
+        cli_flag:  "-c"
+        cli_alias: "--config"
+        type: "string"
+        default: "/config/config.yaml"
+        description: "Path to miner configuration file"
+        category: "config"
+      - name: "line_progress"
+        cli_flag: "--line-progress"
+        type: "bool"
+        default:  false
+        description:  "Enable machine-parsable progress output for GUI"
+        category:  "output"
+        hidden: true
+    
+    config_file:
+      format: "yaml"
+      path_setting: "MinerConfigPath"
+      options:
+        # === Chain Configuration ===
+        - name: "chains"
+          type:  "array"
+          description:  "Mining pool/wallet configurations"
+          category: "pools"
+          items: 
+            type: "object"
+            properties:
+              - name: "name"
+                type:  "string"
+                description: "Pool/wallet name"
+              - name: "base_url"
+                type: "string"
+                description: "Pool URL (e.g., http://pool.example.com:8080)"
+              - name:  "api_path"
+                type:  "string"
+                default: "/pocx"
+                description: "API endpoint path"
+              - name: "accounts"
+                type:  "array"
+                items:
+                  type: "object"
+                  properties:
+                    - name: "account"
+                      type:  "string"
+                      description: "Account/address for mining rewards"
+                      
+        # === Plot Directories ===
+        - name: "plot_dirs"
+          type:  "array"
+          description: "Directories containing plot files"
+          category: "storage"
+          items: 
+            type: "string"
+            
+        # === Timing ===
+        - name: "get_mining_info_interval"
+          type:  "int"
+          default: 1000
+          description: "Interval (ms) between getmininginfo requests"
+          category: "timing"
+        - name: "timeout"
+          type: "int"
+          default: 5000
+          description:  "Request timeout in milliseconds"
+          category: "timing"
+          
+        # === HDD/I/O Settings ===
+        - name: "hdd_use_direct_io"
+          type: "bool"
+          default: true
+          description: "Use direct I/O for better performance (bypass OS cache)"
+          category:  "io"
+        - name: "hdd_wakeup_after"
+          type: "int"
+          default: 30
+          description: "Seconds before waking up idle HDDs"
+          category: "io"
+        - name: "hdd_read_cache_in_warps"
+          type:  "int"
+          default: 16
+          description: "Read cache size in warps"
+          category: "io"
+          
+        # === CPU Settings ===
+        - name: "cpu_threads"
+          type:  "int"
+          default: 0
+          description: "Number of CPU threads (0 = auto-detect)"
+          category: "cpu"
+        - name: "cpu_thread_pinning"
+          type: "bool"
+          default: true
+          description: "Pin threads to specific CPU cores"
+          category: "cpu"
+          
+        # === Display/Progress ===
+        - name: "show_progress"
+          type: "bool"
+          default: true
+          description: "Show mining progress bars"
+          category:  "display"
+        - name: "line_progress"
+          type: "bool"
+          default: false
+          description: "Machine-readable progress output"
+          category: "display"
+          
+        # === Compression ===
+        - name: "enable_on_the_fly_compression"
+          type: "bool"
+          default: true
+          description: "Enable on-the-fly plot scaling for compressed plots"
+          category: "compression"
+          
+        # === Benchmark ===
+        - name: "benchmark"
+          type: "string"
+          default:  ""
+          description: "Run benchmark mode (i/o, cpu, or disabled)"
+          category:  "debug"
+          enum: ["", "i/o", "cpu"]
+          
+        # === Logging ===
+        - name:  "console_log_level"
+          type: "string"
+          default: "Info"
+          description:  "Console log level"
+          category: "logging"
+          enum: ["Trace", "Debug", "Info", "Warn", "Error"]
+        - name: "logfile_log_level"
+          type: "string"
+          default: "Warn"
+          description: "Log file log level"
+          category: "logging"
+          enum: ["Trace", "Debug", "Info", "Warn", "Error"]
+        - name: "logfile_max_count"
+          type:  "int"
+          default: 10
+          description: "Maximum number of log files to keep"
+          category:  "logging"
+        - name: "logfile_max_size"
+          type:  "int"
+          default: 20
+          description: "Maximum log file size in MB"
+          category:  "logging"
+        - name: "console_log_pattern"
+          type:  "string"
+          default: "{({d(%H:%M:%S)} [{l}]):16. 16} {m}{n}"
+          description: "Console log pattern format"
+          category:  "logging"
+        - name: "logfile_log_pattern"
+          type: "string"
+          default: "{({d(%Y-%m-%d %H:%M:%S)} [{l}]):26.26} {m}{n}"
+          description: "Log file pattern format"
+          category: "logging"
+    
+    depends_on: 
+      - service_id: "bitcoin-node"
+        condition: "running"
+        reason:  "Miner needs a running node to receive mining jobs"
+    
+    health_check:
+      command:  "pgrep -f pocx_miner"
+      interval_seconds: 30
+      timeout_seconds: 5
+      retries:  3
+      start_period_seconds:  10
+    
+    menu:
+      main_menu_order: 2
+      submenu: 
+        - action:  "toggle"
+          label_running: "Stop Miner"
+          label_stopped: "Start Miner"
+        - action: "custom"
+          id: "create_config"
+          label: "Create Miner Config"
+          handler: "MiningCommands. CreateMinerConfig"
+        - action: "logs"
+          label:  "View Logs"
+        - action:  "settings"
+          label: "Miner Settings"
+    
+    settings: 
+      - key: "Repository"
+        setting_path: "Miner.Repository"
+        type: "string"
+        category: "container"
+      - key: "Tag"
+        setting_path: "Miner.Tag"
+        type: "string"
+        category: "container"
+      - key: "CPU Threads"
+        setting_path: "Miner.CpuThreads"
+        type: "int"
+        category: "performance"
+        validation: 
+          min: 0
+          max:  128
+      - key:  "Use Direct I/O"
+        setting_path: "Miner.UseDirectIO"
+        type: "bool"
+        category: "performance"
+      - key: "Show Progress"
+        setting_path: "Miner.ShowProgress"
+        type:  "bool"
+        category: "display"
+      - key:  "Additional Parameters"
+        setting_path: "Miner.AdditionalParams"
+        type: "string"
+        category: "advanced"
+
+  # ==========================================================================
+  # POCX PLOTTER
+  # ==========================================================================
+  - id: "plotter"
+    name:  "PoCX Plotter"
+    description: "Plot file generator for Proof-of-Capacity mining with CPU/GPU support"
+    category:  "mining"
+    menu_label: "[Plot]"
+    documentation_url: "https://github.com/PoC-Consortium/pocx"
+    
+    container:
+      image:  "pocx"
+      repository: "ghcr.io/ev1ls33d/pocx-wallet"
+      default_tag: "latest"
+      container_name_setting: "PlotterContainerName"
+      working_dir: "/plots"
+      command:  "pocx_plotter"
+      
+    source:
+      repository: "https://github.com/PoC-Consortium/pocx.git"
+      branch:  "master"
+      build_command: "cargo build --release -p pocx_plotter"
+      binary_paths:
+        - "target/release/pocx_plotter"
+    
+    ports: []
+    
+    volumes: 
+      - name:  "plots"
+        host_path_setting: "PlotDirectory"
+        container_path: "/plots"
+        read_only: false
+        description: "Output directory for generated plot files"
+    
+    environment: []
+    
+    parameters:
+      # === Required ===
+      - name: "address"
+        cli_flag: "-i"
+        cli_alias: "--id"
+        type:  "string"
+        required: true
+        description: "Your PoC mining address (any PoC coin format)"
+        category: "identity"
+        
+      # === Plot Size ===
+      - name: "warps"
+        cli_flag: "-w"
+        cli_alias: "--warps"
+        type: "int"
+        default: 0
+        description: "Number of warps to plot (1 warp = 1 GiB, 0 = fill disk)"
+        category: "size"
+      - name: "number"
+        cli_flag: "-n"
+        cli_alias:  "--num"
+        type:  "int"
+        default: 1
+        description: "Number of plot files to create (0 = fill disk)"
+        category: "size"
+        
+      # === Output ===
+      - name: "path"
+        cli_flag: "-p"
+        cli_alias: "--path"
+        type: "string[]"
+        default:  ["/plots"]
+        description: "Target disk path(s) for plot files"
+        category:  "output"
+        
+      # === Compression ===
+      - name: "compression"
+        cli_flag: "-x"
+        cli_alias: "--compression"
+        type:  "int"
+        default:  1
+        description: "POW scaling factor (2^x compression, 1-6)"
+        category: "compression"
+        validation:
+          min:  1
+          max: 6
+          
+      # === Resume ===
+      - name: "seed"
+        cli_flag: "-s"
+        cli_alias: "--seed"
+        type: "string"
+        default: ""
+        description: "Seed to resume unfinished plot (64 hex chars, requires n=1)"
+        category: "resume"
+        
+      # === CPU Settings ===
+      - name: "cpu"
+        cli_flag: "-c"
+        cli_alias:  "--cpu"
+        type: "int"
+        default:  0
+        description: "Number of CPU threads (0 = auto-detect)"
+        category: "cpu"
+        
+      # === GPU Settings (OpenCL feature) ===
+      - name: "gpu"
+        cli_flag: "-g"
+        cli_alias: "--gpu"
+        type: "string[]"
+        default:  []
+        description:  "GPU config:  platform_id: device_id:cores (can specify multiple)"
+        category: "gpu"
+        feature:  "opencl"
+      - name: "opencl"
+        cli_flag: "-o"
+        cli_alias: "--opencl"
+        type:  "bool"
+        default:  false
+        description:  "Display OpenCL platforms and devices"
+        category: "gpu"
+        feature: "opencl"
+      - name: "zero_copy"
+        cli_flag: "-z"
+        cli_alias: "--zcb"
+        type:  "bool"
+        default: false
+        description: "Enable zero-copy buffers for integrated GPUs"
+        category: "gpu"
+        feature: "opencl"
+      - name: "kws_override"
+        cli_flag: "-k"
+        cli_alias: "--kws-override"
+        type: "int"
+        default:  0
+        description: "Override default GPU kernel workgroup size"
+        category: "gpu"
+        feature: "opencl"
+        
+      # === Memory ===
+      - name: "memory"
+        cli_flag: "-m"
+        cli_alias:  "--mem"
+        type: "string"
+        default: "0B"
+        description:  "Limit memory usage when plotting multiple disks (e.g., 8GB)"
+        category: "memory"
+        
+      # === Performance Tweaks ===
+      - name: "escalate"
+        cli_flag: "-e"
+        cli_alias:  "--escalate"
+        type: "int"
+        default:  1
+        description: "Buffer multiplier for performance tuning"
+        category: "performance"
+        
+      # === I/O Options ===
+      - name: "disable_direct_io"
+        cli_flag: "-d"
+        cli_alias: "--ddio"
+        type: "bool"
+        default: false
+        description: "Disable direct I/O (use OS caching)"
+        category: "io"
+        
+      # === Process Priority ===
+      - name: "low_priority"
+        cli_flag: "-l"
+        cli_alias: "--prio"
+        type: "bool"
+        default: false
+        description: "Run plotter with low CPU priority"
+        category: "process"
+        
+      # === Output Mode ===
+      - name: "quiet"
+        cli_flag: "-q"
+        cli_alias: "--quiet"
+        type: "bool"
+        default:  false
+        description:  "Non-verbose mode (minimal output)"
+        category: "output"
+      - name: "benchmark"
+        cli_flag: "-b"
+        cli_alias: "--bench"
+        type:  "bool"
+        default: false
+        description: "Run in xPU benchmark mode"
+        category: "debug"
+      - name: "line_progress"
+        cli_flag: "--line-progress"
+        type: "bool"
+        default:  false
+        description:  "Machine-readable progress output for GUI"
+        category: "output"
+        hidden: true
+    
+    depends_on:  []
+    
+    health_check: 
+      command: "pgrep -f pocx_plotter"
+      interval_seconds: 30
+      timeout_seconds: 5
+      retries: 3
+      start_period_seconds: 5
+    
+    menu:
+      main_menu_order: 1
+      submenu: 
+        - action:  "toggle"
+          label_running: "Stop Plotter"
+          label_stopped: "Start Plotter"
+        - action: "custom"
+          id: "create_plot"
+          label:  "Create New Plot"
+          handler: "PlottingCommands.CreatePlotAsync"
+        - action: "logs"
+          label: "View Logs"
+        - action: "settings"
+          label: "Plotter Settings"
+    
+    settings: 
+      - key:  "Repository"
+        setting_path: "Plotter.Repository"
+        type:  "string"
+        category: "container"
+      - key:  "Tag"
+        setting_path: "Plotter.Tag"
+        type:  "string"
+        category: "container"
+      - key:  "Default Warps"
+        setting_path:  "Plotter. DefaultWarps"
+        type: "int"
+        category:  "plotting"
+        validation: 
+          min: 1
+          max: 1000000
+      - key:  "CPU Threads"
+        setting_path: "Plotter.CpuThreads"
+        type: "int"
+        category: "performance"
+        validation: 
+          min: 0
+          max:  128
+      - key: "Use Direct I/O"
+        setting_path: "Plotter.UseDirectIO"
+        type: "bool"
+        category: "performance"
+      - key: "Additional Parameters"
+        setting_path: "Plotter.AdditionalParams"
+        type:  "string"
+        category: "advanced"
+
+  # ==========================================================================
+  # POCX VERIFIER (Utility)
+  # ==========================================================================
+  - id: "verifier"
+    name:  "PoCX Verifier"
+    description: "Plot file verification and integrity checking utility"
+    category:  "utilities"
+    menu_label: "[Verify]"
+    documentation_url: "https://github.com/PoC-Consortium/pocx"
+    enabled: false
+    
+    container:
+      image: "pocx"
+      repository:  "ghcr. io/ev1ls33d/pocx-wallet"
+      default_tag: "latest"
+      container_name_setting:  "VerifierContainerName"
+      working_dir: "/plots"
+      command:  "pocx_verifier"
+      
+    source:
+      repository: "https://github.com/PoC-Consortium/pocx.git"
+      branch:  "master"
+      build_command: "cargo build --release -p pocx_verifier"
+      binary_paths:
+        - "target/release/pocx_verifier"
+    
+    volumes: 
+      - name:  "plots"
+        host_path_setting: "PlotDirectory"
+        container_path: "/plots"
+        read_only: true
+    
+    parameters:
+      - name: "subcommand"
+        type: "string"
+        required: true
+        description: "Verification subcommand"
+        enum: ["check"]
+        category: "command"
+      - name: "file"
+        cli_flag: "-f"
+        cli_alias: "--file"
+        type: "string"
+        required: true
+        description: "Plot file to verify"
+        category: "input"
+      - name: "mode"
+        cli_flag: "-m"
+        cli_alias: "--mode"
+        type: "string"
+        required:  true
+        description:  "Verification mode"
+        category: "mode"
+        enum: ["single", "partial", "random", "complete"]
+      - name: "nonce"
+        cli_flag: "-n"
+        cli_alias: "--nonce"
+        type: "int"
+        default:  0
+        description: "Specific nonce to check (single mode only)"
+        category: "mode"
+      - name: "scoop"
+        cli_flag: "-s"
+        cli_alias: "--scoop"
+        type: "int"
+        default:  0
+        description: "Specific scoop to check (single mode only)"
+        category: "mode"
+    
+    depends_on: []
+    
+    menu:
+      main_menu_order: 0
+      submenu: 
+        - action:  "custom"
+          id:  "verify_plot"
+          label: "Verify Plot File"
+          handler:  "PlottingCommands. VerifyPlotAsync"
+
+# ============================================================================
+# CATEGORY DEFINITIONS
+# ============================================================================
+categories:
+  - id: "infrastructure"
+    name:  "Infrastructure"
+    description: "Core blockchain infrastructure services"
+    order: 1
+    
+  - id: "mining"
+    name: "Mining"
+    description: "Proof-of-Capacity mining services"
+    order:  2
+    
+  - id: "utilities"
+    name:  "Utilities"
+    description: "Helper tools and utilities"
+    order: 3
+
+# ============================================================================
+# PARAMETER CATEGORIES
+# ============================================================================
+parameter_categories: 
+  - id:  "network"
+    name:  "Network"
+    description: "Network selection and configuration"
+  - id: "connection"
+    name:  "Connection"
+    description: "Peer and proxy settings"
+  - id: "rpc"
+    name: "RPC"
+    description: "JSON-RPC server configuration"
+  - id: "wallet"
+    name:  "Wallet"
+    description: "Wallet functionality"
+  - id: "debug"
+    name:  "Debug"
+    description: "Debugging and testing"
+  - id:  "index"
+    name:  "Indexing"
+    description: "Blockchain indexing options"
+  - id: "performance"
+    name:  "Performance"
+    description: "Performance tuning"
+  - id:  "zmq"
+    name: "ZeroMQ"
+    description: "ZeroMQ notification settings"
+  - id: "hooks"
+    name:  "Hooks"
+    description: "External command notifications"
+  - id: "logging"
+    name: "Logging"
+    description: "Log configuration"
+  - id:  "storage"
+    name:  "Storage"
+    description: "Data storage paths"
+  - id: "io"
+    name:  "I/O"
+    description: "Disk I/O settings"
+  - id: "cpu"
+    name:  "CPU"
+    description: "CPU thread configuration"
+  - id: "gpu"
+    name: "GPU"
+    description: "GPU/OpenCL settings"
+  - id: "compression"
+    name:  "Compression"
+    description: "Plot compression settings"
+  - id: "server"
+    name:  "Server"
+    description: "Server bind addresses"
+  - id: "upstream"
+    name:  "Upstream"
+    description: "Upstream pool/wallet configuration"
+  - id: "cache"
+    name:  "Cache"
+    description: "Caching settings"
+  - id: "database"
+    name:  "Database"
+    description: "Database configuration"
+  - id: "dashboard"
+    name:  "Dashboard"
+    description: "Web dashboard settings"
