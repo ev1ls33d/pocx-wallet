@@ -99,10 +99,8 @@ public static class WalletCommands
             
             var choices = new List<string>
             {
-                Strings.WalletMenu.Create,
-                Strings.WalletMenu.Import,
-                Strings.WalletMenu.Switch,
-                Strings.WalletMenu.Remove,
+                Strings.WalletMenu.Manage,
+                Strings.WalletMenu.Select,
                 Strings.WalletMenu.Info,
                 Strings.WalletMenu.Transaction,
                 Strings.WalletMenu.Settings,
@@ -121,17 +119,11 @@ public static class WalletCommands
             
             switch (choice)
             {
-                case var c when c == Strings.WalletMenu.Create:
-                    await ShowCreateMenuAsync(showBanner);
+                case var c when c == Strings.WalletMenu.Manage:
+                    await ShowManageMenuAsync(showBanner);
                     break;
-                case var c when c == Strings.WalletMenu.Import:
-                    await ShowImportMenuAsync(showBanner);
-                    break;
-                case var c when c == Strings.WalletMenu.Switch:
-                    ShowSwitchMenu(showBanner);
-                    break;
-                case var c when c == Strings.WalletMenu.Remove:
-                    await ShowRemoveMenuAsync(showBanner);
+                case var c when c == Strings.WalletMenu.Select:
+                    ShowSelectMenu(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Info:
                     await ShowInfoMenuAsync(showBanner);
@@ -150,6 +142,43 @@ public static class WalletCommands
     }
     
     /// <summary>
+    /// Shows the Manage wallet submenu (contains Create, Import, Remove)
+    /// </summary>
+    private static async Task ShowManageMenuAsync(Action showBanner)
+    {
+        var choices = new List<string>
+        {
+            Strings.WalletMenu.Create,
+            Strings.WalletMenu.Import,
+            Strings.WalletMenu.Remove,
+            Strings.ServiceMenu.Back
+        };
+        
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title(Strings.WalletMenu.ManageMenuTitle)
+                .PageSize(10)
+                .AddChoices(choices)
+        );
+        
+        AnsiConsole.Clear();
+        showBanner();
+        
+        switch (choice)
+        {
+            case var c when c == Strings.WalletMenu.Create:
+                await ShowCreateMenuAsync(showBanner);
+                break;
+            case var c when c == Strings.WalletMenu.Import:
+                await ShowImportMenuAsync(showBanner);
+                break;
+            case var c when c == Strings.WalletMenu.Remove:
+                await ShowRemoveMenuAsync(showBanner);
+                break;
+        }
+    }
+    
+    /// <summary>
     /// Shows the Create wallet submenu
     /// </summary>
     private static async Task ShowCreateMenuAsync(Action showBanner)
@@ -163,7 +192,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Create Wallet[/]")
+                .Title(Strings.WalletMenu.CreateMenuTitle)
                 .PageSize(10)
                 .AddChoices(choices)
         );
@@ -196,7 +225,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Import Wallet[/]")
+                .Title(Strings.WalletMenu.ImportMenuTitle)
                 .PageSize(10)
                 .AddChoices(choices)
         );
@@ -245,7 +274,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Select wallet to import to node[/]")
+                .Title(Strings.WalletMenu.SelectWalletToImport)
                 .PageSize(15)
                 .AddChoices(choices)
         );
@@ -282,12 +311,12 @@ public static class WalletCommands
         var walletManager = WalletManager.Instance;
         var settings = walletManager.Settings;
         
-        AnsiConsole.MarkupLine("[bold green]Restore wallet from mnemonic phrase[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.RestoreFromMnemonicTitle);
         AnsiConsole.WriteLine();
         
         // Ask for mnemonic
         var mnemonic = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter your [green]mnemonic phrase[/] (12 or 24 words):")
+            new TextPrompt<string>(Strings.WalletMenu.EnterMnemonicPrompt)
                 .Validate(m =>
                 {
                     try
@@ -297,7 +326,7 @@ public static class WalletCommands
                     }
                     catch
                     {
-                        return ValidationResult.Error("[red]Invalid mnemonic phrase[/]");
+                        return ValidationResult.Error(Strings.WalletMenu.InvalidMnemonic);
                     }
                 }));
         
@@ -316,7 +345,7 @@ public static class WalletCommands
             var wallet = HDWallet.FromMnemonic(mnemonic, passphrase);
             
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[green]✓[/] Wallet restored successfully!");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.WalletRestoredSuccess);
             
             // Display wallet info
             DisplayWalletInfo(wallet);
@@ -359,7 +388,7 @@ public static class WalletCommands
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.ErrorFormat, ex.Message));
         }
         
         AnsiConsole.WriteLine();
@@ -375,7 +404,7 @@ public static class WalletCommands
         var walletManager = WalletManager.Instance;
         var settings = walletManager.Settings;
         
-        AnsiConsole.MarkupLine("[bold green]Creating new HD wallet with random mnemonic...[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.CreatingRandomWallet);
         AnsiConsole.WriteLine();
         
         // Ask for optional passphrase (hidden with asterisks)
@@ -446,9 +475,9 @@ public static class WalletCommands
         const string ValidBech32Chars = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
         var validCharsSorted = string.Concat(ValidBech32Chars.OrderBy(c => c));
         
-        AnsiConsole.MarkupLine("[bold green]Generate vanity address wallet[/]");
-        AnsiConsole.MarkupLine("[dim]Note: This may take a long time depending on the pattern complexity[/]");
-        AnsiConsole.MarkupLine($"[dim]Valid characters: {validCharsSorted} (case-insensitive)[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.VanityTitle);
+        AnsiConsole.MarkupLine(Strings.WalletMenu.VanityNote);
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.VanityValidCharsFormat, validCharsSorted));
         AnsiConsole.WriteLine();
         
         // Ask for search pattern with ! to cancel
@@ -456,19 +485,19 @@ public static class WalletCommands
         while (true)
         {
             pattern = AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter [green]pattern[/] to search for (or '!' to cancel):")
+                new TextPrompt<string>(Strings.WalletMenu.VanityEnterPattern)
                     .AllowEmpty());
             
             if (pattern.Equals("!", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(pattern))
             {
-                AnsiConsole.MarkupLine("[yellow]Operation cancelled[/]");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.VanityCancelled);
                 return;
             }
             
             // Validate pattern
             if (!pattern.All(c => ValidBech32Chars.Contains(char.ToLower(c))))
             {
-                AnsiConsole.MarkupLine("[red]Invalid pattern![/] Only these characters are allowed:");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.VanityInvalidPattern);
                 AnsiConsole.MarkupLine($"[yellow]{validCharsSorted}[/]");
                 AnsiConsole.WriteLine();
                 continue;
@@ -476,7 +505,7 @@ public static class WalletCommands
             break;
         }
         
-        var useTestnet = AnsiConsole.Confirm("Generate for [green]testnet[/]?", false);
+        var useTestnet = AnsiConsole.Confirm(Strings.WalletMenu.VanityGenerateTestnet, false);
         
         // Ask for optional passphrase (hidden with asterisks)
         var passphrase = AnsiConsole.Prompt(
@@ -504,12 +533,12 @@ public static class WalletCommands
                     new SpinnerColumn())
                 .StartAsync(async ctx =>
                 {
-                    var task = ctx.AddTask("[green]Searching for vanity address...[/]");
+                    var task = ctx.AddTask(Strings.WalletMenu.VanitySearching);
                     task.IsIndeterminate = true;
                     
                     var progress = new Progress<long>(attempts =>
                     {
-                        task.Description = $"[green]Searching... ({attempts:N0} attempts)[/]";
+                        task.Description = string.Format(Strings.WalletMenu.VanitySearchingFormat, attempts);
                     });
                     
                     result = await generator.GenerateAsync(progress, cts.Token);
@@ -519,7 +548,7 @@ public static class WalletCommands
             if (!string.IsNullOrEmpty(result.Mnemonic) && !string.IsNullOrEmpty(result.Address))
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[green]✓[/] Vanity address found!");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.VanityFound);
                 
                 // Restore wallet with passphrase
                 var wallet = HDWallet.FromMnemonic(result.Mnemonic, passphrase);
@@ -565,16 +594,16 @@ public static class WalletCommands
             }
             else
             {
-                AnsiConsole.MarkupLine("[yellow]No result produced.[/]");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.VanityNoResult);
             }
         }
         catch (OperationCanceledException)
         {
-            AnsiConsole.MarkupLine("[yellow]Operation cancelled[/]");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.VanityCancelled);
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.ErrorFormat, ex.Message));
         }
         
         AnsiConsole.WriteLine();
@@ -590,28 +619,28 @@ public static class WalletCommands
         AnsiConsole.WriteLine();
         var panel = new Panel(new Markup($"[yellow]{wallet.MnemonicPhrase}[/]"))
         {
-            Header = new PanelHeader("[bold]Mnemonic Phrase[/]"),
+            Header = new PanelHeader(Strings.WalletMenu.MnemonicPanelHeader),
             Border = BoxBorder.Double
         };
         AnsiConsole.Write(panel);
         
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]Mainnet Address:[/] [green]{wallet.GetPoCXAddress(0, 0, testnet: false)}[/]");
-        AnsiConsole.MarkupLine($"[bold]Testnet Address:[/] [green]{wallet.GetPoCXAddress(0, 0, testnet: true)}[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.MainnetAddressFormat, wallet.GetPoCXAddress(0, 0, testnet: false)));
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.TestnetAddressFormat, wallet.GetPoCXAddress(0, 0, testnet: true)));
         
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]WIF Mainnet:[/] [dim]{wallet.GetWIFMainnet()}[/]");
-        AnsiConsole.MarkupLine($"[bold]WIF Testnet:[/] [dim]{wallet.GetWIFTestnet()}[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WifMainnetFormat, wallet.GetWIFMainnet()));
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WifTestnetFormat, wallet.GetWIFTestnet()));
         
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]Descriptor (Mainnet):[/] [dim]{wallet.GetDescriptor()}[/]");
-        AnsiConsole.MarkupLine($"[bold]Descriptor (Testnet):[/] [dim]{wallet.GetDescriptor(true)}[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DescriptorMainnetFormat, wallet.GetDescriptor()));
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DescriptorTestnetFormat, wallet.GetDescriptor(true)));
     }
     
     /// <summary>
-    /// Shows the Switch wallet submenu
+    /// Shows the Select wallet submenu (renamed from Switch)
     /// </summary>
-    private static void ShowSwitchMenu(Action showBanner)
+    private static void ShowSelectMenu(Action showBanner)
     {
         var walletManager = WalletManager.Instance;
         
@@ -645,7 +674,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Switch Wallet[/]")
+                .Title(Strings.WalletMenu.SelectMenuTitle)
                 .PageSize(15)
                 .AddChoices(choices)
         );
@@ -702,7 +731,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Remove Wallet[/]")
+                .Title(Strings.WalletMenu.RemoveMenuTitle)
                 .PageSize(15)
                 .AddChoices(choices)
         );
@@ -759,7 +788,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Wallet Info[/]")
+                .Title(Strings.WalletMenu.InfoMenuTitle)
                 .PageSize(10)
                 .AddChoices(choices)
         );
@@ -817,7 +846,7 @@ public static class WalletCommands
         
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold green]Transactions[/]")
+                .Title(Strings.WalletMenu.TransactionMenuTitle)
                 .PageSize(10)
                 .AddChoices(choices)
         );
@@ -906,12 +935,12 @@ public static class WalletCommands
             {
                 if (_startNodeAsync != null)
                 {
-                    AnsiConsole.MarkupLine("[dim]Starting Bitcoin node...[/]");
+                    AnsiConsole.MarkupLine(Strings.WalletMenu.StartingBitcoinNode);
                     var started = await _startNodeAsync();
                     
                     if (started)
                     {
-                        AnsiConsole.MarkupLine("[green]✓[/] Node started successfully");
+                        AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartedSuccess);
                         
                         // Now execute the command
                         if (_execInContainerAsync != null)
@@ -921,17 +950,17 @@ public static class WalletCommands
                     }
                     else
                     {
-                        AnsiConsole.MarkupLine("[red]✗[/] Failed to start node. Please try starting it from the main menu.");
+                        AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartFailed);
                     }
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine("[yellow]Node start function not available. Please start the node from the main menu.[/]");
+                    AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartNotAvailable);
                 }
             }
             else
             {
-                ShowCommandTemplate("Command", $"docker exec {_bitcoinContainerName} {command}");
+                ShowCommandTemplate("Command", string.Format(Strings.WalletMenu.CommandShowFormat, _bitcoinContainerName, command));
             }
         }
     }
@@ -943,11 +972,11 @@ public static class WalletCommands
     {
         if (_execInContainerAsync == null)
         {
-            AnsiConsole.MarkupLine("[yellow]Command execution not available.[/]");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.NodeExecNotAvailable);
             return;
         }
         
-        AnsiConsole.MarkupLine($"[dim]Executing: {Markup.Escape(command)}[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.ExecutingCommand, Markup.Escape(command)));
         AnsiConsole.WriteLine();
         
         var (exitCode, output) = await _execInContainerAsync(command);
@@ -955,7 +984,7 @@ public static class WalletCommands
         // Show output
         if (!string.IsNullOrWhiteSpace(output))
         {
-            AnsiConsole.MarkupLine("[bold]Output:[/]");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.OutputHeader);
             var panel = new Panel(Markup.Escape(output))
             {
                 Border = BoxBorder.Rounded,
@@ -966,18 +995,18 @@ public static class WalletCommands
         
         if (exitCode == 0)
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Command completed successfully");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.CommandSuccess);
         }
         else
         {
-            AnsiConsole.MarkupLine($"[yellow]⚠[/] Command exited with code {exitCode}");
+            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.CommandExitCodeFormat, exitCode));
         }
         
         // Show last 10 log lines if requested
         if (showLogs)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[bold]Last 10 log lines:[/]");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.LastLogLinesHeader);
             // Try common log paths - testnet and mainnet locations
             var (_, logs) = await _execInContainerAsync(
                 "tail -n 10 /root/.bitcoin/testnet3/debug.log 2>/dev/null || " +
@@ -1007,47 +1036,47 @@ public static class WalletCommands
         {
             if (!AnsiConsole.Confirm(Strings.WalletMenu.NodeNotRunningStartPrompt, false))
             {
-                AnsiConsole.MarkupLine("[yellow]Skipping import to node.[/]");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.SkippingImport);
                 return;
             }
             
             // Try to start the node
             if (_startNodeAsync != null)
             {
-                AnsiConsole.MarkupLine("[dim]Starting Bitcoin node...[/]");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.StartingBitcoinNode);
                 var started = await _startNodeAsync();
                 
                 if (!started)
                 {
-                    AnsiConsole.MarkupLine("[red]✗[/] Failed to start node. Skipping import.[/]");
+                    AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartFailed);
                     return;
                 }
                 
-                AnsiConsole.MarkupLine("[green]✓[/] Node started successfully");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartedSuccess);
                 
                 // Wait a moment for the node to fully initialize
-                AnsiConsole.MarkupLine("[dim]Waiting for node to initialize...[/]");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.WaitingForNodeInit);
                 await Task.Delay(3000);
             }
             else
             {
-                AnsiConsole.MarkupLine("[yellow]Node start function not available. Skipping import.[/]");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartNotAvailable);
                 return;
             }
         }
         
         if (_execInContainerAsync == null)
         {
-            AnsiConsole.MarkupLine("[yellow]Node execution not available. Import manually using bitcoin-cli.[/]");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.NodeExecNotAvailable);
             return;
         }
         
-        AnsiConsole.MarkupLine("[bold]Importing wallet to Bitcoin node...[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingToNode);
         
         // Check node parameters to determine if testnet is active
         var isTestnet = IsNodeTestnet();
         var networkName = isTestnet ? "testnet" : "mainnet";
-        AnsiConsole.MarkupLine($"[dim]Detected network mode: {networkName} (from node parameters)[/]");
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DetectedNetworkFormat, networkName));
         
         var networkFlag = isTestnet ? "-testnet " : "";
         
@@ -1057,7 +1086,7 @@ public static class WalletCommands
         var escapedDescriptor = descriptor.Replace("\\", "\\\\").Replace("\"", "\\\"");
         
         // Step 1: Check if wallet already exists using listwalletdir
-        AnsiConsole.MarkupLine("[dim]Checking if wallet exists...[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.CheckingWalletExists);
         var listDirCmd = $"bitcoin-cli {networkFlag}listwalletdir";
         var (listDirExitCode, listDirOutput) = await _execInContainerAsync(listDirCmd);
         
@@ -1091,7 +1120,7 @@ public static class WalletCommands
         if (walletExists)
         {
             // Step 2a: Wallet exists - load it
-            AnsiConsole.MarkupLine($"[dim]Wallet '{walletName}' found in walletdir. Loading...[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletFoundLoading, walletName));
             var loadCmd = $"bitcoin-cli {networkFlag}loadwallet \"{walletName}\" true";
             var (loadExitCode, loadOutput) = await _execInContainerAsync(loadCmd);
             
@@ -1101,14 +1130,14 @@ public static class WalletCommands
             }
             else
             {
-                AnsiConsole.MarkupLine("[green]✓[/] Wallet loaded");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.WalletLoaded);
             }
         }
         else
         {
             // Step 2b: Wallet doesn't exist - create it
             // createwallet arguments: wallet_name, disable_private_keys, blank, passphrase, avoid_reuse, descriptors
-            AnsiConsole.MarkupLine("[dim]Creating new descriptor wallet on node...[/]");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.CreatingDescriptorWallet);
             var createCmd = $"bitcoin-cli {networkFlag}createwallet \"{walletName}\" false false \"\" false true";
             var (createExitCode, createOutput) = await _execInContainerAsync(createCmd);
             
@@ -1119,12 +1148,12 @@ public static class WalletCommands
             }
             else
             {
-                AnsiConsole.MarkupLine("[green]✓[/] Wallet created on node");
+                AnsiConsole.MarkupLine(Strings.WalletMenu.WalletCreatedOnNode);
             }
         }
         
         // Step 3: Import descriptor
-        AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingDescriptor);
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
         // Note: -wallet flag comes after any network flags, with proper spacing
         var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
@@ -1156,11 +1185,11 @@ public static class WalletCommands
         
         if (importExitCode == 0 && importSuccess)
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Descriptor imported successfully");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.DescriptorImportSuccess);
         }
         else if (importOutput.Contains("already"))
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Descriptor was already imported");
+            AnsiConsole.MarkupLine(Strings.WalletMenu.DescriptorAlreadyImported);
         }
         else
         {
@@ -1185,15 +1214,15 @@ public static class WalletCommands
             // Note: Removed Default Wallet Path since settings are saved in the wallet file itself
             var choices = new List<string>
             {
-                $"{"Auto-Save Wallets".PadRight(25)} {(settings.AutoSave ? "[green]true[/]" : "[red]false[/]")}",
-                $"{"Startup Wallet".PadRight(25)} [cyan]{Markup.Escape(settings.StartupWallet ?? "(none)")}[/]",
-                $"{"Auto-Import to Node".PadRight(25)} {(settings.AutoImportToNode ? "[green]true[/]" : "[red]false[/]")}",
+                $"{Strings.WalletMenu.AutoSaveLabel.PadRight(25)} {(settings.AutoSave ? Strings.Status.BoolTrue : Strings.Status.BoolFalse)}",
+                $"{Strings.WalletMenu.StartupWalletLabel.PadRight(25)} [cyan]{Markup.Escape(settings.StartupWallet ?? Strings.WalletMenu.NoneOption)}[/]",
+                $"{Strings.WalletMenu.AutoImportLabel.PadRight(25)} {(settings.AutoImportToNode ? Strings.Status.BoolTrue : Strings.Status.BoolFalse)}",
                 Strings.ServiceMenu.Back
             };
             
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[bold green]Wallet Settings[/]")
+                    .Title(Strings.WalletMenu.SettingsMenuTitle)
                     .PageSize(10)
                     .AddChoices(choices)
             );
@@ -1211,33 +1240,35 @@ public static class WalletCommands
                 case 0: // Auto-Save
                     settings.AutoSave = !settings.AutoSave;
                     walletManager.Save();
-                    AnsiConsole.MarkupLine($"[green]✓[/] Auto-save is now {(settings.AutoSave ? "enabled" : "disabled")}");
+                    AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.AutoSaveToggled, 
+                        settings.AutoSave ? Strings.WalletMenu.EnabledLabel : Strings.WalletMenu.DisabledLabel));
                     break;
                     
                 case 1: // Startup Wallet
                     if (walletManager.Wallets.Count > 0)
                     {
                         var walletChoices = walletManager.Wallets.Select(w => w.Name).ToList();
-                        walletChoices.Insert(0, "(none)");
+                        walletChoices.Insert(0, Strings.WalletMenu.NoneOption);
                         var selected = AnsiConsole.Prompt(
                             new SelectionPrompt<string>()
-                                .Title("Select startup wallet:")
+                                .Title(Strings.WalletMenu.SelectStartupWallet)
                                 .AddChoices(walletChoices)
                         );
-                        settings.StartupWallet = selected == "(none)" ? null : selected;
+                        settings.StartupWallet = selected == Strings.WalletMenu.NoneOption ? null : selected;
                         walletManager.Save();
-                        AnsiConsole.MarkupLine("[green]✓[/] Setting updated");
+                        AnsiConsole.MarkupLine(Strings.WalletMenu.SettingUpdated);
                     }
                     else
                     {
-                        AnsiConsole.MarkupLine("[yellow]No wallets available. Create a wallet first.[/]");
+                        AnsiConsole.MarkupLine(Strings.WalletMenu.NoWalletsAvailable);
                     }
                     break;
                     
                 case 2: // Auto-Import to Node
                     settings.AutoImportToNode = !settings.AutoImportToNode;
                     walletManager.Save();
-                    AnsiConsole.MarkupLine($"[green]✓[/] Auto-import is now {(settings.AutoImportToNode ? "enabled" : "disabled")}");
+                    AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.AutoImportToggled, 
+                        settings.AutoImportToNode ? Strings.WalletMenu.EnabledLabel : Strings.WalletMenu.DisabledLabel));
                     break;
             }
             
@@ -1258,10 +1289,10 @@ public static class WalletCommands
 
     public static async Task RestoreWallet()
     {
-        AnsiConsole.MarkupLine("[bold green]Restore wallet from mnemonic[/]");
+        AnsiConsole.MarkupLine(Strings.WalletMenu.RestoreFromMnemonicTitle);
         
         var mnemonic = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter your [green]mnemonic phrase[/]:")
+            new TextPrompt<string>(Strings.WalletMenu.EnterMnemonicPrompt)
                 .Validate(m =>
                 {
                     try

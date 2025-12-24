@@ -29,9 +29,8 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
-  <!-- Ensure appsettings.json is copied to output but excluded from single-file -->
+  <!-- Ensure services.yaml is copied to output but excluded from single-file -->
   <ItemGroup>
-    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Content Include="..\services.yaml" Link="services.yaml" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 

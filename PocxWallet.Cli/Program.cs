@@ -54,10 +54,7 @@ class Program
         // Display banner
         ShowBanner();
 
-        // Load configuration if exists
-        LoadConfiguration();
-
-        // Load service definitions from services.yaml
+        // Load service definitions from services.yaml (replaces appsettings.json)
         _serviceConfig = ServiceDefinitionLoader.LoadServices();
         var dynamicMenuBuilder = GetDynamicMenuBuilder();
         var dynamicServices = dynamicMenuBuilder.GetEnabledServices();
@@ -185,38 +182,4 @@ class Program
         AnsiConsole.Write(ruleLine);
         AnsiConsole.WriteLine();
     }
-
-    static void LoadConfiguration()
-    {
-        try
-        {
-            var loadedSettings = SettingsManager.LoadSettings();
-            // Copy all properties from loaded settings
-            _settings.PlotDirectory = loadedSettings.PlotDirectory;
-            _settings.WalletFilePath = loadedSettings.WalletFilePath;
-            _settings.MinerConfigPath = loadedSettings.MinerConfigPath;
-            _settings.BitcoinNodeHost = loadedSettings.BitcoinNodeHost;
-            _settings.BitcoinNodePort = loadedSettings.BitcoinNodePort;
-            _settings.DockerNetwork = loadedSettings.DockerNetwork;
-            _settings.BitcoinContainerName = loadedSettings.BitcoinContainerName;
-            _settings.MinerContainerName = loadedSettings.MinerContainerName;
-            _settings.PlotterContainerName = loadedSettings.PlotterContainerName;
-            _settings.ElectrsContainerName = loadedSettings.ElectrsContainerName;
-            _settings.BitcoinNode = loadedSettings.BitcoinNode;
-            _settings.Electrs = loadedSettings.Electrs;
-            _settings.Miner = loadedSettings.Miner;
-            _settings.Plotter = loadedSettings.Plotter;
-        }
-        catch
-        {
-            // Use defaults if configuration fails to load
-        }
-    }
-
-    static void SaveConfiguration()
-    {
-        SettingsManager.SaveSettings(_settings);
-        AnsiConsole.MarkupLine(string.Format(Strings.Files.SettingsSavedFormat, "appsettings.json"));
-    }
-
 }

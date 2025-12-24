@@ -108,22 +108,36 @@ public static class Strings
         public const string TitleFormat = "[bold green]Wallet Management[/] - [cyan]{0}[/]";
         public const string TitleNoWallet = "[bold green]Wallet Management[/] - [dim](no wallet)[/]";
         
-        // Main wallet menu
-        public const string Create = "Create";
-        public const string Import = "Import";
-        public const string Switch = "Switch";
-        public const string Remove = "Remove";
+        // Main wallet menu (reordered: Manage first, then Select)
+        public const string Manage = "Manage";
+        public const string Select = "Select";
         public const string Info = "Info";
         public const string Transaction = "Transaction";
         public const string Settings = "Settings";
         
+        // Manage submenu (contains Create, Import, Remove)
+        public const string Create = "Create";
+        public const string Import = "Import";
+        public const string Remove = "Remove";
+        public const string ManageMenuTitle = "[bold green]Manage Wallets[/]";
+        
         // Create submenu
         public const string RandomAddress = "Random Address";
         public const string VanityAddress = "Vanity Address";
+        public const string CreateMenuTitle = "[bold green]Create Wallet[/]";
         
         // Import submenu
         public const string ImportToNode = "To Node";
         public const string ImportFromMnemonic = "From Mnemonic";
+        public const string ImportMenuTitle = "[bold green]Import Wallet[/]";
+        public const string SelectWalletToImport = "[bold green]Select wallet to import to node[/]";
+        public const string RestoreFromMnemonicTitle = "[bold green]Restore wallet from mnemonic phrase[/]";
+        
+        // Select wallet (renamed from Switch)
+        public const string SelectMenuTitle = "[bold green]Select Wallet[/]";
+        
+        // Remove submenu
+        public const string RemoveMenuTitle = "[bold green]Remove Wallet[/]";
         
         // Create workflow prompts
         public const string EnterPassphrase = "Enter passphrase (optional, leave empty for none):";
@@ -136,7 +150,28 @@ public static class Strings
         public const string MnemonicWarning = "[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]";
         public const string ImportToNodePrompt = "Import wallet to Bitcoin node?";
         
-        // Switch submenu
+        // Import from mnemonic
+        public const string EnterMnemonicPrompt = "Enter your [green]mnemonic phrase[/] (12 or 24 words):";
+        public const string InvalidMnemonic = "[red]Invalid mnemonic phrase[/]";
+        public const string WalletRestoredSuccess = "[green]✓[/] Wallet restored successfully!";
+        
+        // Random wallet creation
+        public const string CreatingRandomWallet = "[bold green]Creating new HD wallet with random mnemonic...[/]";
+        
+        // Vanity address
+        public const string VanityTitle = "[bold green]Generate vanity address wallet[/]";
+        public const string VanityNote = "[dim]Note: This may take a long time depending on the pattern complexity[/]";
+        public const string VanityValidCharsFormat = "[dim]Valid characters: {0} (case-insensitive)[/]";
+        public const string VanityEnterPattern = "Enter [green]pattern[/] to search for (or '!' to cancel):";
+        public const string VanityInvalidPattern = "[red]Invalid pattern![/] Only these characters are allowed:";
+        public const string VanityGenerateTestnet = "Generate for [green]testnet[/]?";
+        public const string VanitySearching = "[green]Searching for vanity address...[/]";
+        public const string VanitySearchingFormat = "[green]Searching... ({0:N0} attempts)[/]";
+        public const string VanityFound = "[green]✓[/] Vanity address found!";
+        public const string VanityCancelled = "[yellow]Operation cancelled[/]";
+        public const string VanityNoResult = "[yellow]No result produced.[/]";
+        
+        // Switch/Select submenu
         public const string NoWalletsAvailable = "[yellow]No wallets available. Create a wallet first.[/]";
         public const string SwitchedTo = "[green]✓[/] Switched to wallet: {0}";
         public const string SwitchFailed = "[red]✗[/] Failed to switch wallet";
@@ -150,8 +185,28 @@ public static class Strings
         // Node execution
         public const string ExecuteOnNodePrompt = "Execute on running node?";
         public const string NodeNotRunningStartPrompt = "Node is not running. Would you like to start it?";
+        public const string StartingBitcoinNode = "[dim]Starting Bitcoin node...[/]";
+        public const string NodeStartedSuccess = "[green]✓[/] Node started successfully";
+        public const string NodeStartFailed = "[red]✗[/] Failed to start node. Skipping import.[/]";
+        public const string NodeStartNotAvailable = "[yellow]Node start function not available. Skipping import.[/]";
+        public const string WaitingForNodeInit = "[dim]Waiting for node to initialize...[/]";
+        public const string SkippingImport = "[yellow]Skipping import to node.[/]";
+        public const string NodeExecNotAvailable = "[yellow]Node execution not available. Import manually using bitcoin-cli.[/]";
+        
+        // Node import workflow
+        public const string ImportingToNode = "[bold]Importing wallet to Bitcoin node...[/]";
+        public const string DetectedNetworkFormat = "[dim]Detected network mode: {0} (from node parameters)[/]";
+        public const string CheckingWalletExists = "[dim]Checking if wallet exists...[/]";
+        public const string WalletFoundLoading = "[dim]Wallet '{0}' found in walletdir. Loading...[/]";
+        public const string WalletLoaded = "[green]✓[/] Wallet loaded";
+        public const string CreatingDescriptorWallet = "[dim]Creating new descriptor wallet on node...[/]";
+        public const string WalletCreatedOnNode = "[green]✓[/] Wallet created on node";
+        public const string ImportingDescriptor = "[dim]Importing descriptor...[/]";
+        public const string DescriptorImportSuccess = "[green]✓[/] Descriptor imported successfully";
+        public const string DescriptorAlreadyImported = "[green]✓[/] Descriptor was already imported";
         
         // Info submenu
+        public const string InfoMenuTitle = "[bold green]Wallet Info[/]";
         public const string CheckBalance = "Check Balance";
         public const string ShowAddresses = "Show Addresses";
         public const string ShowLabels = "Show Labels";
@@ -161,6 +216,7 @@ public static class Strings
         public const string GetWalletInfo = "Get Wallet Info";
         
         // Transaction submenu
+        public const string TransactionMenuTitle = "[bold green]Transactions[/]";
         public const string SendFunds = "Send Funds";
         public const string CreateTransaction = "Create Transaction";
         public const string SignTransaction = "Sign Transaction";
@@ -172,6 +228,37 @@ public static class Strings
         public const string CommandTemplateHeader = "[bold]Command Template:[/]";
         public const string CommandTemplateFormat = "[dim]{0}[/]";
         public const string CopyPasteNote = "[dim]Copy and paste this command to execute manually.[/]";
+        public const string CommandShowFormat = "[dim]docker exec {0} {1}[/]";
+        public const string ExecutingCommand = "[dim]Executing: {0}[/]";
+        public const string OutputHeader = "[bold]Output:[/]";
+        public const string CommandSuccess = "[green]✓[/] Command completed successfully";
+        public const string CommandExitCodeFormat = "[yellow]⚠[/] Command exited with code {0}";
+        public const string LastLogLinesHeader = "[bold]Last 10 log lines:[/]";
+        
+        // Wallet info display
+        public const string MnemonicPanelHeader = "[bold]Mnemonic Phrase[/]";
+        public const string MainnetAddressFormat = "[bold]Mainnet Address:[/] [green]{0}[/]";
+        public const string TestnetAddressFormat = "[bold]Testnet Address:[/] [green]{0}[/]";
+        public const string WifMainnetFormat = "[bold]WIF Mainnet:[/] [dim]{0}[/]";
+        public const string WifTestnetFormat = "[bold]WIF Testnet:[/] [dim]{0}[/]";
+        public const string DescriptorMainnetFormat = "[bold]Descriptor (Mainnet):[/] [dim]{0}[/]";
+        public const string DescriptorTestnetFormat = "[bold]Descriptor (Testnet):[/] [dim]{0}[/]";
+        
+        // Settings menu
+        public const string SettingsMenuTitle = "[bold green]Wallet Settings[/]";
+        public const string AutoSaveLabel = "Auto-Save Wallets";
+        public const string StartupWalletLabel = "Startup Wallet";
+        public const string AutoImportLabel = "Auto-Import to Node";
+        public const string SelectStartupWallet = "Select startup wallet:";
+        public const string SettingUpdated = "[green]✓[/] Setting updated";
+        public const string AutoSaveToggled = "[green]✓[/] Auto-save is now {0}";
+        public const string AutoImportToggled = "[green]✓[/] Auto-import is now {0}";
+        public const string NoneOption = "(none)";
+        public const string EnabledLabel = "enabled";
+        public const string DisabledLabel = "disabled";
+        
+        // Errors
+        public const string ErrorFormat = "[red]Error:[/] {0}";
         
         // Legacy compatibility
         public const string Title = "[bold green]Wallet Management[/]";
