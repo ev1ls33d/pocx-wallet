@@ -678,10 +678,14 @@ public static class WalletCommands
                     AnsiConsole.MarkupLine($"[yellow]⚠[/] Command exited with code {exitCode}");
                 }
                 
-                // Show last 10 log lines
+                // Show last 10 log lines using bitcoin-cli to get debug log location
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[bold]Last 10 log lines:[/]");
-                var (_, logs) = await execInContainerAsync(containerName, "tail -n 10 /root/.bitcoin/debug.log 2>/dev/null || echo 'No log file available'");
+                // Try common log paths - testnet and mainnet locations
+                var (_, logs) = await execInContainerAsync(containerName, 
+                    "tail -n 10 /root/.bitcoin/testnet3/debug.log 2>/dev/null || " +
+                    "tail -n 10 /root/.bitcoin/debug.log 2>/dev/null || " +
+                    "echo 'No log file available'");
                 if (!string.IsNullOrWhiteSpace(logs))
                 {
                     AnsiConsole.MarkupLine($"[dim]{Markup.Escape(logs)}[/]");
@@ -739,12 +743,16 @@ public static class WalletCommands
         
         AnsiConsole.MarkupLine("[bold]Importing wallet to Bitcoin node...[/]");
         
-        // Detect network (testnet for now, could be made configurable)
-        var isTestnet = true;  // TODO: detect from node parameters
+        // Ask user for network selection since we can't reliably detect it
+        var isTestnet = AnsiConsole.Confirm("Is the node running on [green]testnet[/]?", true);
         var descriptor = wallet.GetDescriptor(isTestnet);
         
+        // Escape descriptor for safe JSON inclusion
+        var escapedDescriptor = descriptor.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        
         // Step 1: Create wallet on node
-        AnsiConsole.MarkupLine("[dim]Creating wallet on node...[/]");
+        // createwallet arguments: wallet_name, disable_private_keys, blank, passphrase, avoid_reuse, descriptors
+        AnsiConsole.MarkupLine("[dim]Creating descriptor wallet on node...[/]");
         var createCmd = $"bitcoin-cli createwallet \"{walletName}\" false false \"\" false true";
         var (createExitCode, createOutput) = await execInContainerAsync(containerName, createCmd);
         
@@ -759,7 +767,7 @@ public static class WalletCommands
         
         // Step 2: Import descriptor
         AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
-        var importJson = $"'[{{\"desc\": \"{descriptor}\", \"timestamp\": \"now\"}}]'";
+        var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
         var importCmd = $"bitcoin-cli -wallet={walletName} importdescriptors {importJson}";
         var (importExitCode, importOutput) = await execInContainerAsync(containerName, importCmd);
         
