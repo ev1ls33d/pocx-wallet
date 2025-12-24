@@ -388,13 +388,74 @@ services:
           label_running: "Stop Node"
           label_stopped: "Start Node"
         - action: "custom"
-          id:  "import_wallet"
-          label:  "Import Wallet from File"
-          handler: "WalletCommands.ImportWalletFromFileAsync"
+          id: "import_descriptor"
+          label: "Import Wallet Descriptor"
+          command:
+            binary: "bitcoin-cli"
+            description: "Import a wallet descriptor from the HD wallet into the Bitcoin node"
+            arguments:
+              - "-wallet={{input:wallet_name}}"
+              - "importdescriptors"
+              - "'[{\"desc\": \"{{macro:HDWallet.GetDescriptor(true)}}\", \"timestamp\": \"{{macro:Timestamp.NowString()}}\"}]'"
+            inputs:
+              - name: "wallet_name"
+                prompt: "Enter wallet name:"
+                type: "string"
+                required: true
+                description: "Name of the wallet to import the descriptor into"
+            show_output: true
+        - action: "custom"
+          id: "create_wallet"
+          label: "Create New Node Wallet"
+          command:
+            binary: "bitcoin-cli"
+            description: "Create a new wallet on the Bitcoin node"
+            arguments:
+              - "createwallet"
+              - "{{input:wallet_name}}"
+            inputs:
+              - name: "wallet_name"
+                prompt: "Enter wallet name to create:"
+                type: "string"
+                required: true
+                description: "Name for the new wallet"
+            show_output: true
         - action: "custom"
           id:  "get_blockchain_info"
           label: "Get Blockchain Info"
-          handler: "NodeCommands.GetBlockchainInfoAsync"
+          command:
+            binary: "bitcoin-cli"
+            description: "Display blockchain synchronization status and info"
+            arguments:
+              - "getblockchaininfo"
+            show_output: true
+        - action: "custom"
+          id: "get_new_address"
+          label: "Get New Address"
+          command:
+            binary: "bitcoin-cli"
+            description: "Generate a new receiving address from a node wallet"
+            arguments:
+              - "-wallet={{input:wallet_name}}"
+              - "getnewaddress"
+              - "{{input:label}}"
+              - "{{input:address_type}}"
+            inputs:
+              - name: "wallet_name"
+                prompt: "Enter wallet name:"
+                type: "string"
+                required: true
+              - name: "label"
+                prompt: "Enter address label (optional):"
+                type: "string"
+                required: false
+                default: ""
+              - name: "address_type"
+                prompt: "Enter address type (legacy/p2sh-segwit/bech32):"
+                type: "string"
+                required: false
+                default: "bech32"
+            show_output: true
         - action: "logs"
           label:  "View Logs"
         - action: "parameters"

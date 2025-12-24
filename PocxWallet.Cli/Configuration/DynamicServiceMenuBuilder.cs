@@ -1,5 +1,6 @@
 using PocxWallet.Cli.Resources;
 using PocxWallet.Cli.Services;
+using PocxWallet.Core.Wallet;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Configuration;
@@ -12,12 +13,20 @@ public class DynamicServiceMenuBuilder
     private readonly DockerServiceManager _dockerManager;
     private readonly ServiceConfiguration? _serviceConfig;
     private readonly AppSettings _settings;
+    private readonly CommandTemplateEngine _templateEngine;
+    private readonly Func<HDWallet?> _walletProvider;
 
-    public DynamicServiceMenuBuilder(ServiceConfiguration? serviceConfig, AppSettings settings, DockerServiceManager dockerManager)
+    public DynamicServiceMenuBuilder(
+        ServiceConfiguration? serviceConfig, 
+        AppSettings settings, 
+        DockerServiceManager dockerManager,
+        Func<HDWallet?>? walletProvider = null)
     {
         _serviceConfig = serviceConfig;
         _settings = settings;
         _dockerManager = dockerManager;
+        _walletProvider = walletProvider ?? (() => null);
+        _templateEngine = new CommandTemplateEngine(_walletProvider);
     }
 
     /// <summary>
@@ -1044,10 +1053,68 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private async Task HandleCustomActionAsync(ServiceDefinition service, SubmenuItem item)
     {
+        // Check if this custom action has a command definition
+        if (item.Command != null)
+        {
+            await ExecuteCustomCommandAsync(service, item.Command);
+            return;
+        }
+
+        // Fallback for legacy custom actions without command definition
         AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.NotImplementedFormat, item.Id));
         AnsiConsole.MarkupLine(Strings.CustomActions.RequiresImplementation);
         AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.HandlerReferenceFormat, item.Handler));
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Execute a custom command defined in services.yaml
+    /// Supports user inputs and macro placeholders
+    /// </summary>
+    private async Task ExecuteCustomCommandAsync(ServiceDefinition service, CustomCommand command)
+    {
+        var containerName = GetContainerName(service);
+
+        // Show description if available
+        if (!string.IsNullOrEmpty(command.Description))
+        {
+            AnsiConsole.MarkupLine($"[bold]{Markup.Escape(command.Description)}[/]");
+            AnsiConsole.WriteLine();
+        }
+
+        try
+        {
+            // Collect user inputs
+            var userInputs = _templateEngine.CollectUserInputs(command);
+
+            // Process the command template
+            var fullCommand = _templateEngine.ProcessCommand(command, userInputs);
+
+            AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.ExecutingFormat, Markup.Escape(fullCommand)));
+            AnsiConsole.WriteLine();
+
+            // Execute the command in the container
+            var (exitCode, output) = await _dockerManager.ExecInContainerAsync(containerName, fullCommand);
+
+            if (command.ShowOutput && !string.IsNullOrWhiteSpace(output))
+            {
+                AnsiConsole.MarkupLine(Strings.CustomActions.OutputHeader);
+                AnsiConsole.WriteLine(output);
+            }
+
+            if (exitCode == 0)
+            {
+                AnsiConsole.MarkupLine(Strings.CustomActions.CommandSuccess);
+            }
+            else
+            {
+                AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.CommandExitCodeFormat, exitCode));
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.CommandErrorFormat, Markup.Escape(ex.Message)));
+        }
     }
 
     /// <summary>

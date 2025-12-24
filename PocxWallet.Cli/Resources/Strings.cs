@@ -142,6 +142,15 @@ public static class Strings
         public const string NotImplementedFormat = "[yellow]Custom action '{0}' is not yet implemented[/]";
         public const string RequiresImplementation = "[dim]This action is defined in services.yaml but requires code implementation.[/]";
         public const string HandlerReferenceFormat = "[dim]Handler reference: {0}[/]";
+        public const string ExecutingFormat = "[dim]Executing: {0}[/]";
+        public const string OutputHeader = "[bold]Output:[/]";
+        public const string CommandSuccess = "[green]✓[/] Command completed successfully";
+        public const string CommandExitCodeFormat = "[yellow]⚠[/] Command exited with code {0}";
+        public const string CommandErrorFormat = "[red]✗[/] Error executing command: {0}";
+        public const string NoWalletLoaded = "No wallet loaded. Please create or restore a wallet first.";
+        public const string MissingInputFormat = "Missing required input: {0}";
+        public const string UnknownMacroFormat = "Unknown macro: {0}";
+        public const string InvalidFormatFormat = "[yellow]Invalid format. Expected pattern: {0}[/]";
     }
 
     // ========================================

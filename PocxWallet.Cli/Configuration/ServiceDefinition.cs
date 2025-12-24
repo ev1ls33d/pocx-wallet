@@ -457,6 +457,98 @@ public class SubmenuItem
 
     [YamlMember(Alias = "handler")]
     public string? Handler { get; set; }
+
+    /// <summary>
+    /// Custom command definition for docker exec actions
+    /// </summary>
+    [YamlMember(Alias = "command")]
+    public CustomCommand? Command { get; set; }
+}
+
+/// <summary>
+/// Custom command definition for docker exec actions
+/// Allows defining commands with user inputs and macros
+/// </summary>
+public class CustomCommand
+{
+    /// <summary>
+    /// Binary executable to run (e.g., "bitcoin-cli")
+    /// </summary>
+    [YamlMember(Alias = "binary")]
+    public string Binary { get; set; } = "";
+
+    /// <summary>
+    /// Arguments to pass to the binary
+    /// Can contain template placeholders like {{input:wallet_name}} or {{macro:HDWallet.GetDescriptor}}
+    /// </summary>
+    [YamlMember(Alias = "arguments")]
+    public List<string>? Arguments { get; set; }
+
+    /// <summary>
+    /// User input definitions
+    /// </summary>
+    [YamlMember(Alias = "inputs")]
+    public List<CommandInput>? Inputs { get; set; }
+
+    /// <summary>
+    /// Description of what this command does
+    /// </summary>
+    [YamlMember(Alias = "description")]
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Whether to show command output to user
+    /// </summary>
+    [YamlMember(Alias = "show_output")]
+    public bool ShowOutput { get; set; } = true;
+}
+
+/// <summary>
+/// User input definition for custom commands
+/// </summary>
+public class CommandInput
+{
+    /// <summary>
+    /// Input identifier (referenced in arguments as {{input:name}})
+    /// </summary>
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// Prompt shown to user
+    /// </summary>
+    [YamlMember(Alias = "prompt")]
+    public string Prompt { get; set; } = "";
+
+    /// <summary>
+    /// Input type: string, int, bool, password
+    /// </summary>
+    [YamlMember(Alias = "type")]
+    public string Type { get; set; } = "string";
+
+    /// <summary>
+    /// Default value if user doesn't provide one
+    /// </summary>
+    [YamlMember(Alias = "default")]
+    public string? Default { get; set; }
+
+    /// <summary>
+    /// Whether this input is required
+    /// </summary>
+    [YamlMember(Alias = "required")]
+    public bool Required { get; set; } = true;
+
+    /// <summary>
+    /// Description/help text for the input
+    /// </summary>
+    [YamlMember(Alias = "description")]
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Validation regex pattern
+    /// </summary>
+    [YamlMember(Alias = "pattern")]
+    public string? Pattern { get; set; }
 }
 
 /// <summary>
