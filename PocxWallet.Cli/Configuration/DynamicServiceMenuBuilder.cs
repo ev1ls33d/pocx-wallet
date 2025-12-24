@@ -467,6 +467,7 @@ public class DynamicServiceMenuBuilder
         var ports = BuildPortMappings(service);
         var readOnlyVolumes = GetReadOnlyVolumes(service);
         var command = BuildCommand(service);
+        var gpuPassthrough = IsGpuPassthroughEnabled(service);
 
         var success = await _dockerManager.StartContainerAsync(
             containerName,
@@ -478,7 +479,8 @@ public class DynamicServiceMenuBuilder
             portMappings: ports.Count > 0 ? ports : null,
             command: command,
             network: network,
-            readOnlyVolumes: readOnlyVolumes.Count > 0 ? readOnlyVolumes : null
+            readOnlyVolumes: readOnlyVolumes.Count > 0 ? readOnlyVolumes : null,
+            gpuPassthrough: gpuPassthrough
         );
 
         if (success)
@@ -1182,5 +1184,27 @@ public class DynamicServiceMenuBuilder
     private string? GetPathFromSetting(string? settingPath)
     {
         return GetSettingValue(settingPath);
+    }
+
+    /// <summary>
+    /// Check if GPU passthrough is enabled for a service
+    /// </summary>
+    private bool IsGpuPassthroughEnabled(ServiceDefinition service)
+    {
+        // Check if service has GPU Passthrough setting
+        var gpuSetting = service.Settings?.FirstOrDefault(s => s.Key == "GPU Passthrough");
+        if (gpuSetting == null)
+        {
+            return false;
+        }
+
+        // Get the value from settings
+        var value = GetSettingValue(gpuSetting.SettingPath);
+        if (bool.TryParse(value, out var enabled))
+        {
+            return enabled;
+        }
+
+        return false;
     }
 }

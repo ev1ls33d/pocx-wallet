@@ -1,19 +1,8 @@
-# Multi-stage Dockerfile for PoCX tools (miner, plotter) with GPU support
+# Multi-stage Dockerfile for PoCX tools (miner, plotter)
 # Stage 1: Builder
-FROM nvidia/cuda:12.2.0-devel-ubuntu22.04 AS builder
-
-# Install Rust and build dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+FROM rust:latest AS builder
 
 # Install Rust nightly
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup toolchain install nightly && \
     rustup default nightly
 
@@ -21,17 +10,16 @@ RUN rustup toolchain install nightly && \
 WORKDIR /build
 RUN git clone -b master --single-branch https://github.com/PoC-Consortium/pocx.git
 
-# Build PoCX binaries with GPU (CUDA) support
+# Build PoCX binaries
 WORKDIR /build/pocx
-RUN cargo build --release --features gpu
+RUN cargo build --release
 
-# Stage 2: Runtime with CUDA support
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+# Stage 2: Runtime
+FROM debian:trixie-slim
 
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binaries from builder
@@ -45,11 +33,6 @@ RUN mkdir -p /plots /config
 
 # Default working directory
 WORKDIR /config
-
-# Enable GPU access (requires nvidia-docker runtime)
-# Use: docker run --gpus all ...
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Default command (can be overridden)
 CMD ["pocx_miner", "--help"]

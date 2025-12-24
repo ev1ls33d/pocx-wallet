@@ -167,7 +167,8 @@ public class DockerServiceManager
         Dictionary<int, int>? portMappings = null,
         string? command = null,
         string? network = null,
-        List<string>? readOnlyVolumes = null)
+        List<string>? readOnlyVolumes = null,
+        bool gpuPassthrough = false)
     {
         var fullImageName = $"{repository}/{imageName}:{imageTag}";
         
@@ -178,6 +179,13 @@ public class DockerServiceManager
 
         // Build docker run command
         var args = new List<string> { "run", "-dit", "--name", containerName };
+
+        // Add GPU passthrough if enabled (requires nvidia-docker runtime)
+        if (gpuPassthrough)
+        {
+            args.Add("--gpus");
+            args.Add("all");
+        }
 
         // Add network if specified
         if (!string.IsNullOrWhiteSpace(network))
