@@ -43,13 +43,6 @@ class Program
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.InputEncoding = System.Text.Encoding.UTF8;
 
-        // Check if demo mode is requested
-        if (args.Length > 0 && args[0] == "--demo")
-        {
-            Demo.RunWalletDemo();
-            return;
-        }
-
         // Display banner
         ShowBanner();
 
