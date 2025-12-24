@@ -884,7 +884,10 @@ public class DynamicServiceMenuBuilder
         {
             foreach (var param in group)
             {
-                var label = $"[dim]{group.Key}:[/] {param.Name}";
+                // Highlight required parameters with yellow color and asterisk
+                var label = param.Required 
+                    ? $"[dim]{group.Key}:[/] [yellow]{param.Name}*[/]"
+                    : $"[dim]{group.Key}:[/] {param.Name}";
                 choices.Add(label);
                 paramMap[label] = param;
             }

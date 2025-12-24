@@ -955,7 +955,8 @@ public static class WalletCommands
             // Node is running - ask if should execute
             if (AnsiConsole.Confirm(Strings.WalletMenu.ExecuteOnNodePrompt, true))
             {
-                await ExecuteAndDisplayCommandAsync(command, showLogs: true);
+                // Don't show logs for commands with nice output - only for service startup
+                await ExecuteAndDisplayCommandAsync(command, showLogs: false);
             }
             else
             {
@@ -1043,7 +1044,7 @@ public static class WalletCommands
             AnsiConsole.MarkupLine(Strings.WalletMenu.LastLogLinesHeader);
             // Try common log paths - testnet and mainnet locations
             var (_, logs) = await _execInContainerAsync(
-                "tail -n 10 /root/.bitcoin/testnet3/debug.log 2>/dev/null || " +
+                "tail -n 10 /root/.bitcoin/testnet/debug.log 2>/dev/null || " +
                 "tail -n 10 /root/.bitcoin/debug.log 2>/dev/null || " +
                 "echo 'No log file available'");
             if (!string.IsNullOrWhiteSpace(logs))
