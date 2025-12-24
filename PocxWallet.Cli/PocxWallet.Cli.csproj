@@ -19,6 +19,14 @@
     <Nullable>enable</Nullable>
     <AssemblyName>pocxwallet</AssemblyName>
     
+    <!-- Version and metadata -->
+    <Version>0.6.0</Version>
+    <Authors>EviLSeeD</Authors>
+    <Company>EviLSeeD</Company>
+    <Product>PoCX Wallet</Product>
+    <Description>A comprehensive CLI HD Wallet for PoCX with full node integration, plotting, mining, and transaction capabilities</Description>
+    <Copyright>Copyright © 2024-2025 EviLSeeD</Copyright>
+    
     <!-- Single-file publish configuration -->
     <!-- RuntimeIdentifier is specified at publish time via -r flag -->
     <PublishSingleFile>true</PublishSingleFile>
