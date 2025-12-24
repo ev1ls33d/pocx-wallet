@@ -1092,7 +1092,7 @@ public static class WalletCommands
         {
             // Step 2a: Wallet exists - load it
             AnsiConsole.MarkupLine($"[dim]Wallet '{walletName}' found in walletdir. Loading...[/]");
-            var loadCmd = $"bitcoin-cli {networkFlag}loadwallet \"{walletName}\"";
+            var loadCmd = $"bitcoin-cli {networkFlag}loadwallet \"{walletName}\" true";
             var (loadExitCode, loadOutput) = await _execInContainerAsync(loadCmd);
             
             if (loadExitCode != 0 && !loadOutput.Contains("already loaded"))
@@ -1127,7 +1127,7 @@ public static class WalletCommands
         AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
         // Note: -wallet flag comes after any network flags, with proper spacing
-        var importCmd = $"bitcoin-cli {networkFlag}-wallet=\"{walletName}\" importdescriptors {importJson}";
+        var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
         // Parse import result using JSON for more robust checking
