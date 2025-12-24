@@ -489,6 +489,11 @@ public class DynamicServiceMenuBuilder
         {
             AnsiConsole.MarkupLine(string.Format(Strings.Container.StartFailedFormat, service.Name));
         }
+
+        // Show last 5 log lines after starting (both success and failure)
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[dim]Last 5 log lines:[/]");
+        await _dockerManager.DisplayContainerLogsAsync(containerName, 5);
     }
 
     /// <summary>
