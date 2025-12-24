@@ -1187,22 +1187,27 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Check if GPU passthrough is enabled for a service
+    /// Check if GPU passthrough is enabled for a service.
+    /// For the plotter, GPU passthrough is automatically enabled when the -g (gpu) parameter is set.
     /// </summary>
     private bool IsGpuPassthroughEnabled(ServiceDefinition service)
     {
-        // Check if service has GPU Passthrough setting
-        var gpuSetting = service.Settings?.FirstOrDefault(s => s.Key == "GPU Passthrough");
-        if (gpuSetting == null)
+        // For plotter service, check if the GPU parameter (-g) is set
+        if (service.Id == "plotter" && service.Parameters != null)
         {
-            return false;
-        }
-
-        // Get the value from settings
-        var value = GetSettingValue(gpuSetting.SettingPath);
-        if (bool.TryParse(value, out var enabled))
-        {
-            return enabled;
+            var gpuParam = service.Parameters.FirstOrDefault(p => p.Name == "gpu" && p.CliFlag == "-g");
+            if (gpuParam != null && gpuParam.HasUserValue)
+            {
+                // GPU parameter is set - check if it has a value (non-empty string array)
+                if (gpuParam.Value is List<object> gpuList && gpuList.Count > 0)
+                {
+                    return true;
+                }
+                else if (gpuParam.Value is string gpuStr && !string.IsNullOrWhiteSpace(gpuStr))
+                {
+                    return true;
+                }
+            }
         }
 
         return false;
