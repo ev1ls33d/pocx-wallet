@@ -150,8 +150,8 @@ class Program
             if (!exit)
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine(Strings.MainMenu.PressEnterToReturn);
-                Console.ReadLine();
+                //AnsiConsole.MarkupLine(Strings.MainMenu.PressEnterToReturn);
+                //Console.ReadLine();
 
                 // Show background services status
                 if (BackgroundServiceManager.HasRunningServices())

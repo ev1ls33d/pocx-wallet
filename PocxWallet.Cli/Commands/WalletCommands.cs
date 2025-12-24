@@ -1138,7 +1138,7 @@ public static class WalletCommands
             // Step 2b: Wallet doesn't exist - create it
             // createwallet arguments: wallet_name, disable_private_keys, blank, passphrase, avoid_reuse, descriptors
             AnsiConsole.MarkupLine(Strings.WalletMenu.CreatingDescriptorWallet);
-            var createCmd = $"bitcoin-cli {networkFlag}createwallet \"{walletName}\" false false \"\" false true";
+            var createCmd = $"bitcoin-cli {networkFlag}createwallet \"{walletName}\" false";
             var (createExitCode, createOutput) = await _execInContainerAsync(createCmd);
             
             if (createExitCode != 0)

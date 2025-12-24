@@ -445,19 +445,19 @@ public class DockerServiceManager
             if (c == '\\')
             {
                 escapeNext = true;
-                current.Append(c);
+                // Don't append the backslash here - let the next iteration decide
                 continue;
             }
 
             if (c == '\'' && !inDoubleQuote)
             {
                 inSingleQuote = !inSingleQuote;
-                current.Append(c); // Keep the quotes in the argument for shell processing
+                // Don't append the quote - ArgumentList will handle escaping
             }
             else if (c == '"' && !inSingleQuote)
             {
                 inDoubleQuote = !inDoubleQuote;
-                current.Append(c); // Keep the quotes in the argument for shell processing
+                // Don't append the quote - ArgumentList will handle escaping
             }
             else if (c == ' ' && !inSingleQuote && !inDoubleQuote)
             {
@@ -501,12 +501,19 @@ public class DockerServiceManager
         using var process = new Process { StartInfo = psi };
         process.Start();
 
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
+        // Read stdout and stderr in parallel to avoid potential deadlocks
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
         
         await process.WaitForExitAsync();
+        
+        var output = await outputTask;
+        var error = await errorTask;
 
-        return (process.ExitCode, string.IsNullOrWhiteSpace(error) ? output : error);
+        // Combine output and error for better debugging
+        var combinedOutput = string.IsNullOrWhiteSpace(error) ? output : $"{output}\n{error}".Trim();
+
+        return (process.ExitCode, combinedOutput);
     }
 
     /// <summary>
