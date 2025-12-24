@@ -1,6 +1,6 @@
 # PoCX Wallet
 
-A comprehensive .NET 9 HD Wallet implementation for [PoCX (Proof of Capacity X)](https://github.com/PoC-Consortium/pocx) with full node integration, plotting, mining, and transaction capabilities.
+A comprehensive .NET 9 HD Wallet implementation for [PoCX](https://github.com/PoC-Consortium/pocx) with full node integration, plotting, mining, and transaction capabilities.
 
 ## Features
 
