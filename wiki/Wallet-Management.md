@@ -50,7 +50,7 @@ Creates a new wallet with a randomly generated 12-word mnemonic.
 4. Save wallet when prompted
 5. Enter a unique wallet name
 
-> ⚠️ **CRITICAL**: Write down your mnemonic phrase and store it securely! This is the only way to recover your funds if you lose access to the wallet.
+> **▲ CRITICAL**: Write down your mnemonic phrase and store it securely! This is the only way to recover your funds if you lose access to the wallet.
 
 ### Vanity Address
 
@@ -167,7 +167,7 @@ Access via `[Wallet] → Settings`
 3. Confirm deletion
 4. Optionally unload from Bitcoin node
 
-> ⚠️ **Warning**: Ensure you have the mnemonic backed up before removing a wallet!
+> **▲ Warning**: Ensure you have the mnemonic backed up before removing a wallet!
 
 ## Technical Details
 
@@ -233,7 +233,7 @@ Wallets are stored in `wallet.json`:
 }
 ```
 
-> ⚠️ **Security**: This file contains your mnemonic phrases. Protect it accordingly!
+> **▲ Security**: This file contains your mnemonic phrases. Protect it accordingly!
 
 ---
 

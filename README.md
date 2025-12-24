@@ -194,7 +194,7 @@ Wallet data is stored in `wallet.json`:
 
 ## Security
 
-> ⚠️ **IMPORTANT SECURITY NOTES**
+> **▲ IMPORTANT SECURITY NOTES**
 
 - **Never share your mnemonic phrase** with anyone
 - Store your mnemonic phrase offline in a secure location
@@ -271,4 +271,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**⚠️ Disclaimer**: This is experimental BETA software. Use at your own risk. Always test with testnet first before using mainnet.
+**▲ Disclaimer**: This is experimental BETA software. Use at your own risk. Always test with testnet first before using mainnet.

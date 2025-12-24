@@ -106,7 +106,7 @@ The `1q` indicates witness version 0 (native SegWit, P2WPKH).
 
 ## Security Best Practices
 
-> ⚠️ **Critical Security Information**
+> **▲ Critical Security Information**
 
 1. **Mnemonic Phrase**: This is the master key to all your funds
    - Write it down on paper (not digital)
