@@ -964,8 +964,8 @@ services:
         read_only: true
         description: "Directory containing plot files"
       - name: "config"
-        host_path_default: "./config.yaml"
-        container_path: "/config/config.yaml"
+        host_path_default: "./miner_config.yaml"
+        container_path: "/config/miner_config.yaml"
         read_only: true
         description: "Miner configuration file"
         is_file: true
