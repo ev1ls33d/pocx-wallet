@@ -40,6 +40,7 @@ services:
       container_name_setting: "BitcoinContainerName"
       working_dir: "/root"
       entrypoint: null
+      binary: "bitcoind"
       
     source: 
       repository: "https://github.com/PoC-Consortium/bitcoin. git"
@@ -450,6 +451,7 @@ services:
       default_tag:  "latest"
       container_name_setting: "ElectrsContainerName"
       working_dir: "/data"
+      binary: "electrs"
       
     source:
       repository: "https://github.com/PoC-Consortium/electrs-pocx.git"
@@ -720,7 +722,7 @@ services:
       default_tag: "latest"
       container_name_setting: "AggregatorContainerName"
       working_dir: "/config"
-      command: "pocx_aggregator"
+      binary: "pocx_aggregator"
       
     source:
       repository:  "https://github.com/PoC-Consortium/pocx. git"
@@ -951,7 +953,7 @@ services:
       default_tag: "latest"
       container_name_setting: "MinerContainerName"
       working_dir: "/config"
-      command: "pocx_miner"
+      binary: "pocx_miner"
       
     source:
       repository:  "https://github.com/PoC-Consortium/pocx.git"
@@ -1208,7 +1210,7 @@ services:
       default_tag: "latest"
       container_name_setting: "PlotterContainerName"
       working_dir: "/plots"
-      command:  "pocx_plotter"
+      binary: "pocx_plotter"
       
     source:
       repository: "https://github.com/PoC-Consortium/pocx.git"
@@ -1461,7 +1463,7 @@ services:
       default_tag: "latest"
       container_name_setting:  "VerifierContainerName"
       working_dir: "/plots"
-      command:  "pocx_verifier"
+      binary: "pocx_verifier"
       
     source:
       repository: "https://github.com/PoC-Consortium/pocx.git"

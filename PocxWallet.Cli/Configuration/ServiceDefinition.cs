@@ -149,6 +149,13 @@ public class ContainerConfig
 
     [YamlMember(Alias = "command")]
     public string? Command { get; set; }
+
+    /// <summary>
+    /// Binary executable to run (e.g., "bitcoind", "electrs")
+    /// This is prepended to the command with user parameters
+    /// </summary>
+    [YamlMember(Alias = "binary")]
+    public string? Binary { get; set; }
 }
 
 /// <summary>
@@ -290,6 +297,14 @@ public class ServiceParameter
 
     [YamlMember(Alias = "hidden")]
     public bool Hidden { get; set; }
+
+    /// <summary>
+    /// Whether the CLI flag uses equals sign syntax (e.g., -rpcbind=0.0.0.0)
+    /// If false, boolean flags are just the flag name (e.g., -testnet)
+    /// Default is true for non-boolean types, false for boolean types
+    /// </summary>
+    [YamlMember(Alias = "use_equals")]
+    public bool? UseEquals { get; set; }
 
     /// <summary>
     /// User-set value for this parameter (null if not set by user)

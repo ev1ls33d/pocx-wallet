@@ -163,20 +163,83 @@ public class DynamicServiceMenuBuilder
     {
         var commands = new List<string>();
         
-        // Add the base command if specified
+        // Add the binary executable first (e.g., "bitcoind", "electrs")
+        if (!string.IsNullOrEmpty(service.Container?.Binary))
+        {
+            commands.Add(service.Container.Binary);
+        }
+        
+        // Add the base command if specified (legacy support)
         if (!string.IsNullOrEmpty(service.Container?.Command))
         {
             commands.Add(service.Container.Command);
         }
 
-        // Add default parameters
+        // Add user-set parameters in order of appearance
+        // Parameters with a 'value' node are passed to the container as CLI flags
         if (service.Parameters != null)
         {
-            foreach (var param in service.Parameters.Where(p => !p.Hidden && p.Default != null))
+            foreach (var param in service.Parameters.Where(p => !p.Hidden && p.HasUserValue))
             {
-                if (param.Type == "bool" && param.Default is bool boolValue && boolValue && !string.IsNullOrEmpty(param.CliFlag))
+                var cliFlag = param.CliFlag;
+                if (string.IsNullOrEmpty(cliFlag)) continue;
+
+                // Determine if this parameter uses equals sign syntax
+                // Default: bool types don't use equals, other types do
+                var useEquals = param.UseEquals ?? (param.Type.ToLower() != "bool");
+
+                switch (param.Type.ToLower())
                 {
-                    commands.Add(param.CliFlag);
+                    case "bool":
+                        // Boolean: if value is true, add the flag; if false, skip it
+                        var boolValue = param.Value?.ToString()?.ToLower() == "true";
+                        if (boolValue)
+                        {
+                            commands.Add(cliFlag);
+                        }
+                        break;
+                    
+                    case "int":
+                        // Integer: add flag=value or flag value
+                        var intValue = param.Value?.ToString();
+                        if (!string.IsNullOrEmpty(intValue))
+                        {
+                            commands.Add(useEquals ? $"{cliFlag}={intValue}" : $"{cliFlag} {intValue}");
+                        }
+                        break;
+                    
+                    case "string[]":
+                        // String array: add flag=value or flag value for each item
+                        if (param.Value is IEnumerable<object> enumerable)
+                        {
+                            foreach (var item in enumerable)
+                            {
+                                var itemStr = item?.ToString();
+                                if (!string.IsNullOrEmpty(itemStr))
+                                {
+                                    commands.Add(useEquals ? $"{cliFlag}={itemStr}" : $"{cliFlag} {itemStr}");
+                                }
+                            }
+                        }
+                        else if (param.Value is string strArray)
+                        {
+                            // Handle comma-separated string format
+                            foreach (var item in strArray.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                commands.Add(useEquals ? $"{cliFlag}={item.Trim()}" : $"{cliFlag} {item.Trim()}");
+                            }
+                        }
+                        break;
+                    
+                    case "string":
+                    default:
+                        // String: add flag=value or flag value
+                        var strValue = param.Value?.ToString();
+                        if (!string.IsNullOrEmpty(strValue))
+                        {
+                            commands.Add(useEquals ? $"{cliFlag}={strValue}" : $"{cliFlag} {strValue}");
+                        }
+                        break;
                 }
             }
         }
