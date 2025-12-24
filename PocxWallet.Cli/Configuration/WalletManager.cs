@@ -127,7 +127,7 @@ public class WalletManager
             return "(no wallet)";
         
         // Show full address as there's enough space
-        return $"{entry.Name} {entry.MainnetAddress}";
+        return $"[yellow]{entry.Name + ":"}[/] {entry.MainnetAddress}";
     }
     
     /// <summary>
