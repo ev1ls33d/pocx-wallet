@@ -102,18 +102,38 @@ class Program
                 var dockerManager = GetDockerManager();
                 var dynamicBuilder = GetDynamicMenuBuilder();
                 
-                Func<string, Task<bool>> isNodeRunning = async (containerName) =>
+                // Get the Bitcoin node service definition for proper container name and start functionality
+                var bitcoinNodeService = dynamicServices.FirstOrDefault(s => s.Id == "bitcoin-node");
+                var bitcoinContainerName = bitcoinNodeService != null 
+                    ? dynamicBuilder.GetContainerName(bitcoinNodeService)
+                    : _settings.BitcoinContainerName;
+                
+                Func<Task<bool>> isNodeRunning = async () =>
                 {
-                    var status = await dockerManager.GetContainerStatusAsync(containerName);
+                    var status = await dockerManager.GetContainerStatusAsync(bitcoinContainerName);
                     return status == "running";
                 };
                 
-                Func<string, string, Task<(int, string)>> execInContainer = async (containerName, command) =>
+                Func<string, Task<(int, string)>> execInContainer = async (command) =>
                 {
-                    return await dockerManager.ExecInContainerAsync(containerName, command);
+                    return await dockerManager.ExecInContainerAsync(bitcoinContainerName, command);
                 };
                 
-                await WalletCommands.ShowWalletMenuAsync(ShowBanner, isNodeRunning, execInContainer);
+                Func<Task<bool>> startNodeService = async () =>
+                {
+                    if (bitcoinNodeService != null)
+                    {
+                        await dynamicBuilder.StartServiceAsync(bitcoinNodeService);
+                        // Wait for the node container to fully start (startup delay)
+                        const int NodeStartupDelayMs = 2000;
+                        await Task.Delay(NodeStartupDelayMs);
+                        var status = await dockerManager.GetContainerStatusAsync(bitcoinContainerName);
+                        return status == "running";
+                    }
+                    return false;
+                };
+                
+                await WalletCommands.ShowWalletMenuAsync(ShowBanner, bitcoinContainerName, isNodeRunning, execInContainer, startNodeService);
             }
             else if (choice == MenuExit)
             {

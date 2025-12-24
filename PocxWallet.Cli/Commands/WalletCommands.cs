@@ -12,12 +12,29 @@ namespace PocxWallet.Cli.Commands;
 /// </summary>
 public static class WalletCommands
 {
+    // Static fields for node integration
+    private static string _bitcoinContainerName = "pocx-node";
+    private static Func<Task<bool>>? _isNodeRunningAsync;
+    private static Func<string, Task<(int, string)>>? _execInContainerAsync;
+    private static Func<Task<bool>>? _startNodeAsync;
+    
     /// <summary>
     /// Shows the main wallet menu
     /// </summary>
-    public static async Task ShowWalletMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync = null, Func<string, string, Task<(int, string)>>? execInContainerAsync = null)
+    public static async Task ShowWalletMenuAsync(
+        Action showBanner, 
+        string? bitcoinContainerName = null,
+        Func<Task<bool>>? isNodeRunningAsync = null, 
+        Func<string, Task<(int, string)>>? execInContainerAsync = null,
+        Func<Task<bool>>? startNodeAsync = null)
     {
         var walletManager = WalletManager.Instance;
+        
+        // Store container name for use in helper methods
+        _bitcoinContainerName = bitcoinContainerName ?? "pocx-node";
+        _isNodeRunningAsync = isNodeRunningAsync;
+        _execInContainerAsync = execInContainerAsync;
+        _startNodeAsync = startNodeAsync;
         
         // Load wallet file if not loaded
         walletManager.Load();
@@ -58,19 +75,19 @@ public static class WalletCommands
             switch (choice)
             {
                 case var c when c == Strings.WalletMenu.Create:
-                    await ShowCreateMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
+                    await ShowCreateMenuAsync(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Switch:
                     ShowSwitchMenu(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Remove:
-                    await ShowRemoveMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
+                    await ShowRemoveMenuAsync(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Info:
-                    await ShowInfoMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
+                    await ShowInfoMenuAsync(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Transaction:
-                    await ShowTransactionMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
+                    await ShowTransactionMenuAsync(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Settings:
                     ShowWalletSettingsMenu(showBanner);
@@ -85,7 +102,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Create wallet submenu
     /// </summary>
-    private static async Task ShowCreateMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task ShowCreateMenuAsync(Action showBanner)
     {
         var choices = new List<string>
         {
@@ -107,10 +124,10 @@ public static class WalletCommands
         switch (choice)
         {
             case var c when c == Strings.WalletMenu.RandomAddress:
-                await CreateRandomWalletAsync(isNodeRunningAsync, execInContainerAsync);
+                await CreateRandomWalletAsync();
                 break;
             case var c when c == Strings.WalletMenu.VanityAddress:
-                await CreateVanityWalletAsync(isNodeRunningAsync, execInContainerAsync);
+                await CreateVanityWalletAsync();
                 break;
         }
     }
@@ -118,7 +135,7 @@ public static class WalletCommands
     /// <summary>
     /// Creates a random wallet from 12-word mnemonic
     /// </summary>
-    private static async Task CreateRandomWalletAsync(Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task CreateRandomWalletAsync()
     {
         var walletManager = WalletManager.Instance;
         var settings = walletManager.Settings;
@@ -175,7 +192,7 @@ public static class WalletCommands
             bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
             if (shouldImport)
             {
-                await ImportWalletToNodeAsync(wallet, walletName, isNodeRunningAsync, execInContainerAsync);
+                await ImportWalletToNodeAsync(wallet, walletName);
             }
         }
         
@@ -190,7 +207,7 @@ public static class WalletCommands
     /// <summary>
     /// Creates a vanity address wallet
     /// </summary>
-    private static async Task CreateVanityWalletAsync(Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task CreateVanityWalletAsync()
     {
         var walletManager = WalletManager.Instance;
         var settings = walletManager.Settings;
@@ -314,7 +331,7 @@ public static class WalletCommands
                     bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
                     if (shouldImport)
                     {
-                        await ImportWalletToNodeAsync(wallet, walletName, isNodeRunningAsync, execInContainerAsync);
+                        await ImportWalletToNodeAsync(wallet, walletName);
                     }
                 }
                 
@@ -433,7 +450,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Remove wallet submenu
     /// </summary>
-    private static async Task ShowRemoveMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task ShowRemoveMenuAsync(Action showBanner)
     {
         var walletManager = WalletManager.Instance;
         
@@ -480,7 +497,7 @@ public static class WalletCommands
         if (AnsiConsole.Confirm(Strings.WalletMenu.UnloadFromNode, false))
         {
             var command = $"bitcoin-cli unloadwallet \"{walletName}\"";
-            await ExecuteNodeCommandAsync(command, isNodeRunningAsync, execInContainerAsync);
+            await ExecuteNodeCommandAsync(command);
         }
         
         // Remove wallet
@@ -498,7 +515,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Info submenu with bitcoin-cli command stubs
     /// </summary>
-    private static async Task ShowInfoMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task ShowInfoMenuAsync(Action showBanner)
     {
         var walletManager = WalletManager.Instance;
         var activeWallet = walletManager.ActiveWalletEntry;
@@ -546,7 +563,7 @@ public static class WalletCommands
             _ => ""
         };
         
-        await ExecuteNodeCommandAsync(command, isNodeRunningAsync, execInContainerAsync);
+        await ExecuteNodeCommandAsync(command);
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
@@ -556,7 +573,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Transaction submenu with bitcoin-cli command stubs
     /// </summary>
-    private static async Task ShowTransactionMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task ShowTransactionMenuAsync(Action showBanner)
     {
         var walletManager = WalletManager.Instance;
         var activeWallet = walletManager.ActiveWalletEntry;
@@ -634,78 +651,116 @@ public static class WalletCommands
     }
     
     /// <summary>
-    /// Execute a command on the node container if running, otherwise show copy/paste template
+    /// Execute a command on the node container if running, otherwise offer to start the node
     /// </summary>
-    private static async Task ExecuteNodeCommandAsync(string command, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task ExecuteNodeCommandAsync(string command)
     {
-        const string containerName = "pocx-bitcoin-node";
-        
-        // Check if node is running
+        // Check if node is running using static callback
         bool nodeRunning = false;
-        if (isNodeRunningAsync != null)
+        if (_isNodeRunningAsync != null)
         {
-            nodeRunning = await isNodeRunningAsync(containerName);
+            nodeRunning = await _isNodeRunningAsync();
         }
         
-        if (nodeRunning && execInContainerAsync != null)
+        if (nodeRunning && _execInContainerAsync != null)
         {
             // Node is running - ask if should execute
             if (AnsiConsole.Confirm(Strings.WalletMenu.ExecuteOnNodePrompt, true))
             {
-                AnsiConsole.MarkupLine($"[dim]Executing: {Markup.Escape(command)}[/]");
-                AnsiConsole.WriteLine();
-                
-                var (exitCode, output) = await execInContainerAsync(containerName, command);
-                
-                // Show output
-                if (!string.IsNullOrWhiteSpace(output))
-                {
-                    AnsiConsole.MarkupLine("[bold]Output:[/]");
-                    var panel = new Panel(Markup.Escape(output))
-                    {
-                        Border = BoxBorder.Rounded,
-                        Padding = new Padding(1, 0, 1, 0)
-                    };
-                    AnsiConsole.Write(panel);
-                }
-                
-                if (exitCode == 0)
-                {
-                    AnsiConsole.MarkupLine("[green]✓[/] Command completed successfully");
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine($"[yellow]⚠[/] Command exited with code {exitCode}");
-                }
-                
-                // Show last 10 log lines using bitcoin-cli to get debug log location
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[bold]Last 10 log lines:[/]");
-                // Try common log paths - testnet and mainnet locations
-                var (_, logs) = await execInContainerAsync(containerName, 
-                    "tail -n 10 /root/.bitcoin/testnet3/debug.log 2>/dev/null || " +
-                    "tail -n 10 /root/.bitcoin/debug.log 2>/dev/null || " +
-                    "echo 'No log file available'");
-                if (!string.IsNullOrWhiteSpace(logs))
-                {
-                    AnsiConsole.MarkupLine($"[dim]{Markup.Escape(logs)}[/]");
-                }
+                await ExecuteAndDisplayCommandAsync(command, showLogs: true);
             }
             else
             {
-                ShowCommandTemplate("Command", $"docker exec {containerName} {command}");
+                ShowCommandTemplate("Command", $"docker exec {_bitcoinContainerName} {command}");
             }
         }
         else
         {
-            // Node is not running
+            // Node is not running - offer to start it
             if (AnsiConsole.Confirm(Strings.WalletMenu.NodeNotRunningStartPrompt, false))
             {
-                AnsiConsole.MarkupLine("[yellow]Please start the node from the main menu, then return here.[/]");
+                if (_startNodeAsync != null)
+                {
+                    AnsiConsole.MarkupLine("[dim]Starting Bitcoin node...[/]");
+                    var started = await _startNodeAsync();
+                    
+                    if (started)
+                    {
+                        AnsiConsole.MarkupLine("[green]✓[/] Node started successfully");
+                        
+                        // Now execute the command
+                        if (_execInContainerAsync != null)
+                        {
+                            await ExecuteAndDisplayCommandAsync(command, showLogs: false);
+                        }
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[red]✗[/] Failed to start node. Please try starting it from the main menu.");
+                    }
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[yellow]Node start function not available. Please start the node from the main menu.[/]");
+                }
             }
             else
             {
-                ShowCommandTemplate("Command", $"docker exec {containerName} {command}");
+                ShowCommandTemplate("Command", $"docker exec {_bitcoinContainerName} {command}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Helper method to execute a command on the node and display the output
+    /// </summary>
+    private static async Task ExecuteAndDisplayCommandAsync(string command, bool showLogs)
+    {
+        if (_execInContainerAsync == null)
+        {
+            AnsiConsole.MarkupLine("[yellow]Command execution not available.[/]");
+            return;
+        }
+        
+        AnsiConsole.MarkupLine($"[dim]Executing: {Markup.Escape(command)}[/]");
+        AnsiConsole.WriteLine();
+        
+        var (exitCode, output) = await _execInContainerAsync(command);
+        
+        // Show output
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            AnsiConsole.MarkupLine("[bold]Output:[/]");
+            var panel = new Panel(Markup.Escape(output))
+            {
+                Border = BoxBorder.Rounded,
+                Padding = new Padding(1, 0, 1, 0)
+            };
+            AnsiConsole.Write(panel);
+        }
+        
+        if (exitCode == 0)
+        {
+            AnsiConsole.MarkupLine("[green]✓[/] Command completed successfully");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[yellow]⚠[/] Command exited with code {exitCode}");
+        }
+        
+        // Show last 10 log lines if requested
+        if (showLogs)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold]Last 10 log lines:[/]");
+            // Try common log paths - testnet and mainnet locations
+            var (_, logs) = await _execInContainerAsync(
+                "tail -n 10 /root/.bitcoin/testnet3/debug.log 2>/dev/null || " +
+                "tail -n 10 /root/.bitcoin/debug.log 2>/dev/null || " +
+                "echo 'No log file available'");
+            if (!string.IsNullOrWhiteSpace(logs))
+            {
+                AnsiConsole.MarkupLine($"[dim]{Markup.Escape(logs)}[/]");
             }
         }
     }
@@ -713,15 +768,13 @@ public static class WalletCommands
     /// <summary>
     /// Import wallet to the Bitcoin node
     /// </summary>
-    private static async Task ImportWalletToNodeAsync(HDWallet wallet, string walletName, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    private static async Task ImportWalletToNodeAsync(HDWallet wallet, string walletName)
     {
-        const string containerName = "pocx-bitcoin-node";
-        
-        // Check if node is running
+        // Check if node is running using static callback
         bool nodeRunning = false;
-        if (isNodeRunningAsync != null)
+        if (_isNodeRunningAsync != null)
         {
-            nodeRunning = await isNodeRunningAsync(containerName);
+            nodeRunning = await _isNodeRunningAsync();
         }
         
         if (!nodeRunning)
@@ -731,11 +784,29 @@ public static class WalletCommands
                 AnsiConsole.MarkupLine("[yellow]Skipping import to node.[/]");
                 return;
             }
-            AnsiConsole.MarkupLine("[yellow]Please start the node from the main menu, then import manually.[/]");
-            return;
+            
+            // Try to start the node
+            if (_startNodeAsync != null)
+            {
+                AnsiConsole.MarkupLine("[dim]Starting Bitcoin node...[/]");
+                var started = await _startNodeAsync();
+                
+                if (!started)
+                {
+                    AnsiConsole.MarkupLine("[red]✗[/] Failed to start node. Skipping import.[/]");
+                    return;
+                }
+                
+                AnsiConsole.MarkupLine("[green]✓[/] Node started successfully");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[yellow]Node start function not available. Skipping import.[/]");
+                return;
+            }
         }
         
-        if (execInContainerAsync == null)
+        if (_execInContainerAsync == null)
         {
             AnsiConsole.MarkupLine("[yellow]Node execution not available. Import manually using bitcoin-cli.[/]");
             return;
@@ -754,7 +825,7 @@ public static class WalletCommands
         // createwallet arguments: wallet_name, disable_private_keys, blank, passphrase, avoid_reuse, descriptors
         AnsiConsole.MarkupLine("[dim]Creating descriptor wallet on node...[/]");
         var createCmd = $"bitcoin-cli createwallet \"{walletName}\" false false \"\" false true";
-        var (createExitCode, createOutput) = await execInContainerAsync(containerName, createCmd);
+        var (createExitCode, createOutput) = await _execInContainerAsync(createCmd);
         
         if (createExitCode != 0 && !createOutput.Contains("already exists"))
         {
@@ -769,7 +840,7 @@ public static class WalletCommands
         AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
         var importCmd = $"bitcoin-cli -wallet={walletName} importdescriptors {importJson}";
-        var (importExitCode, importOutput) = await execInContainerAsync(containerName, importCmd);
+        var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
         if (importExitCode == 0)
         {
@@ -872,7 +943,7 @@ public static class WalletCommands
     
     public static async Task CreateNewWallet()
     {
-        await CreateRandomWalletAsync(null, null);
+        await CreateRandomWalletAsync();
     }
 
     public static async Task RestoreWallet()
