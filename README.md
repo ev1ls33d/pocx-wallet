@@ -226,14 +226,14 @@ dotnet run
 
 ## Documentation
 
-📖 See the [Wiki](wiki/) for detailed documentation:
-- [Home](wiki/Home.md) - Overview
-- [Installation](wiki/Installation.md) - Setup guide
-- [Wallet Management](wiki/Wallet-Management.md) - Wallet features
-- [Services](wiki/Services.md) - Docker services
-- [Configuration](wiki/Configuration.md) - Configuration reference
-- [CLI Reference](wiki/CLI-Reference.md) - All commands
-- [Architecture](wiki/Architecture.md) - Technical details
+📖 See the [GitHub Wiki](https://github.com/ev1ls33d/pocx-wallet/wiki) for detailed documentation:
+- [Home](https://github.com/ev1ls33d/pocx-wallet/wiki/Home) - Overview
+- [Installation](https://github.com/ev1ls33d/pocx-wallet/wiki/Installation) - Setup guide
+- [Wallet Management](https://github.com/ev1ls33d/pocx-wallet/wiki/Wallet-Management) - Wallet features
+- [Services](https://github.com/ev1ls33d/pocx-wallet/wiki/Services) - Docker services
+- [Configuration](https://github.com/ev1ls33d/pocx-wallet/wiki/Configuration) - Configuration reference
+- [CLI Reference](https://github.com/ev1ls33d/pocx-wallet/wiki/CLI-Reference) - All commands
+- [Architecture](https://github.com/ev1ls33d/pocx-wallet/wiki/Architecture) - Technical details
 
 ## Roadmap
 
