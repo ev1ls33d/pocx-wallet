@@ -1244,7 +1244,7 @@ services:
         default: 0
         description: "Number of warps to plot (1 warp = 1 GiB, 0 = fill disk)"
         category: "size"
-        value: 1000
+        value: 976
       - name: "number"
         cli_flag: "-n"
         cli_alias:  "--num"
