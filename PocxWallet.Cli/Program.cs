@@ -66,7 +66,7 @@ class Program
             foreach (var service in dynamicServices)
             {
                 var status = await dynamicMenuBuilder.GetServiceStatusIndicatorAsync(service);
-                var label = $"{Markup.Escape(service.MenuLabel).PadRight(15)} {service.Name} {status}";
+                var label = $"{Markup.Escape(service.MenuLabel).PadRight(15)} {service.Name.PadRight(20)} {status}";
                 menuChoices.Add(label);
                 serviceStatusMap[label] = service.Id;
             }

@@ -314,7 +314,7 @@ public class DynamicServiceMenuBuilder
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title(string.Format(Strings.ServiceMenu.TitleFormat, service.Name, statusIndicator))
+                    .Title(string.Format(Strings.ServiceMenu.TitleFormat, service.Name, GetContainerName(service), statusIndicator))
                     .PageSize(10)
                     .AddChoices(choices)
             );

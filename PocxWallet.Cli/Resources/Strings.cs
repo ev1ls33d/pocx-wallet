@@ -28,7 +28,7 @@ public static class Strings
     // ========================================
     public static class ServiceMenu
     {
-        public const string TitleFormat = "[bold green]{0} - Service: {1}[/]";
+        public const string TitleFormat = "[bold green]{0} - [/][bold yellow]{1}[/][bold green] {2}[/]";
         public const string StopService = "Stop Service";
         public const string StartService = "Start Service";
         public const string ViewLogs = "View Logs";
