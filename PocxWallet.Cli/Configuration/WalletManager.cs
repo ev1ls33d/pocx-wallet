@@ -44,6 +44,27 @@ public class WalletFile
     
     [JsonPropertyName("wallets")]
     public List<WalletEntry> Wallets { get; set; } = new();
+    
+    [JsonPropertyName("settings")]
+    public WalletSettings Settings { get; set; } = new();
+}
+
+/// <summary>
+/// Wallet settings stored in the wallet file
+/// </summary>
+public class WalletSettings
+{
+    [JsonPropertyName("default_wallet_path")]
+    public string DefaultWalletPath { get; set; } = "./wallet.json";
+    
+    [JsonPropertyName("auto_save")]
+    public bool AutoSave { get; set; } = false;
+    
+    [JsonPropertyName("startup_wallet")]
+    public string? StartupWallet { get; set; }
+    
+    [JsonPropertyName("auto_import_to_node")]
+    public bool AutoImportToNode { get; set; } = false;
 }
 
 /// <summary>
@@ -51,7 +72,6 @@ public class WalletFile
 /// </summary>
 public class WalletManager
 {
-    private const int AddressDisplayLength = 15;
     
     private static WalletManager? _instance;
     private static readonly object _lock = new();
@@ -106,18 +126,14 @@ public class WalletManager
         if (entry == null)
             return "(no wallet)";
         
-        return $"{entry.Name} {TruncateAddress(entry.MainnetAddress)}";
+        // Show full address as there's enough space
+        return $"{entry.Name} {entry.MainnetAddress}";
     }
     
     /// <summary>
-    /// Truncates an address for display purposes
+    /// Gets the wallet settings
     /// </summary>
-    public static string TruncateAddress(string address)
-    {
-        return address.Length > AddressDisplayLength 
-            ? address[..AddressDisplayLength] + "..."
-            : address;
-    }
+    public WalletSettings Settings => _walletFile.Settings;
     
     /// <summary>
     /// Loads wallets from the specified file path

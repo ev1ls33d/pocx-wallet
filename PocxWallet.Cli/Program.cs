@@ -98,7 +98,22 @@ class Program
             // Handle menu choice
             if (choice == MenuWallet)
             {
-                await WalletCommands.ShowWalletMenuAsync(ShowBanner);
+                // Pass node status check and exec functions for wallet commands
+                var dockerManager = GetDockerManager();
+                var dynamicBuilder = GetDynamicMenuBuilder();
+                
+                Func<string, Task<bool>> isNodeRunning = async (containerName) =>
+                {
+                    var status = await dockerManager.GetContainerStatusAsync(containerName);
+                    return status == "running";
+                };
+                
+                Func<string, string, Task<(int, string)>> execInContainer = async (containerName, command) =>
+                {
+                    return await dockerManager.ExecInContainerAsync(containerName, command);
+                };
+                
+                await WalletCommands.ShowWalletMenuAsync(ShowBanner, isNodeRunning, execInContainer);
             }
             else if (choice == MenuExit)
             {

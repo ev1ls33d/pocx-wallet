@@ -114,6 +114,7 @@ public static class Strings
         public const string Remove = "Remove";
         public const string Info = "Info";
         public const string Transaction = "Transaction";
+        public const string Settings = "Settings";
         
         // Create submenu
         public const string RandomAddress = "Random Address";
@@ -128,6 +129,7 @@ public static class Strings
         public const string WalletCreated = "[green]✓[/] Wallet '{0}' created successfully!";
         public const string WalletSaved = "[green]✓[/] Wallet saved to: {0}";
         public const string MnemonicWarning = "[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]";
+        public const string ImportToNodePrompt = "Import wallet to Bitcoin node?";
         
         // Switch submenu
         public const string NoWalletsAvailable = "[yellow]No wallets available. Create a wallet first.[/]";
@@ -139,6 +141,10 @@ public static class Strings
         public const string WalletRemoved = "[green]✓[/] Wallet '{0}' removed";
         public const string UnloadFromNode = "Also unload wallet from Bitcoin node?";
         public const string UnloadNotImplemented = "[dim]Node wallet unload - use command: bitcoin-cli unloadwallet \"{0}\"[/]";
+        
+        // Node execution
+        public const string ExecuteOnNodePrompt = "Execute on running node?";
+        public const string NodeNotRunningStartPrompt = "Node is not running. Would you like to start it?";
         
         // Info submenu
         public const string CheckBalance = "Check Balance";

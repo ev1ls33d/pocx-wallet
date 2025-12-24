@@ -382,7 +382,7 @@ services:
       start_period_seconds:  60
     
     menu: 
-      main_menu_order: 4
+      main_menu_order: 1
       submenu: 
         - action:  "toggle"
           label_running: "Stop Node"
@@ -873,7 +873,7 @@ services:
       start_period_seconds: 10
     
     menu:
-      main_menu_order: 3
+      main_menu_order: 4
       submenu: 
         - action:  "toggle"
           label_running: "Stop Aggregator"
@@ -1129,7 +1129,7 @@ services:
       start_period_seconds:  10
     
     menu:
-      main_menu_order: 2
+      main_menu_order: 3
       submenu: 
         - action:  "toggle"
           label_running: "Stop Miner"
@@ -1374,7 +1374,7 @@ services:
       start_period_seconds: 5
     
     menu:
-      main_menu_order: 1
+      main_menu_order: 2
       submenu: 
         - action:  "toggle"
           label_running: "Stop Plotter"

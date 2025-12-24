@@ -15,7 +15,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the main wallet menu
     /// </summary>
-    public static async Task ShowWalletMenuAsync(Action showBanner)
+    public static async Task ShowWalletMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync = null, Func<string, string, Task<(int, string)>>? execInContainerAsync = null)
     {
         var walletManager = WalletManager.Instance;
         
@@ -41,6 +41,7 @@ public static class WalletCommands
                 Strings.WalletMenu.Remove,
                 Strings.WalletMenu.Info,
                 Strings.WalletMenu.Transaction,
+                Strings.WalletMenu.Settings,
                 Strings.ServiceMenu.Back
             };
             
@@ -57,19 +58,22 @@ public static class WalletCommands
             switch (choice)
             {
                 case var c when c == Strings.WalletMenu.Create:
-                    await ShowCreateMenuAsync(showBanner);
+                    await ShowCreateMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
                     break;
                 case var c when c == Strings.WalletMenu.Switch:
                     ShowSwitchMenu(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Remove:
-                    ShowRemoveMenu(showBanner);
+                    await ShowRemoveMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
                     break;
                 case var c when c == Strings.WalletMenu.Info:
-                    await ShowInfoMenuAsync(showBanner);
+                    await ShowInfoMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
                     break;
                 case var c when c == Strings.WalletMenu.Transaction:
-                    await ShowTransactionMenuAsync(showBanner);
+                    await ShowTransactionMenuAsync(showBanner, isNodeRunningAsync, execInContainerAsync);
+                    break;
+                case var c when c == Strings.WalletMenu.Settings:
+                    ShowWalletSettingsMenu(showBanner);
                     break;
                 case var c when c == Strings.ServiceMenu.Back:
                     exit = true;
@@ -81,7 +85,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Create wallet submenu
     /// </summary>
-    private static async Task ShowCreateMenuAsync(Action showBanner)
+    private static async Task ShowCreateMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
     {
         var choices = new List<string>
         {
@@ -103,10 +107,10 @@ public static class WalletCommands
         switch (choice)
         {
             case var c when c == Strings.WalletMenu.RandomAddress:
-                await CreateRandomWalletAsync();
+                await CreateRandomWalletAsync(isNodeRunningAsync, execInContainerAsync);
                 break;
             case var c when c == Strings.WalletMenu.VanityAddress:
-                await CreateVanityWalletAsync();
+                await CreateVanityWalletAsync(isNodeRunningAsync, execInContainerAsync);
                 break;
         }
     }
@@ -114,9 +118,10 @@ public static class WalletCommands
     /// <summary>
     /// Creates a random wallet from 12-word mnemonic
     /// </summary>
-    private static async Task CreateRandomWalletAsync()
+    private static async Task CreateRandomWalletAsync(Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
     {
         var walletManager = WalletManager.Instance;
+        var settings = walletManager.Settings;
         
         AnsiConsole.MarkupLine("[bold green]Creating new HD wallet with random mnemonic...[/]");
         AnsiConsole.WriteLine();
@@ -136,10 +141,14 @@ public static class WalletCommands
         // Display mnemonic and addresses
         DisplayWalletInfo(wallet);
         
-        // Ask if wallet should be saved
-        if (AnsiConsole.Confirm(Strings.WalletMenu.SaveWalletPrompt, true))
+        // Check settings for auto-save, otherwise ask
+        bool shouldSave = settings.AutoSave || AnsiConsole.Confirm(Strings.WalletMenu.SaveWalletPrompt, true);
+        
+        if (shouldSave)
         {
-            var filePath = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterFilePath, "./wallet.json");
+            var filePath = settings.AutoSave && !string.IsNullOrEmpty(settings.DefaultWalletPath)
+                ? settings.DefaultWalletPath
+                : AnsiConsole.Ask<string>(Strings.WalletMenu.EnterFilePath, settings.DefaultWalletPath);
             
             // Ask for wallet name with uniqueness validation
             string walletName;
@@ -161,6 +170,13 @@ public static class WalletCommands
             
             AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletCreated, walletName));
             AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletSaved, filePath));
+            
+            // Ask to import to node
+            bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
+            if (shouldImport)
+            {
+                await ImportWalletToNodeAsync(wallet, walletName, isNodeRunningAsync, execInContainerAsync);
+            }
         }
         
         AnsiConsole.WriteLine();
@@ -174,9 +190,10 @@ public static class WalletCommands
     /// <summary>
     /// Creates a vanity address wallet
     /// </summary>
-    private static async Task CreateVanityWalletAsync()
+    private static async Task CreateVanityWalletAsync(Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
     {
         var walletManager = WalletManager.Instance;
+        var settings = walletManager.Settings;
         
         // Valid Bech32 characters (excluding '1', 'b', 'i', 'o' as per spec)
         const string ValidBech32Chars = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
@@ -263,10 +280,14 @@ public static class WalletCommands
                 // Display wallet info
                 DisplayWalletInfo(wallet);
                 
-                // Ask if wallet should be saved
-                if (AnsiConsole.Confirm(Strings.WalletMenu.SaveWalletPrompt, true))
+                // Check settings for auto-save, otherwise ask
+                bool shouldSave = settings.AutoSave || AnsiConsole.Confirm(Strings.WalletMenu.SaveWalletPrompt, true);
+                
+                if (shouldSave)
                 {
-                    var filePath = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterFilePath, "./wallet.json");
+                    var filePath = settings.AutoSave && !string.IsNullOrEmpty(settings.DefaultWalletPath)
+                        ? settings.DefaultWalletPath
+                        : AnsiConsole.Ask<string>(Strings.WalletMenu.EnterFilePath, settings.DefaultWalletPath);
                     
                     // Ask for wallet name with uniqueness validation
                     string walletName;
@@ -288,6 +309,13 @@ public static class WalletCommands
                     
                     AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletCreated, walletName));
                     AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletSaved, filePath));
+                    
+                    // Ask to import to node
+                    bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
+                    if (shouldImport)
+                    {
+                        await ImportWalletToNodeAsync(wallet, walletName, isNodeRunningAsync, execInContainerAsync);
+                    }
                 }
                 
                 AnsiConsole.WriteLine();
@@ -354,14 +382,13 @@ public static class WalletCommands
             return;
         }
         
-        // Build wallet choices with name and truncated mainnet address
+        // Build wallet choices with name and full mainnet address
         var choices = new List<string>();
         var choiceToWalletName = new Dictionary<string, string>();
         
         foreach (var wallet in walletManager.Wallets)
         {
-            var addressPrefix = WalletManager.TruncateAddress(wallet.MainnetAddress);
-            var label = $"{wallet.Name.PadRight(15)} {addressPrefix}";
+            var label = $"{wallet.Name.PadRight(15)} {wallet.MainnetAddress}";
             
             // Mark active wallet
             if (wallet.Name == walletManager.ActiveWalletEntry?.Name)
@@ -406,7 +433,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Remove wallet submenu
     /// </summary>
-    private static void ShowRemoveMenu(Action showBanner)
+    private static async Task ShowRemoveMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
     {
         var walletManager = WalletManager.Instance;
         
@@ -425,8 +452,7 @@ public static class WalletCommands
         
         foreach (var wallet in walletManager.Wallets)
         {
-            var addressPrefix = WalletManager.TruncateAddress(wallet.MainnetAddress);
-            var label = $"{wallet.Name.PadRight(15)} {addressPrefix}";
+            var label = $"{wallet.Name.PadRight(15)} {wallet.MainnetAddress}";
             choices.Add(label);
             choiceToWalletName[label] = wallet.Name;
         }
@@ -453,10 +479,8 @@ public static class WalletCommands
         // Ask about node unloading
         if (AnsiConsole.Confirm(Strings.WalletMenu.UnloadFromNode, false))
         {
-            // Show command template for node unload (stub)
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine(Strings.WalletMenu.CommandTemplateHeader);
-            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.UnloadNotImplemented, walletName));
+            var command = $"bitcoin-cli unloadwallet \"{walletName}\"";
+            await ExecuteNodeCommandAsync(command, isNodeRunningAsync, execInContainerAsync);
         }
         
         // Remove wallet
@@ -474,7 +498,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Info submenu with bitcoin-cli command stubs
     /// </summary>
-    private static async Task ShowInfoMenuAsync(Action showBanner)
+    private static async Task ShowInfoMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
     {
         var walletManager = WalletManager.Instance;
         var activeWallet = walletManager.ActiveWalletEntry;
@@ -504,25 +528,25 @@ public static class WalletCommands
         AnsiConsole.Clear();
         showBanner();
         
-        // Show command template based on selection
+        // Build command based on selection
         string command = choice switch
         {
             var c when c == Strings.WalletMenu.CheckBalance => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} getbalance",
+                $"bitcoin-cli -wallet={walletName} getbalance",
             var c when c == Strings.WalletMenu.ShowAddresses => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} listreceivedbyaddress 0 true",
+                $"bitcoin-cli -wallet={walletName} listreceivedbyaddress 0 true",
             var c when c == Strings.WalletMenu.ListUnspent => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} listunspent",
+                $"bitcoin-cli -wallet={walletName} listunspent",
             var c when c == Strings.WalletMenu.GetWalletInfo => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} getwalletinfo",
+                $"bitcoin-cli -wallet={walletName} getwalletinfo",
             var c when c == Strings.WalletMenu.GetBlockchainInfo => 
-                "docker exec <container> bitcoin-cli getblockchaininfo",
+                "bitcoin-cli getblockchaininfo",
             var c when c == Strings.WalletMenu.TransactionHistory => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} listtransactions \"*\" 10",
+                $"bitcoin-cli -wallet={walletName} listtransactions \"*\" 10",
             _ => ""
         };
         
-        ShowCommandTemplate(choice, command);
+        await ExecuteNodeCommandAsync(command, isNodeRunningAsync, execInContainerAsync);
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
@@ -532,7 +556,7 @@ public static class WalletCommands
     /// <summary>
     /// Shows the Transaction submenu with bitcoin-cli command stubs
     /// </summary>
-    private static async Task ShowTransactionMenuAsync(Action showBanner)
+    private static async Task ShowTransactionMenuAsync(Action showBanner, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
     {
         var walletManager = WalletManager.Instance;
         var activeWallet = walletManager.ActiveWalletEntry;
@@ -562,25 +586,26 @@ public static class WalletCommands
         AnsiConsole.Clear();
         showBanner();
         
-        // Show command template based on selection
+        // Build command based on selection (these are templates that need user input)
         string command = choice switch
         {
             var c when c == Strings.WalletMenu.SendFunds => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} sendtoaddress \"<address>\" <amount>",
+                $"bitcoin-cli -wallet={walletName} sendtoaddress \"<address>\" <amount>",
             var c when c == Strings.WalletMenu.CreateTransaction => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} createrawtransaction '[{{\"txid\":\"...\",\"vout\":0}}]' '{{\"<address>\":<amount>}}'",
+                $"bitcoin-cli -wallet={walletName} createrawtransaction '[{{\"txid\":\"...\",\"vout\":0}}]' '{{\"<address>\":<amount>}}'",
             var c when c == Strings.WalletMenu.SignTransaction => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} signrawtransactionwithwallet \"<hex>\"",
+                $"bitcoin-cli -wallet={walletName} signrawtransactionwithwallet \"<hex>\"",
             var c when c == Strings.WalletMenu.BroadcastTransaction => 
-                "docker exec <container> bitcoin-cli sendrawtransaction \"<hex>\"",
+                "bitcoin-cli sendrawtransaction \"<hex>\"",
             var c when c == Strings.WalletMenu.CreatePSBT => 
-                $"docker exec <container> bitcoin-cli -wallet={walletName} walletcreatefundedpsbt '[]' '{{\"<address>\":<amount>}}'",
+                $"bitcoin-cli -wallet={walletName} walletcreatefundedpsbt '[]' '{{\"<address>\":<amount>}}'",
             var c when c == Strings.WalletMenu.DecodePSBT => 
-                "docker exec <container> bitcoin-cli decodepsbt \"<psbt>\"",
+                "bitcoin-cli decodepsbt \"<psbt>\"",
             _ => ""
         };
         
-        ShowCommandTemplate(choice, command);
+        // Transaction commands are templates - show copy/paste for now
+        ShowCommandTemplate(choice, $"docker exec <container> {command}");
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
@@ -608,13 +633,238 @@ public static class WalletCommands
         AnsiConsole.MarkupLine(Strings.WalletMenu.CopyPasteNote);
     }
     
+    /// <summary>
+    /// Execute a command on the node container if running, otherwise show copy/paste template
+    /// </summary>
+    private static async Task ExecuteNodeCommandAsync(string command, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    {
+        const string containerName = "pocx-bitcoin-node";
+        
+        // Check if node is running
+        bool nodeRunning = false;
+        if (isNodeRunningAsync != null)
+        {
+            nodeRunning = await isNodeRunningAsync(containerName);
+        }
+        
+        if (nodeRunning && execInContainerAsync != null)
+        {
+            // Node is running - ask if should execute
+            if (AnsiConsole.Confirm(Strings.WalletMenu.ExecuteOnNodePrompt, true))
+            {
+                AnsiConsole.MarkupLine($"[dim]Executing: {Markup.Escape(command)}[/]");
+                AnsiConsole.WriteLine();
+                
+                var (exitCode, output) = await execInContainerAsync(containerName, command);
+                
+                // Show output
+                if (!string.IsNullOrWhiteSpace(output))
+                {
+                    AnsiConsole.MarkupLine("[bold]Output:[/]");
+                    var panel = new Panel(Markup.Escape(output))
+                    {
+                        Border = BoxBorder.Rounded,
+                        Padding = new Padding(1, 0, 1, 0)
+                    };
+                    AnsiConsole.Write(panel);
+                }
+                
+                if (exitCode == 0)
+                {
+                    AnsiConsole.MarkupLine("[green]✓[/] Command completed successfully");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine($"[yellow]⚠[/] Command exited with code {exitCode}");
+                }
+                
+                // Show last 10 log lines
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[bold]Last 10 log lines:[/]");
+                var (_, logs) = await execInContainerAsync(containerName, "tail -n 10 /root/.bitcoin/debug.log 2>/dev/null || echo 'No log file available'");
+                if (!string.IsNullOrWhiteSpace(logs))
+                {
+                    AnsiConsole.MarkupLine($"[dim]{Markup.Escape(logs)}[/]");
+                }
+            }
+            else
+            {
+                ShowCommandTemplate("Command", $"docker exec {containerName} {command}");
+            }
+        }
+        else
+        {
+            // Node is not running
+            if (AnsiConsole.Confirm(Strings.WalletMenu.NodeNotRunningStartPrompt, false))
+            {
+                AnsiConsole.MarkupLine("[yellow]Please start the node from the main menu, then return here.[/]");
+            }
+            else
+            {
+                ShowCommandTemplate("Command", $"docker exec {containerName} {command}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Import wallet to the Bitcoin node
+    /// </summary>
+    private static async Task ImportWalletToNodeAsync(HDWallet wallet, string walletName, Func<string, Task<bool>>? isNodeRunningAsync, Func<string, string, Task<(int, string)>>? execInContainerAsync)
+    {
+        const string containerName = "pocx-bitcoin-node";
+        
+        // Check if node is running
+        bool nodeRunning = false;
+        if (isNodeRunningAsync != null)
+        {
+            nodeRunning = await isNodeRunningAsync(containerName);
+        }
+        
+        if (!nodeRunning)
+        {
+            if (!AnsiConsole.Confirm(Strings.WalletMenu.NodeNotRunningStartPrompt, false))
+            {
+                AnsiConsole.MarkupLine("[yellow]Skipping import to node.[/]");
+                return;
+            }
+            AnsiConsole.MarkupLine("[yellow]Please start the node from the main menu, then import manually.[/]");
+            return;
+        }
+        
+        if (execInContainerAsync == null)
+        {
+            AnsiConsole.MarkupLine("[yellow]Node execution not available. Import manually using bitcoin-cli.[/]");
+            return;
+        }
+        
+        AnsiConsole.MarkupLine("[bold]Importing wallet to Bitcoin node...[/]");
+        
+        // Detect network (testnet for now, could be made configurable)
+        var isTestnet = true;  // TODO: detect from node parameters
+        var descriptor = wallet.GetDescriptor(isTestnet);
+        
+        // Step 1: Create wallet on node
+        AnsiConsole.MarkupLine("[dim]Creating wallet on node...[/]");
+        var createCmd = $"bitcoin-cli createwallet \"{walletName}\" false false \"\" false true";
+        var (createExitCode, createOutput) = await execInContainerAsync(containerName, createCmd);
+        
+        if (createExitCode != 0 && !createOutput.Contains("already exists"))
+        {
+            AnsiConsole.MarkupLine($"[yellow]⚠[/] Create wallet: {Markup.Escape(createOutput)}");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[green]✓[/] Wallet created on node");
+        }
+        
+        // Step 2: Import descriptor
+        AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
+        var importJson = $"'[{{\"desc\": \"{descriptor}\", \"timestamp\": \"now\"}}]'";
+        var importCmd = $"bitcoin-cli -wallet={walletName} importdescriptors {importJson}";
+        var (importExitCode, importOutput) = await execInContainerAsync(containerName, importCmd);
+        
+        if (importExitCode == 0)
+        {
+            AnsiConsole.MarkupLine("[green]✓[/] Descriptor imported successfully");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[yellow]⚠[/] Import result: {Markup.Escape(importOutput)}");
+        }
+    }
+    
+    /// <summary>
+    /// Shows the wallet settings menu
+    /// </summary>
+    private static void ShowWalletSettingsMenu(Action showBanner)
+    {
+        var walletManager = WalletManager.Instance;
+        var settings = walletManager.Settings;
+        
+        bool back = false;
+        while (!back)
+        {
+            AnsiConsole.Clear();
+            showBanner();
+            
+            var choices = new List<string>
+            {
+                $"{"Default Wallet Path".PadRight(25)} [cyan]{Markup.Escape(settings.DefaultWalletPath)}[/]",
+                $"{"Auto-Save Wallets".PadRight(25)} {(settings.AutoSave ? "[green]true[/]" : "[red]false[/]")}",
+                $"{"Startup Wallet".PadRight(25)} [cyan]{Markup.Escape(settings.StartupWallet ?? "(none)")}[/]",
+                $"{"Auto-Import to Node".PadRight(25)} {(settings.AutoImportToNode ? "[green]true[/]" : "[red]false[/]")}",
+                Strings.ServiceMenu.Back
+            };
+            
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold green]Wallet Settings[/]")
+                    .PageSize(10)
+                    .AddChoices(choices)
+            );
+            
+            if (choice == Strings.ServiceMenu.Back)
+            {
+                back = true;
+                continue;
+            }
+            
+            // Determine which setting was selected
+            var index = choices.IndexOf(choice);
+            switch (index)
+            {
+                case 0: // Default Wallet Path
+                    settings.DefaultWalletPath = AnsiConsole.Ask("Enter default wallet path:", settings.DefaultWalletPath);
+                    walletManager.Save();
+                    AnsiConsole.MarkupLine("[green]✓[/] Setting updated");
+                    break;
+                    
+                case 1: // Auto-Save
+                    settings.AutoSave = !settings.AutoSave;
+                    walletManager.Save();
+                    AnsiConsole.MarkupLine($"[green]✓[/] Auto-save is now {(settings.AutoSave ? "enabled" : "disabled")}");
+                    break;
+                    
+                case 2: // Startup Wallet
+                    if (walletManager.Wallets.Count > 0)
+                    {
+                        var walletChoices = walletManager.Wallets.Select(w => w.Name).ToList();
+                        walletChoices.Insert(0, "(none)");
+                        var selected = AnsiConsole.Prompt(
+                            new SelectionPrompt<string>()
+                                .Title("Select startup wallet:")
+                                .AddChoices(walletChoices)
+                        );
+                        settings.StartupWallet = selected == "(none)" ? null : selected;
+                        walletManager.Save();
+                        AnsiConsole.MarkupLine("[green]✓[/] Setting updated");
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[yellow]No wallets available. Create a wallet first.[/]");
+                    }
+                    break;
+                    
+                case 3: // Auto-Import to Node
+                    settings.AutoImportToNode = !settings.AutoImportToNode;
+                    walletManager.Save();
+                    AnsiConsole.MarkupLine($"[green]✓[/] Auto-import is now {(settings.AutoImportToNode ? "enabled" : "disabled")}");
+                    break;
+            }
+            
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+            Console.ReadLine();
+        }
+    }
+    
     // ========================================
     // Legacy methods (kept for compatibility)
     // ========================================
     
     public static async Task CreateNewWallet()
     {
-        await CreateRandomWalletAsync();
+        await CreateRandomWalletAsync(null, null);
     }
 
     public static async Task RestoreWallet()
