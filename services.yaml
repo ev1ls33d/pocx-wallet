@@ -1234,6 +1234,7 @@ services:
         required: true
         description: "Your PoC mining address (any PoC coin format)"
         category: "identity"
+        value: "<pocx1qYourWalletAddressHere>"
         
       # === Plot Size ===
       - name: "warps"
@@ -1243,6 +1244,7 @@ services:
         default: 0
         description: "Number of warps to plot (1 warp = 1 GiB, 0 = fill disk)"
         category: "size"
+        value: 1000
       - name: "number"
         cli_flag: "-n"
         cli_alias:  "--num"
@@ -1250,6 +1252,7 @@ services:
         default: 1
         description: "Number of plot files to create (0 = fill disk)"
         category: "size"
+        value: 0
         
       # === Output ===
       - name: "path"
@@ -1259,6 +1262,7 @@ services:
         default:  ["/plots"]
         description: "Target disk path(s) for plot files"
         category:  "output"
+        value: ["/plots"]
         
       # === Compression ===
       - name: "compression"
@@ -1289,6 +1293,7 @@ services:
         default:  0
         description: "Number of CPU threads (0 = auto-detect)"
         category: "cpu"
+        value: 0
         
       # === GPU Settings (OpenCL feature) ===
       - name: "gpu"
@@ -1381,7 +1386,7 @@ services:
         default:  false
         description:  "Machine-readable progress output for GUI"
         category: "output"
-        hidden: true
+        value: true
     
     depends_on:  []
     
