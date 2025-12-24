@@ -270,6 +270,12 @@ public class EnvironmentVariable
 
     [YamlMember(Alias = "sensitive")]
     public bool Sensitive { get; set; }
+
+    /// <summary>
+    /// User override for the environment variable value
+    /// </summary>
+    [YamlMember(Alias = "value_override")]
+    public string? ValueOverride { get; set; }
 }
 
 /// <summary>

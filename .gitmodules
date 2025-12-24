@@ -5,6 +5,7 @@
 [submodule "electrs"]
 	path = electrs
 	url = https://github.com/PoC-Consortium/electrs-pocx.git
+	branch = pocx
 [submodule "bitcoin"]
 	path = bitcoin
 	url = https://github.com/PoC-Consortium/bitcoin.git

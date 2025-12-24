@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Clone electrs-pocx repository
 WORKDIR /build
-RUN git clone --single-branch https://github.com/PoC-Consortium/electrs-pocx.git
+RUN git clone -b pocx --single-branch https://github.com/PoC-Consortium/electrs-pocx.git
 
 # Build electrs binary
 WORKDIR /build/electrs-pocx

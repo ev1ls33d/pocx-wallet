@@ -171,9 +171,14 @@ public class DynamicServiceMenuBuilder
 
         foreach (var envVar in service.Environment)
         {
-            if (!string.IsNullOrEmpty(envVar.Name) && !string.IsNullOrEmpty(envVar.Value))
+            if (!string.IsNullOrEmpty(envVar.Name))
             {
-                envVars[envVar.Name] = envVar.Value;
+                // Use override value if set, otherwise use default value
+                var value = envVar.ValueOverride ?? envVar.Value;
+                if (!string.IsNullOrEmpty(value))
+                {
+                    envVars[envVar.Name] = value;
+                }
             }
         }
 
@@ -657,6 +662,10 @@ public class DynamicServiceMenuBuilder
             var portCount = service.Ports?.Count ?? 0;
             choices.Add($"{Strings.SettingsMenu.Ports.PadRight(20)} [cyan]{portCount} configured[/]");
             
+            // Environment variables count
+            var envCount = service.Environment?.Count ?? 0;
+            choices.Add($"{Strings.SettingsMenu.Environment.PadRight(20)} [cyan]{envCount} configured[/]");
+            
             choices.Add(Strings.ServiceMenu.Back);
 
             var choice = AnsiConsole.Prompt(
@@ -693,6 +702,9 @@ public class DynamicServiceMenuBuilder
                     break;
                 case 5: // Ports
                     ShowPortsMenu(service, showBanner);
+                    break;
+                case 6: // Environment
+                    ShowEnvironmentMenu(service, showBanner);
                     break;
             }
             
@@ -821,6 +833,139 @@ public class DynamicServiceMenuBuilder
                 AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, port.Name));
             }
         }
+    }
+
+    /// <summary>
+    /// Show environment variables configuration menu
+    /// </summary>
+    private void ShowEnvironmentMenu(ServiceDefinition service, Action showBanner)
+    {
+        bool back = false;
+        while (!back)
+        {
+            var choices = new List<string>();
+            var envVarCount = service.Environment?.Count ?? 0;
+            
+            // Add existing environment variables
+            if (service.Environment != null)
+            {
+                foreach (var env in service.Environment)
+                {
+                    var currentValue = GetEnvironmentValue(env);
+                    var displayValue = env.Sensitive ? "********" : Markup.Escape(currentValue);
+                    choices.Add($"{env.Name.PadRight(20)} {displayValue}");
+                }
+            }
+            
+            // Add option to add new environment variable
+            choices.Add(Strings.SettingsMenu.AddEnvironmentVar);
+            choices.Add(Strings.ServiceMenu.Back);
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[bold green]{service.Name} Environment Variables[/]")
+                    .PageSize(15)
+                    .AddChoices(choices)
+            );
+
+            if (choice == Strings.ServiceMenu.Back)
+            {
+                back = true;
+                continue;
+            }
+
+            if (choice == Strings.SettingsMenu.AddEnvironmentVar)
+            {
+                // Add new environment variable
+                var name = AnsiConsole.Ask<string>(Strings.SettingsMenu.EnterEnvVarName);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    var value = AnsiConsole.Ask<string>(string.Format(Strings.SettingsMenu.EnterEnvVarValue, name));
+                    
+                    // Initialize Environment list if null
+                    service.Environment ??= new List<EnvironmentVariable>();
+                    
+                    // Add the new environment variable
+                    service.Environment.Add(new EnvironmentVariable
+                    {
+                        Name = name,
+                        Value = value,
+                        Description = Strings.SettingsMenu.UserDefinedEnvVarDescription
+                    });
+                    
+                    SaveServicesToYaml();
+                    AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.EnvironmentVarAdded, name));
+                }
+            }
+            else
+            {
+                // Edit existing environment variable - index is position in choices list
+                // which matches position in Environment list since env vars are added first
+                var envIndex = choices.IndexOf(choice);
+                if (envIndex >= 0 && envIndex < envVarCount && service.Environment != null)
+                {
+                    var env = service.Environment[envIndex];
+                    ShowEditEnvironmentVarMenu(service, env, showBanner);
+                }
+            }
+            
+            AnsiConsole.Clear();
+            showBanner();
+        }
+    }
+
+    /// <summary>
+    /// Show menu to edit or remove an environment variable
+    /// </summary>
+    private void ShowEditEnvironmentVarMenu(ServiceDefinition service, EnvironmentVariable env, Action showBanner)
+    {
+        // Show description if available
+        if (!string.IsNullOrEmpty(env.Description))
+        {
+            AnsiConsole.MarkupLine($"[dim]{Markup.Escape(env.Description)}[/]");
+            AnsiConsole.WriteLine();
+        }
+
+        var currentValue = GetEnvironmentValue(env);
+        var displayValue = env.Sensitive ? "********" : Markup.Escape(currentValue);
+
+        var choices = new List<string>
+        {
+            Strings.ParametersMenu.EditValue,
+            Strings.SettingsMenu.RemoveEnvironmentVar,
+            Strings.ServiceMenu.Back
+        };
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold]{env.Name}[/] = {displayValue}")
+                .AddChoices(choices)
+        );
+
+        if (choice == Strings.ParametersMenu.EditValue)
+        {
+            var newValue = env.Sensitive 
+                ? AnsiConsole.Prompt(new TextPrompt<string>(string.Format(Strings.SettingsMenu.EnterEnvVarValue, env.Name)).Secret())
+                : AnsiConsole.Ask(string.Format(Strings.SettingsMenu.EnterEnvVarValue, env.Name), currentValue);
+            
+            env.ValueOverride = newValue;
+            SaveServicesToYaml();
+            AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, env.Name));
+        }
+        else if (choice == Strings.SettingsMenu.RemoveEnvironmentVar)
+        {
+            service.Environment?.Remove(env);
+            SaveServicesToYaml();
+            AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.EnvironmentVarRemoved, env.Name));
+        }
+    }
+
+    /// <summary>
+    /// Get environment variable value (from override or default)
+    /// </summary>
+    private string GetEnvironmentValue(EnvironmentVariable env)
+    {
+        return env.ValueOverride ?? env.Value ?? "";
     }
 
     /// <summary>
