@@ -43,7 +43,7 @@ services:
       binary: "bitcoind"
       
     source: 
-      repository: "https://github.com/PoC-Consortium/bitcoin. git"
+      repository: "https://github.com/PoC-Consortium/bitcoin.git"
       branch: "pocx-v30-RC3"
       build_command: "cmake -B build && cmake --build build"
       binary_paths:
@@ -77,10 +77,10 @@ services:
     volumes:
       - name: "data"
         host_path_setting: "BitcoinNode.DataDirectory"
-        container_path:  "/root/.bitcoin"
+        container_path:  "/root/.bitcoin-pocx"
         read_only: false
         description: "Blockchain data, wallet files, and node configuration"
-    
+
     environment:  []
     
     # All available CLI parameters from bitcoind --help

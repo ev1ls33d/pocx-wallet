@@ -38,7 +38,7 @@ public class BitcoinNodeSettings
     /// <summary>
     /// Data directory for blockchain data
     /// </summary>
-    public string DataDirectory { get; set; } = "./bitcoin-data";
+    public string DataDirectory { get; set; } = "./bitcoin-pocx";
 }
 
 /// <summary>
