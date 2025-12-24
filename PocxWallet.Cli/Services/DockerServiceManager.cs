@@ -414,13 +414,77 @@ public class DockerServiceManager
         string command)
     {
         ValidateContainerName(containerName);
-        return await ExecuteCommandAsync("docker", $"exec {containerName} {command}");
+        // Split command but respect quoted strings to preserve JSON arguments with spaces
+        var arguments = SplitCommandLineArguments(command);
+        var fullArgs = new string[] { "exec", containerName }.Concat(arguments).ToArray();
+        return await ExecuteCommandAsync("docker", fullArgs);
     }
 
     /// <summary>
-    /// Execute a shell command
+    /// Split command line arguments while respecting quoted strings
+    /// This handles cases like: bitcoin-cli importdescriptors '[{"desc": "...", "timestamp": "now"}]'
+    /// Also handles escaped quotes with backslash
     /// </summary>
-    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments, bool suppressOutput = false)
+    private static string[] SplitCommandLineArguments(string commandLine)
+    {
+        var args = new List<string>();
+        var inSingleQuote = false;
+        var inDoubleQuote = false;
+        var current = new System.Text.StringBuilder();
+        var escapeNext = false;
+
+        foreach (char c in commandLine)
+        {
+            if (escapeNext)
+            {
+                current.Append(c);
+                escapeNext = false;
+                continue;
+            }
+
+            if (c == '\\')
+            {
+                escapeNext = true;
+                current.Append(c);
+                continue;
+            }
+
+            if (c == '\'' && !inDoubleQuote)
+            {
+                inSingleQuote = !inSingleQuote;
+                current.Append(c); // Keep the quotes in the argument for shell processing
+            }
+            else if (c == '"' && !inSingleQuote)
+            {
+                inDoubleQuote = !inDoubleQuote;
+                current.Append(c); // Keep the quotes in the argument for shell processing
+            }
+            else if (c == ' ' && !inSingleQuote && !inDoubleQuote)
+            {
+                if (current.Length > 0)
+                {
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            args.Add(current.ToString());
+        }
+
+        return args.ToArray();
+    }
+
+    /// <summary>
+    /// Execute a shell command with string[] arguments (preserves arguments with spaces)
+    /// </summary>
+    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string[] arguments, bool suppressOutput = false)
     {
         var psi = new ProcessStartInfo
         {
@@ -431,8 +495,8 @@ public class DockerServiceManager
             CreateNoWindow = true
         };
 
-        foreach (var a in arguments.Split())
-            psi.ArgumentList.Add(a);
+        foreach (var arg in arguments)
+            psi.ArgumentList.Add(arg);
 
         using var process = new Process { StartInfo = psi };
         process.Start();
@@ -443,6 +507,15 @@ public class DockerServiceManager
         await process.WaitForExitAsync();
 
         return (process.ExitCode, string.IsNullOrWhiteSpace(error) ? output : error);
+    }
+
+    /// <summary>
+    /// Execute a shell command (legacy overload - splits by space, use string[] overload for complex arguments)
+    /// </summary>
+    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments, bool suppressOutput = false)
+    {
+        // For simple commands, split by space
+        return await ExecuteCommandAsync(command, arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries), suppressOutput);
     }
 
     public class ContainerInfo
