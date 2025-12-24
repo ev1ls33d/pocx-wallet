@@ -124,12 +124,14 @@ services:
         type: "string[]"
         default:  []
         description:  "Add nodes to connect to (can specify multiple)"
+        use_equals: true
         category: "connection"
       - name: "connect"
         cli_flag: "-connect"
         type: "string[]"
         default:  []
         description:  "Connect only to specified nodes"
+        use_equals: true
         category: "connection"
       - name: "listen"
         cli_flag: "-listen"
@@ -142,24 +144,28 @@ services:
         type: "int"
         default:  125
         description: "Maximum number of inbound+outbound connections"
+        use_equals: true
         category: "connection"
       - name: "port"
         cli_flag: "-port"
         type: "int"
         default: 18333
         description: "Listen for connections on this port"
+        use_equals: true
         category: "connection"
       - name: "proxy"
         cli_flag: "-proxy"
         type: "string"
         default: ""
         description: "Connect through SOCKS5 proxy (ip:port)"
+        use_equals: true
         category: "connection"
       - name: "onion"
         cli_flag: "-onion"
         type: "string"
         default: ""
         description: "Use separate SOCKS5 proxy for Tor hidden services"
+        use_equals: true
         category: "connection"
       - name: "dns"
         cli_flag: "-dns"
@@ -180,24 +186,30 @@ services:
         type: "int"
         default: 18332
         description:  "Listen for JSON-RPC connections on this port"
+        use_equals: true
         category: "rpc"
       - name: "rpcbind"
         cli_flag: "-rpcbind"
         type: "string"
         default:  "0.0.0.0"
         description: "Bind to given address for JSON-RPC connections"
+        use_equals: true
         category: "rpc"
+        value: "0.0.0.0"
       - name:  "rpcallowip"
         cli_flag: "-rpcallowip"
         type: "string[]"
         default:  ["0.0.0.0/0"]
         description: "Allow JSON-RPC connections from specified IPs/subnets"
+        use_equals: true
         category: "rpc"
+        value: ["0.0.0.0/0"]
       - name: "rpcuser"
         cli_flag: "-rpcuser"
         type: "string"
         default: ""
         description: "Username for JSON-RPC connections"
+        use_equals: true
         category: "rpc"
         sensitive: true
       - name: "rpcpassword"
@@ -205,6 +217,7 @@ services:
         type: "string"
         default: ""
         description: "Password for JSON-RPC connections"
+        use_equals: true
         category: "rpc"
         sensitive: true
       - name: "rpcauth"
@@ -219,6 +232,7 @@ services:
         type:  "int"
         default: 4
         description: "Number of threads for RPC server"
+        use_equals: true
         category:  "rpc"
         
       # === Wallet Options ===
@@ -280,6 +294,7 @@ services:
         default: false
         value: true
         description: "Maintain a full transaction index"
+        use_equals: true
         category: "index"
       - name: "prune"
         cli_flag: "-prune"
@@ -287,6 +302,7 @@ services:
         default:  0
         value: 0
         description: "Reduce storage by pruning blocks (0=disable, 1=auto, N=target size MB)"
+        use_equals: true
         category: "index"
       - name: "reindex"
         cli_flag: "-reindex"

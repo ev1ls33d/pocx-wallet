@@ -210,7 +210,7 @@ public class DynamicServiceMenuBuilder
 
                 // Determine if this parameter uses equals sign syntax
                 // Default: bool types don't use equals, other types do
-                var useEquals = false; //param.UseEquals ?? (param.Type.ToLower() != "bool");
+                var useEquals = param.UseEquals ?? false;
 
                 switch (param.Type.ToLower())
                 {
