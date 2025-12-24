@@ -6,6 +6,7 @@ FROM rust:bookworm AS builder
 RUN apt-get update && apt-get install -y \
     clang \
     cmake \
+    librocksdb-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone electrs-pocx repository
@@ -16,13 +17,14 @@ RUN git clone --single-branch https://github.com/PoC-Consortium/electrs-pocx.git
 WORKDIR /build/electrs-pocx
 RUN cargo build --release --bin electrs
 
-# Stage 2: Runtime - Use same base to ensure glibc compatibility
-FROM rust:bookworm
+# Stage 2: Runtime - Use debian:bookworm-slim for smaller image while maintaining glibc compatibility
+FROM debian:bookworm-slim
 
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    librocksdb-dev \
+    librocksdb7.8 \
+    libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder

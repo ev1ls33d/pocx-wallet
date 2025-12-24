@@ -81,7 +81,10 @@ services:
         read_only: false
         description: "Blockchain data, wallet files, and node configuration"
 
-    environment:  []
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
     
     # All available CLI parameters from bitcoind --help
     parameters:
@@ -90,6 +93,7 @@ services:
         cli_flag: "-testnet"
         type: "bool"
         default: true
+        value: true
         description: "Use the test network (testnet3)"
         category: "network"
       - name: "regtest"
@@ -110,6 +114,7 @@ services:
         cli_flag: "-miningserver"
         type: "bool"
         default:  true
+        value: true
         description: "Enable PoC mining server RPC endpoints"
         category:  "pocx"
         
@@ -273,12 +278,14 @@ services:
         cli_flag: "-txindex"
         type: "bool"
         default: false
+        value: true
         description: "Maintain a full transaction index"
         category: "index"
       - name: "prune"
         cli_flag: "-prune"
         type: "int"
         default:  0
+        value: 0
         description: "Reduce storage by pruning blocks (0=disable, 1=auto, N=target size MB)"
         category: "index"
       - name: "reindex"
@@ -487,7 +494,10 @@ services:
         read_only: true
         description: "Bitcoin node data (read-only access for .cookie and blocks)"
     
-    environment: []
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
     
     parameters:
       # === Verbosity ===
@@ -745,7 +755,10 @@ services:
         read_only: false
         description: "Database and log storage"
     
-    environment: []
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
     
     # CLI parameters
     parameters:
@@ -951,13 +964,16 @@ services:
         read_only: true
         description: "Directory containing plot files"
       - name: "config"
-        host_path_default: "./config.yaml"
-        container_path: "/config/config.yaml"
+        host_path_default: "./miner_config.yaml"
+        container_path: "/config/miner_config.yaml"
         read_only: true
         description: "Miner configuration file"
         is_file: true
     
-    environment: []
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
     
     parameters:
       - name: "config"
@@ -1204,7 +1220,10 @@ services:
         read_only: false
         description: "Output directory for generated plot files"
     
-    environment: []
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
     
     parameters:
       # === Required ===
@@ -1215,6 +1234,7 @@ services:
         required: true
         description: "Your PoC mining address (any PoC coin format)"
         category: "identity"
+        value: "<pocx1qYourWalletAddressHere>"
         
       # === Plot Size ===
       - name: "warps"
@@ -1224,6 +1244,7 @@ services:
         default: 0
         description: "Number of warps to plot (1 warp = 1 GiB, 0 = fill disk)"
         category: "size"
+        value: 976
       - name: "number"
         cli_flag: "-n"
         cli_alias:  "--num"
@@ -1231,6 +1252,7 @@ services:
         default: 1
         description: "Number of plot files to create (0 = fill disk)"
         category: "size"
+        value: 0
         
       # === Output ===
       - name: "path"
@@ -1240,6 +1262,7 @@ services:
         default:  ["/plots"]
         description: "Target disk path(s) for plot files"
         category:  "output"
+        value: ["/plots"]
         
       # === Compression ===
       - name: "compression"
@@ -1270,6 +1293,7 @@ services:
         default:  0
         description: "Number of CPU threads (0 = auto-detect)"
         category: "cpu"
+        value: 0
         
       # === GPU Settings (OpenCL feature) ===
       - name: "gpu"
@@ -1362,7 +1386,7 @@ services:
         default:  false
         description:  "Machine-readable progress output for GUI"
         category: "output"
-        hidden: true
+        value: true
     
     depends_on:  []
     
@@ -1449,6 +1473,11 @@ services:
         host_path_default: "./plots"
         container_path: "/plots"
         read_only: true
+    
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
     
     parameters:
       - name: "subcommand"
