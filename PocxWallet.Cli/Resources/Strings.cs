@@ -78,6 +78,7 @@ public static class Strings
         public const string EnvironmentVarAdded = "[green]✓[/] Environment variable {0} added";
         public const string RemoveEnvironmentVar = "[red][[Remove]][/]";
         public const string EnvironmentVarRemoved = "[green]✓[/] Environment variable {0} removed";
+        public const string UserDefinedEnvVarDescription = "User-defined environment variable";
     }
 
     // ========================================

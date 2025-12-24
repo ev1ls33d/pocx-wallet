@@ -890,7 +890,7 @@ public class DynamicServiceMenuBuilder
                     {
                         Name = name,
                         Value = value,
-                        Description = "User-defined environment variable"
+                        Description = Strings.SettingsMenu.UserDefinedEnvVarDescription
                     });
                     
                     SaveServicesToYaml();
