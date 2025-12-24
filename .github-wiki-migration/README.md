@@ -4,15 +4,55 @@ This directory contains all the files prepared for the GitHub Wiki migration.
 
 ## Quick Start
 
-To complete the wiki migration, run these commands:
+### Option 1: Automated Scripts (Easiest)
 
+#### Windows Users:
+
+**PowerShell (Recommended):**
+```powershell
+cd .github-wiki-migration
+.\migrate-wiki.ps1
+```
+
+**Command Prompt:**
+```cmd
+cd .github-wiki-migration
+migrate-wiki.bat
+```
+
+#### Linux/Mac Users:
+
+```bash
+cd .github-wiki-migration
+chmod +x migrate-wiki.sh
+./migrate-wiki.sh
+```
+
+### Option 2: Manual Commands
+
+**Windows (PowerShell):**
+```powershell
+# 1. Clone the wiki repository
+git clone https://github.com/ev1ls33d/pocx-wallet.wiki.git
+cd pocx-wallet.wiki
+
+# 2. Copy all markdown files
+Copy-Item ..\*.md . -Force
+
+# 3. Commit and push
+git add .
+git commit -m "Migrate documentation from wiki/ directory with custom sidebar and footer"
+git push origin master
+```
+
+**Linux/Mac (Bash):**
 ```bash
 # 1. Clone the wiki repository
 git clone https://github.com/ev1ls33d/pocx-wallet.wiki.git
 cd pocx-wallet.wiki
 
-# 2. Copy all markdown files from this directory
-cp /path/to/pocx-wallet/.github-wiki-migration/*.md .
+# 2. Copy all markdown files
+cp ../*.md .
 
 # 3. Commit and push
 git add .

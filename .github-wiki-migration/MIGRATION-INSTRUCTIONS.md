@@ -13,18 +13,61 @@ This directory contains:
 
 Since the wiki repository requires separate authentication, please follow these steps to complete the migration:
 
-### 1. Clone the Wiki Repository
+### Option 1: Using Automated Scripts (Recommended)
 
+#### For Windows Users:
+
+**Using PowerShell (Recommended):**
+```powershell
+cd .github-wiki-migration
+.\migrate-wiki.ps1
+```
+
+**Using Command Prompt (cmd):**
+```cmd
+cd .github-wiki-migration
+migrate-wiki.bat
+```
+
+#### For Linux/Mac Users:
+
+```bash
+cd .github-wiki-migration
+chmod +x migrate-wiki.sh
+./migrate-wiki.sh
+```
+
+### Option 2: Manual Steps
+
+#### 1. Clone the Wiki Repository
+
+**Windows (Command Prompt or PowerShell):**
+```cmd
+git clone https://github.com/ev1ls33d/pocx-wallet.wiki.git
+cd pocx-wallet.wiki
+```
+
+**Linux/Mac (Bash):**
 ```bash
 git clone https://github.com/ev1ls33d/pocx-wallet.wiki.git
 cd pocx-wallet.wiki
 ```
 
-### 2. Copy All Files from This Directory
+#### 2. Copy All Files from This Directory
 
+**Windows (PowerShell):**
+```powershell
+Copy-Item ..\*.md . -Force
+```
+
+**Windows (Command Prompt):**
+```cmd
+copy ..\*.md .
+```
+
+**Linux/Mac (Bash):**
 ```bash
-# Copy all markdown files from this directory to the wiki repository root
-cp /path/to/pocx-wallet/.github-wiki-migration/*.md .
+cp ../*.md .
 ```
 
 Or manually copy these files:
@@ -38,8 +81,9 @@ Or manually copy these files:
 - _Sidebar.md
 - _Footer.md
 
-### 3. Commit and Push
+#### 3. Commit and Push
 
+**All platforms:**
 ```bash
 git add .
 git commit -m "Migrate documentation from wiki/ directory with custom sidebar and footer"
