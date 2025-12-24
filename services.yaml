@@ -76,7 +76,7 @@ services:
     
     volumes:
       - name: "data"
-        host_path_default: "./bitcoin-data"
+        host_path_default: "./bitcoin-pocx"
         container_path:  "/root/.bitcoin-pocx"
         read_only: false
         description: "Blockchain data, wallet files, and node configuration"
@@ -481,8 +481,8 @@ services:
         container_path: "/data"
         read_only: false
         description: "Electrs index database storage"
-      - name: "bitcoin-data"
-        host_path_default: "./bitcoin-data"
+      - name: "bitcoin-pocx"
+        host_path_default: "./bitcoin-pocx"
         container_path:  "/root/.bitcoin-pocx"
         read_only: true
         description: "Bitcoin node data (read-only access for .cookie and blocks)"

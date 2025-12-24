@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PocxWallet.Core\PocxWallet.Core.csproj" />
-    <ProjectReference Include="..\PocxWallet.Mining\PocxWallet.Mining.csproj" />
   </ItemGroup>
 
   <ItemGroup>
