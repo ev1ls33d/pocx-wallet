@@ -28,7 +28,9 @@ public static class WalletCommands
         _serviceConfig ??= ServiceDefinitionLoader.LoadServices();
         
         if (_serviceConfig?.Services == null)
-            return true; // Default to testnet if config not available
+            // Default to testnet for safety - mainnet transactions are irreversible and costly,
+            // so in case of configuration issues, testnet is the safer default to prevent accidental mainnet use
+            return true;
         
         // Find the node service
         var nodeService = _serviceConfig.Services.FirstOrDefault(s => 
@@ -36,7 +38,8 @@ public static class WalletCommands
             s.Id?.Equals("bitcoin-node", StringComparison.OrdinalIgnoreCase) == true);
         
         if (nodeService?.Parameters == null)
-            return true; // Default to testnet
+            // Default to testnet for safety - mainnet operations should be explicitly configured
+            return true;
         
         // Check if testnet parameter has a value set
         var testnetParam = nodeService.Parameters.FirstOrDefault(p => 
@@ -1058,8 +1061,32 @@ public static class WalletCommands
         var listDirCmd = $"bitcoin-cli {networkFlag}listwalletdir";
         var (listDirExitCode, listDirOutput) = await _execInContainerAsync(listDirCmd);
         
-        bool walletExists = listDirOutput.Contains($"\"name\": \"{walletName}\"") || 
+        // Parse wallet existence more carefully - look for exact wallet name in JSON format
+        // Match patterns: "name": "walletName" or "name":"walletName" with proper boundary checks
+        bool walletExists = false;
+        try
+        {
+            // Try to parse as JSON for more robust checking
+            using var doc = System.Text.Json.JsonDocument.Parse(listDirOutput);
+            if (doc.RootElement.TryGetProperty("wallets", out var walletsArray))
+            {
+                foreach (var walletObj in walletsArray.EnumerateArray())
+                {
+                    if (walletObj.TryGetProperty("name", out var nameElement) &&
+                        nameElement.GetString()?.Equals(walletName, StringComparison.Ordinal) == true)
+                    {
+                        walletExists = true;
+                        break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to string matching if JSON parsing fails
+            walletExists = listDirOutput.Contains($"\"name\": \"{walletName}\"") || 
                            listDirOutput.Contains($"\"name\":\"{walletName}\"");
+        }
         
         if (walletExists)
         {
@@ -1099,10 +1126,35 @@ public static class WalletCommands
         // Step 3: Import descriptor
         AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
+        // Note: -wallet flag comes after any network flags, with proper spacing
         var importCmd = $"bitcoin-cli {networkFlag}-wallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
-        if (importExitCode == 0 && (importOutput.Contains("\"success\": true") || importOutput.Contains("\"success\":true")))
+        // Parse import result using JSON for more robust checking
+        bool importSuccess = false;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(importOutput);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    if (item.TryGetProperty("success", out var successElement) &&
+                        successElement.GetBoolean())
+                    {
+                        importSuccess = true;
+                        break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to string matching if JSON parsing fails
+            importSuccess = importOutput.Contains("\"success\": true") || importOutput.Contains("\"success\":true");
+        }
+        
+        if (importExitCode == 0 && importSuccess)
         {
             AnsiConsole.MarkupLine("[green]✓[/] Descriptor imported successfully");
         }
