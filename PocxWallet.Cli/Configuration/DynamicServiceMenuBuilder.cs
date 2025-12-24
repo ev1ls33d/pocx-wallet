@@ -844,6 +844,7 @@ public class DynamicServiceMenuBuilder
         while (!back)
         {
             var choices = new List<string>();
+            var envVarCount = service.Environment?.Count ?? 0;
             
             // Add existing environment variables
             if (service.Environment != null)
@@ -898,9 +899,10 @@ public class DynamicServiceMenuBuilder
             }
             else
             {
-                // Edit existing environment variable
+                // Edit existing environment variable - index is position in choices list
+                // which matches position in Environment list since env vars are added first
                 var envIndex = choices.IndexOf(choice);
-                if (envIndex >= 0 && service.Environment != null && envIndex < service.Environment.Count)
+                if (envIndex >= 0 && envIndex < envVarCount && service.Environment != null)
                 {
                     var env = service.Environment[envIndex];
                     ShowEditEnvironmentVarMenu(service, env, showBanner);
@@ -963,7 +965,7 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private string GetEnvironmentValue(EnvironmentVariable env)
     {
-        return env.ValueOverride ?? env.Value;
+        return env.ValueOverride ?? env.Value ?? "";
     }
 
     /// <summary>
