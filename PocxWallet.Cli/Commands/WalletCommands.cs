@@ -1161,7 +1161,7 @@ public static class WalletCommands
             
             if (loadExitCode != 0 && !loadOutput.Contains("already loaded"))
             {
-                AnsiConsole.MarkupLine($"[yellow]⚠[/] Load wallet: {Markup.Escape(loadOutput)}");
+                AnsiConsole.MarkupLine($"[yellow]▲[/] Load wallet: {Markup.Escape(loadOutput)}");
             }
             else
             {
@@ -1178,7 +1178,7 @@ public static class WalletCommands
             
             if (createExitCode != 0)
             {
-                AnsiConsole.MarkupLine($"[yellow]⚠[/] Create wallet: {Markup.Escape(createOutput)}");
+                AnsiConsole.MarkupLine($"[yellow]▲[/] Create wallet: {Markup.Escape(createOutput)}");
                 // Try to proceed anyway in case wallet was created but with warning
             }
             else
@@ -1228,7 +1228,7 @@ public static class WalletCommands
         }
         else
         {
-            AnsiConsole.MarkupLine($"[yellow]⚠[/] Import result: {Markup.Escape(importOutput)}");
+            AnsiConsole.MarkupLine($"[yellow]▲[/] Import result: {Markup.Escape(importOutput)}");
         }
     }
     

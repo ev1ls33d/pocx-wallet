@@ -51,8 +51,8 @@ public static class Strings
         public const string ToggleValue = "Toggle Value";
         public const string EditValue = "Edit Value";
         public const string RemoveParameter = "[red][[Remove Parameter]][/]";
-        public const string ParameterSetFormat = "[green]✓[/] {0} set to {1}";
-        public const string ParameterRemovedFormat = "[green]✓[/] {0} removed";
+        public const string ParameterSetFormat = "[green]√[/] {0} set to {1}";
+        public const string ParameterRemovedFormat = "[green]√[/] {0} removed";
     }
 
     // ========================================
@@ -69,15 +69,15 @@ public static class Strings
         public const string Volumes = "Volumes";
         public const string Ports = "Ports";
         public const string Environment = "Environment";
-        public const string SettingUpdatedFormat = "[green]✓[/] {0} updated";
+        public const string SettingUpdatedFormat = "[green]√[/] {0} updated";
         public const string EnterValueFormat = "Enter {0}:";
         public const string NoEnvironmentVars = "[yellow]No environment variables configured for this service[/]";
         public const string AddEnvironmentVar = "[[Add Environment Variable]]";
         public const string EnterEnvVarName = "Enter environment variable name:";
         public const string EnterEnvVarValue = "Enter value for {0}:";
-        public const string EnvironmentVarAdded = "[green]✓[/] Environment variable {0} added";
+        public const string EnvironmentVarAdded = "[green]√[/] Environment variable {0} added";
         public const string RemoveEnvironmentVar = "[red][[Remove]][/]";
-        public const string EnvironmentVarRemoved = "[green]✓[/] Environment variable {0} removed";
+        public const string EnvironmentVarRemoved = "[green]√[/] Environment variable {0} removed";
         public const string UserDefinedEnvVarDescription = "User-defined environment variable";
     }
 
@@ -101,10 +101,10 @@ public static class Strings
     {
         public const string StartingFormat = "[bold]Starting {0}...[/]";
         public const string StoppingFormat = "[bold]Stopping {0}...[/]";
-        public const string StartedSuccessFormat = "[green]✓[/] {0} started successfully";
-        public const string StartFailedFormat = "[red]✗[/] Failed to start {0}";
-        public const string StoppedSuccessFormat = "[green]✓[/] {0} stopped successfully";
-        public const string MayNotBeRunningFormat = "[yellow]⚠[/] {0} may not have been running";
+        public const string StartedSuccessFormat = "[green]√[/] {0} started successfully";
+        public const string StartFailedFormat = "[red]‼[/] Failed to start {0}";
+        public const string StoppedSuccessFormat = "[green]√[/] {0} stopped successfully";
+        public const string MayNotBeRunningFormat = "[yellow]▲[/] {0} may not have been running";
         public const string CreatedDirectoryFormat = "[dim]Created directory: {0}[/]";
         public const string CouldNotCreatePathFormat = "[yellow]Warning: Could not create path {0}: {1}[/]";
     }
@@ -154,15 +154,15 @@ public static class Strings
         public const string EnterFilePath = "Enter file path:";
         public const string EnterWalletName = "Enter wallet name:";
         public const string WalletNameExists = "[yellow]Wallet name '{0}' already exists. Please enter a different name.[/]";
-        public const string WalletCreated = "[green]✓[/] Wallet '{0}' created successfully!";
-        public const string WalletSaved = "[green]✓[/] Wallet saved to: {0}";
+        public const string WalletCreated = "[green]√[/] Wallet '{0}' created successfully!";
+        public const string WalletSaved = "[green]√[/] Wallet saved to: {0}";
         public const string MnemonicWarning = "[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]";
         public const string ImportToNodePrompt = "Import wallet to Bitcoin node?";
         
         // Import from mnemonic
         public const string EnterMnemonicPrompt = "Enter your [green]mnemonic phrase[/] (12 or 24 words):";
         public const string InvalidMnemonic = "[red]Invalid mnemonic phrase[/]";
-        public const string WalletRestoredSuccess = "[green]✓[/] Wallet restored successfully!";
+        public const string WalletRestoredSuccess = "[green]√[/] Wallet restored successfully!";
         
         // Random wallet creation
         public const string CreatingRandomWallet = "[bold green]Creating new HD wallet with random mnemonic...[/]";
@@ -176,18 +176,18 @@ public static class Strings
         public const string VanityGenerateTestnet = "Generate for [green]testnet[/]?";
         public const string VanitySearching = "[green]Searching for vanity address...[/]";
         public const string VanitySearchingFormat = "[green]Searching... ({0:N0} attempts)[/]";
-        public const string VanityFound = "[green]✓[/] Vanity address found!";
+        public const string VanityFound = "[green]√[/] Vanity address found!";
         public const string VanityCancelled = "[yellow]Operation cancelled[/]";
         public const string VanityNoResult = "[yellow]No result produced.[/]";
         
         // Switch/Select submenu
         public const string NoWalletsAvailable = "[yellow]No wallets available. Create a wallet first.[/]";
-        public const string SwitchedTo = "[green]✓[/] Switched to wallet: {0}";
-        public const string SwitchFailed = "[red]✗[/] Failed to switch wallet";
+        public const string SwitchedTo = "[green]√[/] Switched to wallet: {0}";
+        public const string SwitchFailed = "[red]‼[/] Failed to switch wallet";
         
         // Remove submenu  
         public const string ConfirmRemove = "Are you sure you want to remove wallet '{0}'?";
-        public const string WalletRemoved = "[green]✓[/] Wallet '{0}' removed";
+        public const string WalletRemoved = "[green]√[/] Wallet '{0}' removed";
         public const string UnloadFromNode = "Also unload wallet from Bitcoin node?";
         public const string UnloadNotImplemented = "[dim]Node wallet unload - use command: bitcoin-cli unloadwallet \"{0}\"[/]";
         
@@ -195,8 +195,8 @@ public static class Strings
         public const string ExecuteOnNodePrompt = "Execute on running node?";
         public const string NodeNotRunningStartPrompt = "Node is not running. Would you like to start it?";
         public const string StartingBitcoinNode = "[dim]Starting Bitcoin node...[/]";
-        public const string NodeStartedSuccess = "[green]✓[/] Node started successfully";
-        public const string NodeStartFailed = "[red]✗[/] Failed to start node. Skipping import.[/]";
+        public const string NodeStartedSuccess = "[green]√[/] Node started successfully";
+        public const string NodeStartFailed = "[red]‼[/] Failed to start node. Skipping import.[/]";
         public const string NodeStartNotAvailable = "[yellow]Node start function not available. Skipping import.[/]";
         public const string WaitingForNodeInit = "[dim]Waiting for node to initialize...[/]";
         public const string SkippingImport = "[yellow]Skipping import to node.[/]";
@@ -207,12 +207,12 @@ public static class Strings
         public const string DetectedNetworkFormat = "[dim]Detected network mode: {0} (from node parameters)[/]";
         public const string CheckingWalletExists = "[dim]Checking if wallet exists...[/]";
         public const string WalletFoundLoading = "[dim]Wallet '{0}' found in walletdir. Loading...[/]";
-        public const string WalletLoaded = "[green]✓[/] Wallet loaded";
+        public const string WalletLoaded = "[green]√[/] Wallet loaded";
         public const string CreatingDescriptorWallet = "[dim]Creating new descriptor wallet on node...[/]";
-        public const string WalletCreatedOnNode = "[green]✓[/] Wallet created on node";
+        public const string WalletCreatedOnNode = "[green]√[/] Wallet created on node";
         public const string ImportingDescriptor = "[dim]Importing descriptor...[/]";
-        public const string DescriptorImportSuccess = "[green]✓[/] Descriptor imported successfully";
-        public const string DescriptorAlreadyImported = "[green]✓[/] Descriptor was already imported";
+        public const string DescriptorImportSuccess = "[green]√[/] Descriptor imported successfully";
+        public const string DescriptorAlreadyImported = "[green]√[/] Descriptor was already imported";
         
         // Info submenu
         public const string InfoMenuTitle = "[bold green]Wallet Info[/]";
@@ -247,8 +247,8 @@ public static class Strings
         public const string CommandShowFormat = "[dim]docker exec {0} {1}[/]";
         public const string ExecutingCommand = "[dim]Executing: {0}[/]";
         public const string OutputHeader = "[bold]Output:[/]";
-        public const string CommandSuccess = "[green]✓[/] Command completed successfully";
-        public const string CommandExitCodeFormat = "[yellow]⚠[/] Command exited with code {0}";
+        public const string CommandSuccess = "[green]√[/] Command completed successfully";
+        public const string CommandExitCodeFormat = "[yellow]▲[/] Command exited with code {0}";
         public const string LastLogLinesHeader = "[bold]Last 10 log lines:[/]";
         
         // Wallet info display
@@ -266,9 +266,9 @@ public static class Strings
         public const string StartupWalletLabel = "Startup Wallet";
         public const string AutoImportLabel = "Auto-Import to Node";
         public const string SelectStartupWallet = "Select startup wallet:";
-        public const string SettingUpdated = "[green]✓[/] Setting updated";
-        public const string AutoSaveToggled = "[green]✓[/] Auto-save is now {0}";
-        public const string AutoImportToggled = "[green]✓[/] Auto-import is now {0}";
+        public const string SettingUpdated = "[green]√[/] Setting updated";
+        public const string AutoSaveToggled = "[green]√[/] Auto-save is now {0}";
+        public const string AutoImportToggled = "[green]√[/] Auto-import is now {0}";
         public const string NoneOption = "(none)";
         public const string EnabledLabel = "enabled";
         public const string DisabledLabel = "disabled";
@@ -312,9 +312,9 @@ public static class Strings
         public const string HandlerReferenceFormat = "[dim]Handler reference: {0}[/]";
         public const string ExecutingFormat = "[dim]Executing: {0}[/]";
         public const string OutputHeader = "[bold]Output:[/]";
-        public const string CommandSuccess = "[green]✓[/] Command completed successfully";
-        public const string CommandExitCodeFormat = "[yellow]⚠[/] Command exited with code {0}";
-        public const string CommandErrorFormat = "[red]✗[/] Error executing command: {0}";
+        public const string CommandSuccess = "[green]√[/] Command completed successfully";
+        public const string CommandExitCodeFormat = "[yellow]▲[/] Command exited with code {0}";
+        public const string CommandErrorFormat = "[red]‼[/] Error executing command: {0}";
         public const string NoWalletLoaded = "No wallet loaded. Please create or restore a wallet first.";
         public const string MissingInputFormat = "Missing required input: {0}";
         public const string UnknownMacroFormat = "Unknown macro: {0}";
