@@ -37,12 +37,13 @@ services:
       image: "bitcoin"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "BitcoinContainerName"
+      container_name_default: "pocx-node"
       working_dir: "/root"
       entrypoint: null
+      binary: "bitcoind"
       
     source: 
-      repository: "https://github.com/PoC-Consortium/bitcoin. git"
+      repository: "https://github.com/PoC-Consortium/bitcoin.git"
       branch: "pocx-v30-RC3"
       build_command: "cmake -B build && cmake --build build"
       binary_paths:
@@ -52,34 +53,34 @@ services:
     ports:
       - name: "rpc"
         container_port: 18332
-        host_port_setting: "BitcoinNode. RpcPort"
+        host_port_default: 18332
         description: "JSON-RPC API port for wallet and mining communication"
         protocol: "tcp"
       - name: "p2p"
         container_port: 18333
-        host_port_setting:  "BitcoinNode.P2PPort"
+        host_port_default: 18333
         description:  "P2P network port for node communication"
         protocol:  "tcp"
       - name: "zmq-block"
         container_port: 28332
-        host_port_setting: "BitcoinNode. ZmqBlockPort"
+        host_port_default: 28332
         description:  "ZeroMQ block notification port"
         protocol: "tcp"
         optional: true
       - name: "zmq-tx"
         container_port: 28333
-        host_port_setting:  "BitcoinNode.ZmqTxPort"
+        host_port_default: 28333
         description: "ZeroMQ transaction notification port"
         protocol:  "tcp"
         optional: true
     
     volumes:
       - name: "data"
-        host_path_setting: "BitcoinNode. DataDirectory"
-        container_path:  "/root/.bitcoin"
+        host_path_default: "./bitcoin-pocx"
+        container_path:  "/root/.bitcoin-pocx"
         read_only: false
         description: "Blockchain data, wallet files, and node configuration"
-    
+
     environment:  []
     
     # All available CLI parameters from bitcoind --help
@@ -381,23 +382,17 @@ services:
       start_period_seconds:  60
     
     menu: 
-      main_menu_order: 4
+      main_menu_order: 1
       submenu: 
         - action:  "toggle"
           label_running: "Stop Node"
           label_stopped: "Start Node"
-        - action: "custom"
-          id:  "import_wallet"
-          label:  "Import Wallet from File"
-          handler: "WalletCommands.ImportWalletFromFileAsync"
-        - action: "custom"
-          id:  "get_blockchain_info"
-          label: "Get Blockchain Info"
-          handler: "NodeCommands.GetBlockchainInfoAsync"
         - action: "logs"
           label:  "View Logs"
+        - action: "parameters"
+          label:  "Parameters"
         - action: "settings"
-          label:  "Node Settings"
+          label:  "Settings"
     
     settings:
       - key: "Repository"
@@ -416,7 +411,7 @@ services:
           min: 1024
           max: 65535
       - key: "P2P Port"
-        setting_path: "BitcoinNode. P2PPort"
+        setting_path: "BitcoinNode.P2PPort"
         type: "int"
         category: "network"
         validation:
@@ -446,8 +441,9 @@ services:
       image: "electrs"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag:  "latest"
-      container_name_setting: "ElectrsContainerName"
+      container_name_default: "pocx-electrs"
       working_dir: "/data"
+      binary: "electrs"
       
     source:
       repository: "https://github.com/PoC-Consortium/electrs-pocx.git"
@@ -459,37 +455,37 @@ services:
     ports: 
       - name: "http"
         container_port: 3000
-        host_port_setting: "Electrs.HttpPort"
+        host_port_default: 3000
         description: "HTTP REST API for blockchain queries"
         protocol: "tcp"
       - name: "electrum-rpc"
         container_port: 50001
-        host_port_setting: "Electrs.RpcPort"
+        host_port_default: 50001
         description: "Electrum protocol RPC port (mainnet)"
         protocol: "tcp"
       - name: "electrum-testnet"
         container_port: 60001
-        host_port_setting: "Electrs.TestnetPort"
+        host_port_default: 60001
         description: "Electrum protocol RPC port (testnet)"
         protocol: "tcp"
       - name: "monitoring"
         container_port: 4224
-        host_port_setting: "Electrs.MonitoringPort"
+        host_port_default: 4224
         description: "Prometheus metrics endpoint"
         protocol: "tcp"
         optional: true
     
     volumes: 
       - name: "data"
-        host_path_setting:  "Electrs. DataDirectory"
+        host_path_default: "./electrs-data"
         container_path: "/data"
         read_only: false
         description: "Electrs index database storage"
-      - name: "bitcoin-data"
-        host_path_setting:  "BitcoinNode.DataDirectory"
-        container_path:  "/root/.bitcoin"
+      - name: "bitcoin-pocx"
+        host_path_default: "./bitcoin-pocx"
+        container_path:  "/root/.bitcoin-pocx"
         read_only: true
-        description: "Bitcoin node data (read-only access for . cookie and blocks)"
+        description: "Bitcoin node data (read-only access for .cookie and blocks)"
     
     environment: []
     
@@ -661,14 +657,12 @@ services:
         - action: "toggle"
           label_running:  "Stop Electrs"
           label_stopped: "Start Electrs"
-        - action: "custom"
-          id:  "check_sync"
-          label:  "Check Sync Status"
-          handler:  "ElectrsCommands.CheckSyncStatusAsync"
         - action: "logs"
           label:  "View Logs"
+        - action: "parameters"
+          label: "Parameters"
         - action:  "settings"
-          label: "Electrs Settings"
+          label: "Settings"
     
     settings:
       - key: "Repository"
@@ -692,7 +686,7 @@ services:
         type:  "int"
         category: "network"
       - key:  "Data Directory"
-        setting_path:  "Electrs. DataDirectory"
+        setting_path:  "Electrs.DataDirectory"
         type: "path"
         category: "storage"
       - key: "Additional Parameters"
@@ -714,9 +708,9 @@ services:
       image:  "pocx"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "AggregatorContainerName"
+      container_name_default: "pocx-aggregator"
       working_dir: "/config"
-      command: "pocx_aggregator"
+      binary: "pocx_aggregator"
       
     source:
       repository:  "https://github.com/PoC-Consortium/pocx. git"
@@ -728,25 +722,25 @@ services:
     ports:
       - name: "api"
         container_port: 8080
-        host_port_setting: "Aggregator.ApiPort"
+        host_port_default: 8080
         description: "Mining API port for downstream miners"
         protocol:  "tcp"
       - name: "dashboard"
         container_port: 8081
-        host_port_setting: "Aggregator.DashboardPort"
+        host_port_default: 8081
         description: "Web dashboard port"
         protocol: "tcp"
         optional: true
     
     volumes:
       - name: "config"
-        host_path_setting: "Aggregator.ConfigPath"
+        host_path_default: "./aggregator_config.yaml"
         container_path: "/config/aggregator_config.yaml"
         read_only: true
         description: "Aggregator configuration file"
         is_file: true
       - name: "data"
-        host_path_setting: "Aggregator.DataDirectory"
+        host_path_default: "./aggregator-data"
         container_path: "/data"
         read_only: false
         description: "Database and log storage"
@@ -879,23 +873,17 @@ services:
       start_period_seconds: 10
     
     menu:
-      main_menu_order: 3
+      main_menu_order: 4
       submenu: 
         - action:  "toggle"
           label_running: "Stop Aggregator"
           label_stopped: "Start Aggregator"
-        - action: "custom"
-          id: "create_config"
-          label:  "Create Aggregator Config"
-          handler:  "AggregatorCommands.CreateConfigAsync"
-        - action:  "custom"
-          id: "show_stats"
-          label:  "Show Statistics"
-          handler: "AggregatorCommands.ShowStatsAsync"
         - action: "logs"
           label: "View Logs"
+        - action: "parameters"
+          label: "Parameters"
         - action: "settings"
-          label:  "Aggregator Settings"
+          label:  "Settings"
     
     settings:
       - key: "Repository"
@@ -943,9 +931,9 @@ services:
       image:  "pocx"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "MinerContainerName"
+      container_name_default: "pocx-miner"
       working_dir: "/config"
-      command: "pocx_miner"
+      binary: "pocx_miner"
       
     source:
       repository:  "https://github.com/PoC-Consortium/pocx.git"
@@ -958,12 +946,12 @@ services:
     
     volumes:
       - name: "plots"
-        host_path_setting: "PlotDirectory"
+        host_path_default: "./plots"
         container_path: "/plots"
         read_only: true
         description: "Directory containing plot files"
       - name: "config"
-        host_path_setting: "MinerConfigPath"
+        host_path_default: "./config.yaml"
         container_path: "/config/config.yaml"
         read_only: true
         description: "Miner configuration file"
@@ -1141,19 +1129,17 @@ services:
       start_period_seconds:  10
     
     menu:
-      main_menu_order: 2
+      main_menu_order: 3
       submenu: 
         - action:  "toggle"
           label_running: "Stop Miner"
           label_stopped: "Start Miner"
-        - action: "custom"
-          id: "create_config"
-          label: "Create Miner Config"
-          handler: "MiningCommands. CreateMinerConfig"
         - action: "logs"
           label:  "View Logs"
+        - action: "parameters"
+          label: "Parameters"
         - action:  "settings"
-          label: "Miner Settings"
+          label: "Settings"
     
     settings: 
       - key: "Repository"
@@ -1198,9 +1184,9 @@ services:
       image:  "pocx"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "PlotterContainerName"
+      container_name_default: "pocx-plotter"
       working_dir: "/plots"
-      command:  "pocx_plotter"
+      binary: "pocx_plotter"
       
     source:
       repository: "https://github.com/PoC-Consortium/pocx.git"
@@ -1213,7 +1199,7 @@ services:
     
     volumes: 
       - name:  "plots"
-        host_path_setting: "PlotDirectory"
+        host_path_default: "./plots"
         container_path: "/plots"
         read_only: false
         description: "Output directory for generated plot files"
@@ -1388,19 +1374,17 @@ services:
       start_period_seconds: 5
     
     menu:
-      main_menu_order: 1
+      main_menu_order: 2
       submenu: 
         - action:  "toggle"
           label_running: "Stop Plotter"
           label_stopped: "Start Plotter"
-        - action: "custom"
-          id: "create_plot"
-          label:  "Create New Plot"
-          handler: "PlottingCommands.CreatePlotAsync"
         - action: "logs"
           label: "View Logs"
+        - action: "parameters"
+          label: "Parameters"
         - action: "settings"
-          label: "Plotter Settings"
+          label: "Settings"
     
     settings: 
       - key:  "Repository"
@@ -1412,7 +1396,7 @@ services:
         type:  "string"
         category: "container"
       - key:  "Default Warps"
-        setting_path:  "Plotter. DefaultWarps"
+        setting_path:  "Plotter.DefaultWarps"
         type: "int"
         category:  "plotting"
         validation: 
@@ -1449,9 +1433,9 @@ services:
       image: "pocx"
       repository:  "ghcr. io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting:  "VerifierContainerName"
+      container_name_default: "pocx-verifier"
       working_dir: "/plots"
-      command:  "pocx_verifier"
+      binary: "pocx_verifier"
       
     source:
       repository: "https://github.com/PoC-Consortium/pocx.git"
@@ -1462,7 +1446,7 @@ services:
     
     volumes: 
       - name:  "plots"
-        host_path_setting: "PlotDirectory"
+        host_path_default: "./plots"
         container_path: "/plots"
         read_only: true
     
@@ -1507,11 +1491,7 @@ services:
     
     menu:
       main_menu_order: 0
-      submenu: 
-        - action:  "custom"
-          id:  "verify_plot"
-          label: "Verify Plot File"
-          handler:  "PlottingCommands. VerifyPlotAsync"
+      submenu: []
 
 # ============================================================================
 # CATEGORY DEFINITIONS

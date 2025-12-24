@@ -167,7 +167,8 @@ public class DockerServiceManager
         Dictionary<int, int>? portMappings = null,
         string? command = null,
         string? network = null,
-        List<string>? readOnlyVolumes = null)
+        List<string>? readOnlyVolumes = null,
+        bool gpuPassthrough = false)
     {
         var fullImageName = $"{repository}/{imageName}:{imageTag}";
         
@@ -178,6 +179,13 @@ public class DockerServiceManager
 
         // Build docker run command
         var args = new List<string> { "run", "-dit", "--name", containerName };
+
+        // Add GPU passthrough if enabled (requires nvidia-docker runtime)
+        if (gpuPassthrough)
+        {
+            args.Add("--gpus");
+            args.Add("all");
+        }
 
         // Add network if specified
         if (!string.IsNullOrWhiteSpace(network))
@@ -414,13 +422,77 @@ public class DockerServiceManager
         string command)
     {
         ValidateContainerName(containerName);
-        return await ExecuteCommandAsync("docker", $"exec {containerName} {command}");
+        // Split command but respect quoted strings to preserve JSON arguments with spaces
+        var arguments = SplitCommandLineArguments(command);
+        var fullArgs = new string[] { "exec", containerName }.Concat(arguments).ToArray();
+        return await ExecuteCommandAsync("docker", fullArgs);
     }
 
     /// <summary>
-    /// Execute a shell command
+    /// Split command line arguments while respecting quoted strings
+    /// This handles cases like: bitcoin-cli importdescriptors '[{"desc": "...", "timestamp": "now"}]'
+    /// Also handles escaped quotes with backslash
     /// </summary>
-    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments, bool suppressOutput = false)
+    private static string[] SplitCommandLineArguments(string commandLine)
+    {
+        var args = new List<string>();
+        var inSingleQuote = false;
+        var inDoubleQuote = false;
+        var current = new System.Text.StringBuilder();
+        var escapeNext = false;
+
+        foreach (char c in commandLine)
+        {
+            if (escapeNext)
+            {
+                current.Append(c);
+                escapeNext = false;
+                continue;
+            }
+
+            if (c == '\\')
+            {
+                escapeNext = true;
+                // Don't append the backslash here - let the next iteration decide
+                continue;
+            }
+
+            if (c == '\'' && !inDoubleQuote)
+            {
+                inSingleQuote = !inSingleQuote;
+                // Don't append the quote - ArgumentList will handle escaping
+            }
+            else if (c == '"' && !inSingleQuote)
+            {
+                inDoubleQuote = !inDoubleQuote;
+                // Don't append the quote - ArgumentList will handle escaping
+            }
+            else if (c == ' ' && !inSingleQuote && !inDoubleQuote)
+            {
+                if (current.Length > 0)
+                {
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            args.Add(current.ToString());
+        }
+
+        return args.ToArray();
+    }
+
+    /// <summary>
+    /// Execute a shell command with string[] arguments (preserves arguments with spaces)
+    /// </summary>
+    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string[] arguments, bool suppressOutput = false)
     {
         var psi = new ProcessStartInfo
         {
@@ -431,18 +503,34 @@ public class DockerServiceManager
             CreateNoWindow = true
         };
 
-        foreach (var a in arguments.Split())
-            psi.ArgumentList.Add(a);
+        foreach (var arg in arguments)
+            psi.ArgumentList.Add(arg);
 
         using var process = new Process { StartInfo = psi };
         process.Start();
 
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
+        // Read stdout and stderr in parallel to avoid potential deadlocks
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
         
         await process.WaitForExitAsync();
+        
+        var output = await outputTask;
+        var error = await errorTask;
 
-        return (process.ExitCode, string.IsNullOrWhiteSpace(error) ? output : error);
+        // Combine output and error for better debugging
+        var combinedOutput = string.IsNullOrWhiteSpace(error) ? output : $"{output}\n{error}".Trim();
+
+        return (process.ExitCode, combinedOutput);
+    }
+
+    /// <summary>
+    /// Execute a shell command (legacy overload - splits by space, use string[] overload for complex arguments)
+    /// </summary>
+    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments, bool suppressOutput = false)
+    {
+        // For simple commands, split by space
+        return await ExecuteCommandAsync(command, arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries), suppressOutput);
     }
 
     public class ContainerInfo
