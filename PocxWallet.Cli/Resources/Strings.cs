@@ -105,13 +105,67 @@ public static class Strings
     // ========================================
     public static class WalletMenu
     {
+        public const string TitleFormat = "[bold green]Wallet Management[/] - [cyan]{0}[/]";
+        public const string TitleNoWallet = "[bold green]Wallet Management[/] - [dim](no wallet)[/]";
+        
+        // Main wallet menu
+        public const string Create = "Create";
+        public const string Switch = "Switch";
+        public const string Remove = "Remove";
+        public const string Info = "Info";
+        public const string Transaction = "Transaction";
+        
+        // Create submenu
+        public const string RandomAddress = "Random Address";
+        public const string VanityAddress = "Vanity Address";
+        
+        // Create workflow prompts
+        public const string EnterPassphrase = "Enter passphrase (optional, leave empty for none):";
+        public const string SaveWalletPrompt = "Save wallet to file?";
+        public const string EnterFilePath = "Enter file path:";
+        public const string EnterWalletName = "Enter wallet name:";
+        public const string WalletNameExists = "[yellow]Wallet name '{0}' already exists. Please enter a different name.[/]";
+        public const string WalletCreated = "[green]✓[/] Wallet '{0}' created successfully!";
+        public const string WalletSaved = "[green]✓[/] Wallet saved to: {0}";
+        public const string MnemonicWarning = "[bold red]▲ IMPORTANT: Save your mnemonic phrase in a secure location![/]";
+        
+        // Switch submenu
+        public const string NoWalletsAvailable = "[yellow]No wallets available. Create a wallet first.[/]";
+        public const string SwitchedTo = "[green]✓[/] Switched to wallet: {0}";
+        public const string SwitchFailed = "[red]✗[/] Failed to switch wallet";
+        
+        // Remove submenu  
+        public const string ConfirmRemove = "Are you sure you want to remove wallet '{0}'?";
+        public const string WalletRemoved = "[green]✓[/] Wallet '{0}' removed";
+        public const string UnloadFromNode = "Also unload wallet from Bitcoin node?";
+        public const string UnloadNotImplemented = "[dim]Node wallet unload - use command: bitcoin-cli unloadwallet \"{0}\"[/]";
+        
+        // Info submenu
+        public const string CheckBalance = "Check Balance";
+        public const string ShowAddresses = "Show Addresses";
+        public const string ShowLabels = "Show Labels";
+        public const string TransactionHistory = "Transaction History";
+        public const string GetBlockchainInfo = "Get Blockchain Info";
+        public const string ListUnspent = "List Unspent";
+        public const string GetWalletInfo = "Get Wallet Info";
+        
+        // Transaction submenu
+        public const string SendFunds = "Send Funds";
+        public const string CreateTransaction = "Create Transaction";
+        public const string SignTransaction = "Sign Transaction";
+        public const string BroadcastTransaction = "Broadcast Transaction";
+        public const string CreatePSBT = "Create PSBT";
+        public const string DecodePSBT = "Decode PSBT";
+        
+        // Command templates (stubs)
+        public const string CommandTemplateHeader = "[bold]Command Template:[/]";
+        public const string CommandTemplateFormat = "[dim]{0}[/]";
+        public const string CopyPasteNote = "[dim]Copy and paste this command to execute manually.[/]";
+        
+        // Legacy compatibility
         public const string Title = "[bold green]Wallet Management[/]";
         public const string CreateNewWallet = "Create New Wallet";
         public const string RestoreFromMnemonic = "Restore Wallet from Mnemonic";
-        public const string ShowAddresses = "Show Addresses";
-        public const string CheckBalance = "Check Balance";
-        public const string SendFunds = "Send Funds";
-        public const string TransactionHistory = "Transaction History";
     }
 
     // ========================================

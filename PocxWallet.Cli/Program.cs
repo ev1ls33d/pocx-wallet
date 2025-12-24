@@ -18,7 +18,6 @@ class Program
 
     // Constants for hardcoded menu items
     private static string MenuWallet = $"{Markup.Escape(Strings.MainMenu.WalletLabel).PadRight(15)} {Strings.MainMenu.WalletDescription}";
-    private static string MenuVanity = $"{Markup.Escape(Strings.MainMenu.VanityLabel).PadRight(15)} {Strings.MainMenu.VanityDescription}";
     private static string MenuExit   = $"{Markup.Escape(Strings.MainMenu.ExitLabel).PadRight(15)} {Strings.MainMenu.ExitDescription}";
 
     private static DockerServiceManager GetDockerManager()
@@ -70,9 +69,8 @@ class Program
             // Build dynamic main menu choices
             var menuChoices = new List<string>();
             
-            // Add hardcoded items first (Wallet and Vanity)
+            // Add hardcoded items first (Wallet only - Vanity is now inside Wallet -> Create)
             menuChoices.Add(MenuWallet);
-            menuChoices.Add(MenuVanity);
             
             // Add dynamic services from services.yaml (sorted by menu order)
             var serviceStatusMap = new Dictionary<string, string>();
@@ -100,13 +98,7 @@ class Program
             // Handle menu choice
             if (choice == MenuWallet)
             {
-                await ShowWalletMenuAsync();
-            }
-            else if (choice == MenuVanity)
-            {
-                await VanityCommands.GenerateVanityAddressAsync();
-                AnsiConsole.MarkupLine(Strings.Common.PressEnterToReturn);
-                Console.ReadLine();
+                await WalletCommands.ShowWalletMenuAsync(ShowBanner);
             }
             else if (choice == MenuExit)
             {
@@ -144,55 +136,6 @@ class Program
 
         // Stop all background services on exit
         BackgroundServiceManager.StopAllServices();
-    }
-
-    /// <summary>
-    /// Show wallet management submenu
-    /// </summary>
-    static async Task ShowWalletMenuAsync()
-    {
-        var choices = new[]
-        {
-            Strings.WalletMenu.CreateNewWallet,
-            Strings.WalletMenu.RestoreFromMnemonic,
-            Strings.WalletMenu.ShowAddresses,
-            Strings.WalletMenu.CheckBalance,
-            Strings.WalletMenu.SendFunds,
-            Strings.WalletMenu.TransactionHistory,
-            Strings.ServiceMenu.Back
-        };
-
-        var choice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title(Strings.WalletMenu.Title)
-                .PageSize(10)
-                .AddChoices(choices)
-        );
-
-        AnsiConsole.Clear();
-        ShowBanner();
-
-        switch (choice)
-        {
-            case var c when c == Strings.WalletMenu.CreateNewWallet:
-                await WalletCommands.CreateNewWallet();
-                break;
-            case var c when c == Strings.WalletMenu.RestoreFromMnemonic:
-                await WalletCommands.RestoreWallet();
-                break;
-            case var c when c == Strings.WalletMenu.ShowAddresses:
-                WalletCommands.ShowAddresses();
-                break;
-            case var c when c == Strings.WalletMenu.CheckBalance:
-                await TransactionCommands.CheckBalance();
-                break;
-            case var c when c == Strings.WalletMenu.SendFunds:
-                await TransactionCommands.SendFunds();
-                break;
-            case var c when c == Strings.WalletMenu.TransactionHistory:
-                await TransactionCommands.ShowTransactionHistory();
-                break;
-        }
     }
 
     static void ShowBanner()
