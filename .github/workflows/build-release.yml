@@ -110,10 +110,12 @@ jobs:
           name: pocxwallet-win-x64
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: PoCX Wallet v${{ needs.build-linux.outputs.version }}
           files: |
             pocxwallet-${{ needs.build-linux.outputs.version }}-linux-x64.tar.gz
             pocxwallet-${{ needs.build-linux.outputs.version }}-win-x64.zip
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
