@@ -799,21 +799,25 @@ public static class WalletCommands
         AnsiConsole.Clear();
         showBanner();
         
-        // Build command based on selection
+        // Check if testnet is active and build network flag
+        var isTestnet = IsNodeTestnet();
+        var networkFlag = isTestnet ? "-testnet " : "";
+        
+        // Build command based on selection (all commands are now testnet-aware)
         string command = choice switch
         {
             var c when c == Strings.WalletMenu.CheckBalance => 
-                $"bitcoin-cli -rpcwallet={walletName} getbalance",
+                $"bitcoin-cli {networkFlag}-rpcwallet={walletName} getbalance",
             var c when c == Strings.WalletMenu.ShowAddresses => 
-                $"bitcoin-cli -rpcwallet={walletName} listreceivedbyaddress 0 true",
+                $"bitcoin-cli {networkFlag}-rpcwallet={walletName} listreceivedbyaddress 0 true",
             var c when c == Strings.WalletMenu.ListUnspent => 
-                $"bitcoin-cli -rpcwallet={walletName} listunspent",
+                $"bitcoin-cli {networkFlag}-rpcwallet={walletName} listunspent",
             var c when c == Strings.WalletMenu.GetWalletInfo => 
-                $"bitcoin-cli -rpcwallet={walletName} getwalletinfo",
+                $"bitcoin-cli {networkFlag}-rpcwallet={walletName} getwalletinfo",
             var c when c == Strings.WalletMenu.GetBlockchainInfo => 
-                "bitcoin-cli getblockchaininfo",
+                $"bitcoin-cli {networkFlag}getblockchaininfo",
             var c when c == Strings.WalletMenu.TransactionHistory => 
-                $"bitcoin-cli -rpcwallet={walletName} listtransactions \"*\" 10",
+                $"bitcoin-cli {networkFlag}-rpcwallet={walletName} listtransactions \"*\" 10",
             _ => ""
         };
         
@@ -825,7 +829,7 @@ public static class WalletCommands
     }
     
     /// <summary>
-    /// Shows the Transaction submenu with bitcoin-cli command stubs
+    /// Shows the Transaction submenu with bitcoin-cli commands (testnet-aware with node execution)
     /// </summary>
     private static async Task ShowTransactionMenuAsync(Action showBanner)
     {
@@ -857,26 +861,56 @@ public static class WalletCommands
         AnsiConsole.Clear();
         showBanner();
         
-        // Build command based on selection (these are templates that need user input)
-        string command = choice switch
-        {
-            var c when c == Strings.WalletMenu.SendFunds => 
-                $"bitcoin-cli -rpcwallet={walletName} sendtoaddress \"<address>\" <amount>",
-            var c when c == Strings.WalletMenu.CreateTransaction => 
-                $"bitcoin-cli -rpcwallet={walletName} createrawtransaction '[{{\"txid\":\"...\",\"vout\":0}}]' '{{\"<address>\":<amount>}}'",
-            var c when c == Strings.WalletMenu.SignTransaction => 
-                $"bitcoin-cli -rpcwallet={walletName} signrawtransactionwithwallet \"<hex>\"",
-            var c when c == Strings.WalletMenu.BroadcastTransaction => 
-                "bitcoin-cli sendrawtransaction \"<hex>\"",
-            var c when c == Strings.WalletMenu.CreatePSBT => 
-                $"bitcoin-cli -rpcwallet={walletName} walletcreatefundedpsbt '[]' '{{\"<address>\":<amount>}}'",
-            var c when c == Strings.WalletMenu.DecodePSBT => 
-                "bitcoin-cli decodepsbt \"<psbt>\"",
-            _ => ""
-        };
+        // Check if testnet is active and build network flag
+        var isTestnet = IsNodeTestnet();
+        var networkFlag = isTestnet ? "-testnet " : "";
         
-        // Transaction commands are templates - show copy/paste for now
-        ShowCommandTemplate(choice, $"docker exec <container> {command}");
+        // Transaction commands require user input - prompt for parameters based on command type
+        string command = "";
+        
+        switch (choice)
+        {
+            case var c when c == Strings.WalletMenu.SendFunds:
+                var address = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterDestinationAddress);
+                var amount = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterAmount);
+                command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} sendtoaddress \"{address}\" {amount}";
+                break;
+                
+            case var c when c == Strings.WalletMenu.CreateTransaction:
+                // Show template since this requires complex JSON input
+                ShowCommandTemplate(choice, $"docker exec <container> bitcoin-cli {networkFlag}-rpcwallet={walletName} createrawtransaction '[{{\"txid\":\"...\",\"vout\":0}}]' '{{\"<address>\":<amount>}}'");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+                Console.ReadLine();
+                return;
+                
+            case var c when c == Strings.WalletMenu.SignTransaction:
+                var hexToSign = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterTransactionHex);
+                command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} signrawtransactionwithwallet \"{hexToSign}\"";
+                break;
+                
+            case var c when c == Strings.WalletMenu.BroadcastTransaction:
+                var hexToBroadcast = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterSignedTransactionHex);
+                command = $"bitcoin-cli {networkFlag}sendrawtransaction \"{hexToBroadcast}\"";
+                break;
+                
+            case var c when c == Strings.WalletMenu.CreatePSBT:
+                var psbtAddress = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterDestinationAddress);
+                var psbtAmount = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterAmount);
+                command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} walletcreatefundedpsbt '[]' '{{" +
+                    $"\"{psbtAddress}\":{psbtAmount}}}'";
+                break;
+                
+            case var c when c == Strings.WalletMenu.DecodePSBT:
+                var psbtToDecode = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterPSBT);
+                command = $"bitcoin-cli {networkFlag}decodepsbt \"{psbtToDecode}\"";
+                break;
+        }
+        
+        if (!string.IsNullOrEmpty(command))
+        {
+            await ExecuteNodeCommandAsync(command);
+        }
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);

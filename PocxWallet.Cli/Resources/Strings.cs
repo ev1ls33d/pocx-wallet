@@ -224,6 +224,13 @@ public static class Strings
         public const string CreatePSBT = "Create PSBT";
         public const string DecodePSBT = "Decode PSBT";
         
+        // Transaction input prompts
+        public const string EnterDestinationAddress = "Enter destination [green]address[/]:";
+        public const string EnterAmount = "Enter [green]amount[/] (in BTC):";
+        public const string EnterTransactionHex = "Enter raw transaction [green]hex[/]:";
+        public const string EnterSignedTransactionHex = "Enter signed transaction [green]hex[/]:";
+        public const string EnterPSBT = "Enter [green]PSBT[/] string:";
+        
         // Command templates (stubs)
         public const string CommandTemplateHeader = "[bold]Command Template:[/]";
         public const string CommandTemplateFormat = "[dim]{0}[/]";
