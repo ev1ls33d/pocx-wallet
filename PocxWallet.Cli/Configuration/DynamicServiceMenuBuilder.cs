@@ -158,6 +158,29 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
+    /// Build environment variables dictionary for Docker from service definition
+    /// </summary>
+    public Dictionary<string, string> BuildEnvironmentVariables(ServiceDefinition service)
+    {
+        var envVars = new Dictionary<string, string>();
+        
+        if (service.Environment == null)
+        {
+            return envVars;
+        }
+
+        foreach (var envVar in service.Environment)
+        {
+            if (!string.IsNullOrEmpty(envVar.Name) && !string.IsNullOrEmpty(envVar.Value))
+            {
+                envVars[envVar.Name] = envVar.Value;
+            }
+        }
+
+        return envVars;
+    }
+
+    /// <summary>
     /// Build command string from parameters
     /// </summary>
     public string? BuildCommand(ServiceDefinition service)
@@ -460,13 +483,14 @@ public class DynamicServiceMenuBuilder
         var readOnlyVolumes = GetReadOnlyVolumes(service);
         var command = BuildCommand(service);
         var gpuPassthrough = IsGpuPassthroughEnabled(service);
+        var environmentVars = BuildEnvironmentVariables(service);
 
         var success = await _dockerManager.StartContainerAsync(
             containerName,
             imageName,
             repository,
             tag,
-            environmentVars: null,
+            environmentVars: environmentVars.Count > 0 ? environmentVars : null,
             volumeMounts: volumes.Count > 0 ? volumes : null,
             portMappings: ports.Count > 0 ? ports : null,
             command: command,
