@@ -803,17 +803,17 @@ public static class WalletCommands
         string command = choice switch
         {
             var c when c == Strings.WalletMenu.CheckBalance => 
-                $"bitcoin-cli -wallet={walletName} getbalance",
+                $"bitcoin-cli -rpcwallet={walletName} getbalance",
             var c when c == Strings.WalletMenu.ShowAddresses => 
-                $"bitcoin-cli -wallet={walletName} listreceivedbyaddress 0 true",
+                $"bitcoin-cli -rpcwallet={walletName} listreceivedbyaddress 0 true",
             var c when c == Strings.WalletMenu.ListUnspent => 
-                $"bitcoin-cli -wallet={walletName} listunspent",
+                $"bitcoin-cli -rpcwallet={walletName} listunspent",
             var c when c == Strings.WalletMenu.GetWalletInfo => 
-                $"bitcoin-cli -wallet={walletName} getwalletinfo",
+                $"bitcoin-cli -rpcwallet={walletName} getwalletinfo",
             var c when c == Strings.WalletMenu.GetBlockchainInfo => 
                 "bitcoin-cli getblockchaininfo",
             var c when c == Strings.WalletMenu.TransactionHistory => 
-                $"bitcoin-cli -wallet={walletName} listtransactions \"*\" 10",
+                $"bitcoin-cli -rpcwallet={walletName} listtransactions \"*\" 10",
             _ => ""
         };
         
@@ -861,15 +861,15 @@ public static class WalletCommands
         string command = choice switch
         {
             var c when c == Strings.WalletMenu.SendFunds => 
-                $"bitcoin-cli -wallet={walletName} sendtoaddress \"<address>\" <amount>",
+                $"bitcoin-cli -rpcwallet={walletName} sendtoaddress \"<address>\" <amount>",
             var c when c == Strings.WalletMenu.CreateTransaction => 
-                $"bitcoin-cli -wallet={walletName} createrawtransaction '[{{\"txid\":\"...\",\"vout\":0}}]' '{{\"<address>\":<amount>}}'",
+                $"bitcoin-cli -rpcwallet={walletName} createrawtransaction '[{{\"txid\":\"...\",\"vout\":0}}]' '{{\"<address>\":<amount>}}'",
             var c when c == Strings.WalletMenu.SignTransaction => 
-                $"bitcoin-cli -wallet={walletName} signrawtransactionwithwallet \"<hex>\"",
+                $"bitcoin-cli -rpcwallet={walletName} signrawtransactionwithwallet \"<hex>\"",
             var c when c == Strings.WalletMenu.BroadcastTransaction => 
                 "bitcoin-cli sendrawtransaction \"<hex>\"",
             var c when c == Strings.WalletMenu.CreatePSBT => 
-                $"bitcoin-cli -wallet={walletName} walletcreatefundedpsbt '[]' '{{\"<address>\":<amount>}}'",
+                $"bitcoin-cli -rpcwallet={walletName} walletcreatefundedpsbt '[]' '{{\"<address>\":<amount>}}'",
             var c when c == Strings.WalletMenu.DecodePSBT => 
                 "bitcoin-cli decodepsbt \"<psbt>\"",
             _ => ""
@@ -1155,7 +1155,7 @@ public static class WalletCommands
         // Step 3: Import descriptor
         AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingDescriptor);
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
-        // Note: -wallet flag comes after any network flags, with proper spacing
+        // Note: -rpcwallet flag comes after any network flags, with proper spacing
         var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
