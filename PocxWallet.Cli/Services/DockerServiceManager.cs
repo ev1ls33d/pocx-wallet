@@ -43,7 +43,7 @@ public class DockerServiceManager
     {
         if (await IsDockerAvailableAsync())
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Docker is installed and running");
+            AnsiConsole.MarkupLine("[green]√[/] Docker is installed and running");
             return true;
         }
 
@@ -112,7 +112,7 @@ public class DockerServiceManager
 
             if (await IsDockerAvailableAsync())
             {
-                AnsiConsole.MarkupLine("[green]✓[/] Docker installed successfully!");
+                AnsiConsole.MarkupLine("[green]√[/] Docker installed successfully!");
                 AnsiConsole.MarkupLine("[yellow]Note: You may need to log out and back in for group permissions[/]");
                 return true;
             }
@@ -141,7 +141,7 @@ public class DockerServiceManager
             
             if (createResult.exitCode == 0)
             {
-                AnsiConsole.MarkupLine("[green]✓[/] Network created successfully");
+                AnsiConsole.MarkupLine("[green]√[/] Network created successfully");
                 return true;
             }
             else
@@ -244,12 +244,12 @@ public class DockerServiceManager
             var status = await GetContainerStatusAsync(containerName);
             if (status == "running")
             {
-                AnsiConsole.MarkupLine("[green]✓[/] Container started successfully");
+                AnsiConsole.MarkupLine("[green]√[/] Container started successfully");
                 return true;
             }
             else
             {
-                AnsiConsole.MarkupLine($"[yellow]⚠[/] Container created but status is: {Markup.Escape(status)}");
+                AnsiConsole.MarkupLine($"[yellow]▲[/] Container created but status is: {Markup.Escape(status)}");
                 return false; // Return false if not running
             }
         }
@@ -274,7 +274,7 @@ public class DockerServiceManager
         {
             // Wait a moment for container to fully stop
             await Task.Delay(ContainerShutdownDelayMs);
-            AnsiConsole.MarkupLine("[green]✓[/] Container stopped successfully");
+            AnsiConsole.MarkupLine("[green]√[/] Container stopped successfully");
             return true;
         }
         else
@@ -299,7 +299,7 @@ public class DockerServiceManager
         
         if (result.exitCode == 0)
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Container removed successfully");
+            AnsiConsole.MarkupLine("[green]√[/] Container removed successfully");
             return true;
         }
         else
