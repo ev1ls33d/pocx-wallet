@@ -354,13 +354,13 @@ public static class WalletCommands
             return;
         }
         
-        // Build wallet choices with name and first 15 chars of mainnet address
+        // Build wallet choices with name and truncated mainnet address
         var choices = new List<string>();
+        var choiceToWalletName = new Dictionary<string, string>();
+        
         foreach (var wallet in walletManager.Wallets)
         {
-            var addressPrefix = wallet.MainnetAddress.Length > 15 
-                ? wallet.MainnetAddress[..15] + "..."
-                : wallet.MainnetAddress;
+            var addressPrefix = WalletManager.TruncateAddress(wallet.MainnetAddress);
             var label = $"{wallet.Name.PadRight(15)} {addressPrefix}";
             
             // Mark active wallet
@@ -370,6 +370,7 @@ public static class WalletCommands
                 label = $"  {label}";
             
             choices.Add(label);
+            choiceToWalletName[label] = wallet.Name;
         }
         choices.Add(Strings.ServiceMenu.Back);
         
@@ -383,17 +384,18 @@ public static class WalletCommands
         if (choice == Strings.ServiceMenu.Back)
             return;
         
-        // Extract wallet name from choice
-        var walletName = choice.TrimStart('●', ' ').Split(' ')[0].Trim();
-        
-        if (walletManager.SwitchWallet(walletName))
+        // Look up wallet name from dictionary
+        if (choiceToWalletName.TryGetValue(choice, out var walletName))
         {
-            walletManager.Save();
-            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.SwitchedTo, walletName));
-        }
-        else
-        {
-            AnsiConsole.MarkupLine(Strings.WalletMenu.SwitchFailed);
+            if (walletManager.SwitchWallet(walletName))
+            {
+                walletManager.Save();
+                AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.SwitchedTo, walletName));
+            }
+            else
+            {
+                AnsiConsole.MarkupLine(Strings.WalletMenu.SwitchFailed);
+            }
         }
         
         AnsiConsole.WriteLine();
@@ -417,15 +419,16 @@ public static class WalletCommands
             return;
         }
         
-        // Build wallet choices
+        // Build wallet choices with dictionary for reliable name lookup
         var choices = new List<string>();
+        var choiceToWalletName = new Dictionary<string, string>();
+        
         foreach (var wallet in walletManager.Wallets)
         {
-            var addressPrefix = wallet.MainnetAddress.Length > 15 
-                ? wallet.MainnetAddress[..15] + "..."
-                : wallet.MainnetAddress;
+            var addressPrefix = WalletManager.TruncateAddress(wallet.MainnetAddress);
             var label = $"{wallet.Name.PadRight(15)} {addressPrefix}";
             choices.Add(label);
+            choiceToWalletName[label] = wallet.Name;
         }
         choices.Add(Strings.ServiceMenu.Back);
         
@@ -439,8 +442,9 @@ public static class WalletCommands
         if (choice == Strings.ServiceMenu.Back)
             return;
         
-        // Extract wallet name from choice
-        var walletName = choice.Split(' ')[0].Trim();
+        // Look up wallet name from dictionary
+        if (!choiceToWalletName.TryGetValue(choice, out var walletName))
+            return;
         
         // Confirm removal
         if (!AnsiConsole.Confirm(string.Format(Strings.WalletMenu.ConfirmRemove, walletName), false))

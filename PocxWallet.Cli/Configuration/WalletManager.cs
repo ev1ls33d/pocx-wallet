@@ -51,6 +51,8 @@ public class WalletFile
 /// </summary>
 public class WalletManager
 {
+    private const int AddressDisplayLength = 15;
+    
     private static WalletManager? _instance;
     private static readonly object _lock = new();
     
@@ -65,12 +67,9 @@ public class WalletManager
     {
         get
         {
-            if (_instance == null)
+            lock (_lock)
             {
-                lock (_lock)
-                {
-                    _instance ??= new WalletManager();
-                }
+                _instance ??= new WalletManager();
             }
             return _instance;
         }
@@ -107,11 +106,17 @@ public class WalletManager
         if (entry == null)
             return "(no wallet)";
         
-        var addressPrefix = entry.MainnetAddress.Length > 15 
-            ? entry.MainnetAddress[..15] + "..."
-            : entry.MainnetAddress;
-        
-        return $"{entry.Name} {addressPrefix}";
+        return $"{entry.Name} {TruncateAddress(entry.MainnetAddress)}";
+    }
+    
+    /// <summary>
+    /// Truncates an address for display purposes
+    /// </summary>
+    public static string TruncateAddress(string address)
+    {
+        return address.Length > AddressDisplayLength 
+            ? address[..AddressDisplayLength] + "..."
+            : address;
     }
     
     /// <summary>
