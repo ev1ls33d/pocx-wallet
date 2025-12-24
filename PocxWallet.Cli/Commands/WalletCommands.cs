@@ -17,6 +17,49 @@ public static class WalletCommands
     private static Func<Task<bool>>? _isNodeRunningAsync;
     private static Func<string, Task<(int, string)>>? _execInContainerAsync;
     private static Func<Task<bool>>? _startNodeAsync;
+    private static ServiceConfiguration? _serviceConfig;
+    
+    /// <summary>
+    /// Check if the node is configured for testnet by checking the parameters in services.yaml
+    /// </summary>
+    private static bool IsNodeTestnet()
+    {
+        // Load service configuration if not already loaded
+        _serviceConfig ??= ServiceDefinitionLoader.LoadServices();
+        
+        if (_serviceConfig?.Services == null)
+            return true; // Default to testnet if config not available
+        
+        // Find the node service
+        var nodeService = _serviceConfig.Services.FirstOrDefault(s => 
+            s.Id?.Equals("node", StringComparison.OrdinalIgnoreCase) == true ||
+            s.Id?.Equals("bitcoin-node", StringComparison.OrdinalIgnoreCase) == true);
+        
+        if (nodeService?.Parameters == null)
+            return true; // Default to testnet
+        
+        // Check if testnet parameter has a value set
+        var testnetParam = nodeService.Parameters.FirstOrDefault(p => 
+            p.Name?.Equals("testnet", StringComparison.OrdinalIgnoreCase) == true);
+        
+        if (testnetParam != null)
+        {
+            // If value is explicitly set, use it
+            if (testnetParam.Value != null)
+            {
+                if (bool.TryParse(testnetParam.Value.ToString(), out var isTestnet))
+                    return isTestnet;
+            }
+            // Otherwise use the default
+            if (testnetParam.Default != null)
+            {
+                if (bool.TryParse(testnetParam.Default.ToString(), out var defaultTestnet))
+                    return defaultTestnet;
+            }
+        }
+        
+        return true; // Default to testnet for safety
+    }
     
     /// <summary>
     /// Shows the main wallet menu
@@ -54,6 +97,7 @@ public static class WalletCommands
             var choices = new List<string>
             {
                 Strings.WalletMenu.Create,
+                Strings.WalletMenu.Import,
                 Strings.WalletMenu.Switch,
                 Strings.WalletMenu.Remove,
                 Strings.WalletMenu.Info,
@@ -65,7 +109,7 @@ public static class WalletCommands
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title(title)
-                    .PageSize(10)
+                    .PageSize(12)
                     .AddChoices(choices)
             );
             
@@ -76,6 +120,9 @@ public static class WalletCommands
             {
                 case var c when c == Strings.WalletMenu.Create:
                     await ShowCreateMenuAsync(showBanner);
+                    break;
+                case var c when c == Strings.WalletMenu.Import:
+                    await ShowImportMenuAsync(showBanner);
                     break;
                 case var c when c == Strings.WalletMenu.Switch:
                     ShowSwitchMenu(showBanner);
@@ -133,6 +180,191 @@ public static class WalletCommands
     }
     
     /// <summary>
+    /// Shows the Import wallet submenu
+    /// </summary>
+    private static async Task ShowImportMenuAsync(Action showBanner)
+    {
+        var choices = new List<string>
+        {
+            Strings.WalletMenu.ImportToNode,
+            Strings.WalletMenu.ImportFromMnemonic,
+            Strings.ServiceMenu.Back
+        };
+        
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold green]Import Wallet[/]")
+                .PageSize(10)
+                .AddChoices(choices)
+        );
+        
+        AnsiConsole.Clear();
+        showBanner();
+        
+        switch (choice)
+        {
+            case var c when c == Strings.WalletMenu.ImportToNode:
+                await ImportExistingWalletToNodeAsync();
+                break;
+            case var c when c == Strings.WalletMenu.ImportFromMnemonic:
+                await ImportFromMnemonicAsync();
+                break;
+        }
+    }
+    
+    /// <summary>
+    /// Import an existing wallet to the Bitcoin node
+    /// </summary>
+    private static async Task ImportExistingWalletToNodeAsync()
+    {
+        var walletManager = WalletManager.Instance;
+        
+        if (walletManager.Wallets.Count == 0)
+        {
+            AnsiConsole.MarkupLine(Strings.WalletMenu.NoWalletsAvailable);
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+            Console.ReadLine();
+            return;
+        }
+        
+        // Build wallet choices
+        var choices = new List<string>();
+        var choiceToWalletName = new Dictionary<string, string>();
+        
+        foreach (var wallet in walletManager.Wallets)
+        {
+            var label = $"{wallet.Name.PadRight(15)} {wallet.MainnetAddress}";
+            choices.Add(label);
+            choiceToWalletName[label] = wallet.Name;
+        }
+        choices.Add(Strings.ServiceMenu.Back);
+        
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold green]Select wallet to import to node[/]")
+                .PageSize(15)
+                .AddChoices(choices)
+        );
+        
+        if (choice == Strings.ServiceMenu.Back)
+            return;
+        
+        // Look up wallet name from dictionary
+        if (!choiceToWalletName.TryGetValue(choice, out var walletName))
+            return;
+        
+        // Find the wallet entry
+        var walletEntry = walletManager.Wallets.FirstOrDefault(w => w.Name == walletName);
+        if (walletEntry == null)
+            return;
+        
+        // Restore the HDWallet from the entry
+        var hdWallet = HDWallet.FromMnemonic(walletEntry.Mnemonic, 
+            string.IsNullOrEmpty(walletEntry.Passphrase) ? null : walletEntry.Passphrase);
+        
+        // Import to node
+        await ImportWalletToNodeAsync(hdWallet, walletName);
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+        Console.ReadLine();
+    }
+    
+    /// <summary>
+    /// Import wallet from mnemonic phrase
+    /// </summary>
+    private static async Task ImportFromMnemonicAsync()
+    {
+        var walletManager = WalletManager.Instance;
+        var settings = walletManager.Settings;
+        
+        AnsiConsole.MarkupLine("[bold green]Restore wallet from mnemonic phrase[/]");
+        AnsiConsole.WriteLine();
+        
+        // Ask for mnemonic
+        var mnemonic = AnsiConsole.Prompt(
+            new TextPrompt<string>("Enter your [green]mnemonic phrase[/] (12 or 24 words):")
+                .Validate(m =>
+                {
+                    try
+                    {
+                        new Mnemonic(m);
+                        return ValidationResult.Success();
+                    }
+                    catch
+                    {
+                        return ValidationResult.Error("[red]Invalid mnemonic phrase[/]");
+                    }
+                }));
+        
+        // Ask for optional passphrase (hidden with asterisks)
+        var passphrase = AnsiConsole.Prompt(
+            new TextPrompt<string>(Strings.WalletMenu.EnterPassphrase)
+                .AllowEmpty()
+                .Secret());
+        
+        if (string.IsNullOrEmpty(passphrase))
+            passphrase = null;
+        
+        try
+        {
+            // Restore wallet
+            var wallet = HDWallet.FromMnemonic(mnemonic, passphrase);
+            
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[green]✓[/] Wallet restored successfully!");
+            
+            // Display wallet info
+            DisplayWalletInfo(wallet);
+            
+            // Check settings for auto-save, otherwise ask
+            bool shouldSave = settings.AutoSave || AnsiConsole.Confirm(Strings.WalletMenu.SaveWalletPrompt, true);
+            
+            if (shouldSave)
+            {
+                // Ask for wallet name with uniqueness validation
+                string walletName;
+                while (true)
+                {
+                    walletName = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterWalletName, "restored");
+                    
+                    if (walletManager.WalletNameExists(walletName))
+                    {
+                        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletNameExists, walletName));
+                        continue;
+                    }
+                    break;
+                }
+                
+                // Add wallet to manager and save
+                walletManager.AddWallet(wallet, walletName, passphrase, pattern: null, makeActive: true);
+                walletManager.Save();
+                
+                AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletCreated, walletName));
+                
+                // Ask to import to node
+                bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
+                if (shouldImport)
+                {
+                    await ImportWalletToNodeAsync(wallet, walletName);
+                }
+            }
+            
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(Strings.WalletMenu.MnemonicWarning);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+        }
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+        Console.ReadLine();
+    }
+    
+    /// <summary>
     /// Creates a random wallet from 12-word mnemonic
     /// </summary>
     private static async Task CreateRandomWalletAsync()
@@ -163,10 +395,6 @@ public static class WalletCommands
         
         if (shouldSave)
         {
-            var filePath = settings.AutoSave && !string.IsNullOrEmpty(settings.DefaultWalletPath)
-                ? settings.DefaultWalletPath
-                : AnsiConsole.Ask<string>(Strings.WalletMenu.EnterFilePath, settings.DefaultWalletPath);
-            
             // Ask for wallet name with uniqueness validation
             string walletName;
             while (true)
@@ -181,12 +409,11 @@ public static class WalletCommands
                 break;
             }
             
-            // Add wallet to manager and save
+            // Add wallet to manager and save (file path is fixed to wallet.json)
             walletManager.AddWallet(wallet, walletName, passphrase, pattern: null, makeActive: true);
-            walletManager.Save(filePath);
+            walletManager.Save();
             
             AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletCreated, walletName));
-            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletSaved, filePath));
             
             // Ask to import to node
             bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
@@ -302,10 +529,6 @@ public static class WalletCommands
                 
                 if (shouldSave)
                 {
-                    var filePath = settings.AutoSave && !string.IsNullOrEmpty(settings.DefaultWalletPath)
-                        ? settings.DefaultWalletPath
-                        : AnsiConsole.Ask<string>(Strings.WalletMenu.EnterFilePath, settings.DefaultWalletPath);
-                    
                     // Ask for wallet name with uniqueness validation
                     string walletName;
                     while (true)
@@ -320,12 +543,11 @@ public static class WalletCommands
                         break;
                     }
                     
-                    // Add wallet to manager and save
+                    // Add wallet to manager and save (file path is fixed to wallet.json)
                     walletManager.AddWallet(wallet, walletName, passphrase, pattern, makeActive: true);
-                    walletManager.Save(filePath);
+                    walletManager.Save();
                     
                     AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletCreated, walletName));
-                    AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletSaved, filePath));
                     
                     // Ask to import to node
                     bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
@@ -767,6 +989,7 @@ public static class WalletCommands
     
     /// <summary>
     /// Import wallet to the Bitcoin node
+    /// Workflow: listwalletdir -> check if exists -> load or create -> import descriptors
     /// </summary>
     private static async Task ImportWalletToNodeAsync(HDWallet wallet, string walletName)
     {
@@ -798,6 +1021,10 @@ public static class WalletCommands
                 }
                 
                 AnsiConsole.MarkupLine("[green]✓[/] Node started successfully");
+                
+                // Wait a moment for the node to fully initialize
+                AnsiConsole.MarkupLine("[dim]Waiting for node to initialize...[/]");
+                await Task.Delay(3000);
             }
             else
             {
@@ -814,37 +1041,74 @@ public static class WalletCommands
         
         AnsiConsole.MarkupLine("[bold]Importing wallet to Bitcoin node...[/]");
         
-        // Ask user for network selection since we can't reliably detect it
-        var isTestnet = AnsiConsole.Confirm("Is the node running on [green]testnet[/]?", true);
+        // Check node parameters to determine if testnet is active
+        var isTestnet = IsNodeTestnet();
+        var networkName = isTestnet ? "testnet" : "mainnet";
+        AnsiConsole.MarkupLine($"[dim]Detected network mode: {networkName} (from node parameters)[/]");
+        
+        var networkFlag = isTestnet ? "-testnet " : "";
+        
         var descriptor = wallet.GetDescriptor(isTestnet);
         
         // Escape descriptor for safe JSON inclusion
         var escapedDescriptor = descriptor.Replace("\\", "\\\\").Replace("\"", "\\\"");
         
-        // Step 1: Create wallet on node
-        // createwallet arguments: wallet_name, disable_private_keys, blank, passphrase, avoid_reuse, descriptors
-        AnsiConsole.MarkupLine("[dim]Creating descriptor wallet on node...[/]");
-        var createCmd = $"bitcoin-cli createwallet \"{walletName}\" false false \"\" false true";
-        var (createExitCode, createOutput) = await _execInContainerAsync(createCmd);
+        // Step 1: Check if wallet already exists using listwalletdir
+        AnsiConsole.MarkupLine("[dim]Checking if wallet exists...[/]");
+        var listDirCmd = $"bitcoin-cli {networkFlag}listwalletdir";
+        var (listDirExitCode, listDirOutput) = await _execInContainerAsync(listDirCmd);
         
-        if (createExitCode != 0 && !createOutput.Contains("already exists"))
+        bool walletExists = listDirOutput.Contains($"\"name\": \"{walletName}\"") || 
+                           listDirOutput.Contains($"\"name\":\"{walletName}\"");
+        
+        if (walletExists)
         {
-            AnsiConsole.MarkupLine($"[yellow]⚠[/] Create wallet: {Markup.Escape(createOutput)}");
+            // Step 2a: Wallet exists - load it
+            AnsiConsole.MarkupLine($"[dim]Wallet '{walletName}' found in walletdir. Loading...[/]");
+            var loadCmd = $"bitcoin-cli {networkFlag}loadwallet \"{walletName}\"";
+            var (loadExitCode, loadOutput) = await _execInContainerAsync(loadCmd);
+            
+            if (loadExitCode != 0 && !loadOutput.Contains("already loaded"))
+            {
+                AnsiConsole.MarkupLine($"[yellow]⚠[/] Load wallet: {Markup.Escape(loadOutput)}");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Wallet loaded");
+            }
         }
         else
         {
-            AnsiConsole.MarkupLine("[green]✓[/] Wallet created on node");
+            // Step 2b: Wallet doesn't exist - create it
+            // createwallet arguments: wallet_name, disable_private_keys, blank, passphrase, avoid_reuse, descriptors
+            AnsiConsole.MarkupLine("[dim]Creating new descriptor wallet on node...[/]");
+            var createCmd = $"bitcoin-cli {networkFlag}createwallet \"{walletName}\" false false \"\" false true";
+            var (createExitCode, createOutput) = await _execInContainerAsync(createCmd);
+            
+            if (createExitCode != 0)
+            {
+                AnsiConsole.MarkupLine($"[yellow]⚠[/] Create wallet: {Markup.Escape(createOutput)}");
+                // Try to proceed anyway in case wallet was created but with warning
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[green]✓[/] Wallet created on node");
+            }
         }
         
-        // Step 2: Import descriptor
+        // Step 3: Import descriptor
         AnsiConsole.MarkupLine("[dim]Importing descriptor...[/]");
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
-        var importCmd = $"bitcoin-cli -wallet={walletName} importdescriptors {importJson}";
+        var importCmd = $"bitcoin-cli {networkFlag}-wallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
-        if (importExitCode == 0)
+        if (importExitCode == 0 && (importOutput.Contains("\"success\": true") || importOutput.Contains("\"success\":true")))
         {
             AnsiConsole.MarkupLine("[green]✓[/] Descriptor imported successfully");
+        }
+        else if (importOutput.Contains("already"))
+        {
+            AnsiConsole.MarkupLine("[green]✓[/] Descriptor was already imported");
         }
         else
         {
@@ -866,9 +1130,9 @@ public static class WalletCommands
             AnsiConsole.Clear();
             showBanner();
             
+            // Note: Removed Default Wallet Path since settings are saved in the wallet file itself
             var choices = new List<string>
             {
-                $"{"Default Wallet Path".PadRight(25)} [cyan]{Markup.Escape(settings.DefaultWalletPath)}[/]",
                 $"{"Auto-Save Wallets".PadRight(25)} {(settings.AutoSave ? "[green]true[/]" : "[red]false[/]")}",
                 $"{"Startup Wallet".PadRight(25)} [cyan]{Markup.Escape(settings.StartupWallet ?? "(none)")}[/]",
                 $"{"Auto-Import to Node".PadRight(25)} {(settings.AutoImportToNode ? "[green]true[/]" : "[red]false[/]")}",
@@ -892,19 +1156,13 @@ public static class WalletCommands
             var index = choices.IndexOf(choice);
             switch (index)
             {
-                case 0: // Default Wallet Path
-                    settings.DefaultWalletPath = AnsiConsole.Ask("Enter default wallet path:", settings.DefaultWalletPath);
-                    walletManager.Save();
-                    AnsiConsole.MarkupLine("[green]✓[/] Setting updated");
-                    break;
-                    
-                case 1: // Auto-Save
+                case 0: // Auto-Save
                     settings.AutoSave = !settings.AutoSave;
                     walletManager.Save();
                     AnsiConsole.MarkupLine($"[green]✓[/] Auto-save is now {(settings.AutoSave ? "enabled" : "disabled")}");
                     break;
                     
-                case 2: // Startup Wallet
+                case 1: // Startup Wallet
                     if (walletManager.Wallets.Count > 0)
                     {
                         var walletChoices = walletManager.Wallets.Select(w => w.Name).ToList();
@@ -924,7 +1182,7 @@ public static class WalletCommands
                     }
                     break;
                     
-                case 3: // Auto-Import to Node
+                case 2: // Auto-Import to Node
                     settings.AutoImportToNode = !settings.AutoImportToNode;
                     walletManager.Save();
                     AnsiConsole.MarkupLine($"[green]✓[/] Auto-import is now {(settings.AutoImportToNode ? "enabled" : "disabled")}");

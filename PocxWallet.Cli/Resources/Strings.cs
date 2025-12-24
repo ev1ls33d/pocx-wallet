@@ -110,6 +110,7 @@ public static class Strings
         
         // Main wallet menu
         public const string Create = "Create";
+        public const string Import = "Import";
         public const string Switch = "Switch";
         public const string Remove = "Remove";
         public const string Info = "Info";
@@ -119,6 +120,10 @@ public static class Strings
         // Create submenu
         public const string RandomAddress = "Random Address";
         public const string VanityAddress = "Vanity Address";
+        
+        // Import submenu
+        public const string ImportToNode = "To Node";
+        public const string ImportFromMnemonic = "From Mnemonic";
         
         // Create workflow prompts
         public const string EnterPassphrase = "Enter passphrase (optional, leave empty for none):";
