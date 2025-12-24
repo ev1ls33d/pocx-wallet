@@ -45,12 +45,12 @@ public static class Strings
     {
         public const string TitleFormat = "[bold green]{0} Parameters[/]";
         public const string TitleNoParamsFormat = "[bold green]{0} Parameters[/] [dim](no parameters set)[/]";
-        public const string AddParameter = "[Add Parameter]";
+        public const string AddParameter = "[[Add Parameter]]";
         public const string AddParameterTitleFormat = "[bold green]Add Parameter to {0}[/]";
         public const string NoParametersAvailable = "[yellow]No parameters available for this service[/]";
         public const string ToggleValue = "Toggle Value";
         public const string EditValue = "Edit Value";
-        public const string RemoveParameter = "[red]Remove Parameter[/]";
+        public const string RemoveParameter = "[red][[Remove Parameter]][/]";
         public const string ParameterSetFormat = "[green]✓[/] {0} set to {1}";
         public const string ParameterRemovedFormat = "[green]✓[/] {0} removed";
     }
