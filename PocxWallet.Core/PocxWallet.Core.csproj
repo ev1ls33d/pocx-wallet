@@ -8,10 +8,9 @@
     <!-- Version and metadata -->
     <Version>0.6.0</Version>
     <Authors>EviLSeeD</Authors>
-    <Company>EviLSeeD</Company>
     <Product>PoCX Wallet</Product>
     <Description>Core cryptographic and wallet functionality for PoCX Wallet</Description>
-    <Copyright>Copyright © 2024-2025 EviLSeeD</Copyright>
+    <Copyright>Copyright © 2025</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
