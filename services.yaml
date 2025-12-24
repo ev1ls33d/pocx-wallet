@@ -454,7 +454,7 @@ services:
       
     source:
       repository: "https://github.com/PoC-Consortium/electrs-pocx.git"
-      branch: "master"
+      branch: "pocx"
       build_command: "cargo build --release --bin electrs"
       binary_paths: 
         - "target/release/electrs"

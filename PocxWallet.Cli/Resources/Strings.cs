@@ -68,8 +68,16 @@ public static class Strings
         public const string Network = "Network";
         public const string Volumes = "Volumes";
         public const string Ports = "Ports";
+        public const string Environment = "Environment";
         public const string SettingUpdatedFormat = "[green]✓[/] {0} updated";
         public const string EnterValueFormat = "Enter {0}:";
+        public const string NoEnvironmentVars = "[yellow]No environment variables configured for this service[/]";
+        public const string AddEnvironmentVar = "[[Add Environment Variable]]";
+        public const string EnterEnvVarName = "Enter environment variable name:";
+        public const string EnterEnvVarValue = "Enter value for {0}:";
+        public const string EnvironmentVarAdded = "[green]✓[/] Environment variable {0} added";
+        public const string RemoveEnvironmentVar = "[red][[Remove]][/]";
+        public const string EnvironmentVarRemoved = "[green]✓[/] Environment variable {0} removed";
     }
 
     // ========================================
