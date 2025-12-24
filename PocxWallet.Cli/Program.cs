@@ -11,7 +11,6 @@ namespace PocxWallet.Cli;
 
 class Program
 {
-    private static readonly AppSettings _settings = new();
     private static DockerServiceManager? _dockerManager;
     private static ServiceConfiguration? _serviceConfig;
     private static DynamicServiceMenuBuilder? _dynamicMenuBuilder;
@@ -33,7 +32,7 @@ class Program
     {
         if (_dynamicMenuBuilder == null)
         {
-            _dynamicMenuBuilder = new DynamicServiceMenuBuilder(_serviceConfig, _settings, GetDockerManager());
+            _dynamicMenuBuilder = new DynamicServiceMenuBuilder(_serviceConfig, GetDockerManager());
         }
         return _dynamicMenuBuilder;
     }
@@ -103,7 +102,7 @@ class Program
                 var bitcoinNodeService = dynamicServices.FirstOrDefault(s => s.Id == "bitcoin-node");
                 var bitcoinContainerName = bitcoinNodeService != null 
                     ? dynamicBuilder.GetContainerName(bitcoinNodeService)
-                    : _settings.BitcoinContainerName;
+                    : "pocx-node";  // Default fallback
                 
                 Func<Task<bool>> isNodeRunning = async () =>
                 {

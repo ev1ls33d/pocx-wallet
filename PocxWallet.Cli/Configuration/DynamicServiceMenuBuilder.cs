@@ -12,18 +12,15 @@ public class DynamicServiceMenuBuilder
 {
     private readonly DockerServiceManager _dockerManager;
     private readonly ServiceConfiguration? _serviceConfig;
-    private readonly AppSettings _settings;
     private readonly CommandTemplateEngine _templateEngine;
     private readonly Func<HDWallet?> _walletProvider;
 
     public DynamicServiceMenuBuilder(
         ServiceConfiguration? serviceConfig, 
-        AppSettings settings, 
         DockerServiceManager dockerManager,
         Func<HDWallet?>? walletProvider = null)
     {
         _serviceConfig = serviceConfig;
-        _settings = settings;
         _dockerManager = dockerManager;
         _walletProvider = walletProvider ?? (() => null);
         _templateEngine = new CommandTemplateEngine(_walletProvider);
@@ -68,15 +65,10 @@ public class DynamicServiceMenuBuilder
             return service.ContainerNameOverride;
         }
 
-        // Try to resolve from container_name_setting if it references AppSettings
-        if (service.Container?.ContainerNameSetting != null)
+        // Check for default container name in services.yaml
+        if (!string.IsNullOrEmpty(service.Container?.ContainerNameDefault))
         {
-            var settingName = service.Container.ContainerNameSetting;
-            var containerName = GetSettingValue(settingName);
-            if (!string.IsNullOrEmpty(containerName))
-            {
-                return containerName;
-            }
+            return service.Container.ContainerNameDefault;
         }
         
         // Fallback to default naming convention
@@ -155,7 +147,7 @@ public class DynamicServiceMenuBuilder
 
         foreach (var volume in service.Volumes.Where(v => v.ReadOnly))
         {
-            var hostPath = GetPathFromSetting(volume.HostPathSetting);
+            var hostPath = GetVolumePath(service, volume);
             if (!string.IsNullOrEmpty(hostPath))
             {
                 readOnlyPaths.Add(hostPath);
@@ -828,23 +820,23 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private string GetServiceNetwork(ServiceDefinition service)
     {
-        return service.NetworkOverride ?? _serviceConfig?.Defaults?.DockerNetwork ?? _settings.DockerNetwork;
+        return service.NetworkOverride ?? _serviceConfig?.Defaults?.DockerNetwork ?? "pocx";
     }
 
     /// <summary>
-    /// Get volume path (from override or setting)
+    /// Get volume path (from override or default in services.yaml)
     /// </summary>
     private string? GetVolumePath(ServiceDefinition service, VolumeMapping volume)
     {
-        return volume.HostPathOverride ?? GetPathFromSetting(volume.HostPathSetting);
+        return volume.HostPathOverride ?? volume.HostPathDefault;
     }
 
     /// <summary>
-    /// Get port value (from override or setting)
+    /// Get port value (from override or default in services.yaml)
     /// </summary>
     private int GetPortValue(ServiceDefinition service, PortMapping port)
     {
-        return port.HostPortOverride ?? GetPortFromSetting(port.HostPortSetting) ?? port.ContainerPort;
+        return port.HostPortOverride ?? port.HostPortDefault ?? port.ContainerPort;
     }
 
     /// <summary>
@@ -1125,65 +1117,6 @@ public class DynamicServiceMenuBuilder
         {
             AnsiConsole.MarkupLine(string.Format(Strings.CustomActions.CommandErrorFormat, Markup.Escape(ex.Message)));
         }
-    }
-
-    /// <summary>
-    /// Get a setting value from AppSettings by path
-    /// </summary>
-    private string? GetSettingValue(string? settingPath)
-    {
-        if (string.IsNullOrEmpty(settingPath))
-        {
-            return null;
-        }
-
-        // Handle common setting paths
-        return settingPath switch
-        {
-            "BitcoinContainerName" => _settings.BitcoinContainerName,
-            "ElectrsContainerName" => _settings.ElectrsContainerName,
-            "MinerContainerName" => _settings.MinerContainerName,
-            "PlotterContainerName" => _settings.PlotterContainerName,
-            "BitcoinNode.Repository" => _settings.BitcoinNode.Repository,
-            "BitcoinNode.Tag" => _settings.BitcoinNode.Tag,
-            "BitcoinNode.DataDirectory" => _settings.BitcoinNode.DataDirectory,
-            "BitcoinNode.RpcPort" => _settings.BitcoinNode.RpcPort.ToString(),
-            "BitcoinNode.P2PPort" => _settings.BitcoinNode.P2PPort.ToString(),
-            "Electrs.Repository" => _settings.Electrs.Repository,
-            "Electrs.Tag" => _settings.Electrs.Tag,
-            "Electrs.DataDirectory" => _settings.Electrs.DataDirectory,
-            "Electrs.HttpPort" => _settings.Electrs.HttpPort.ToString(),
-            "Electrs.RpcPort" => _settings.Electrs.RpcPort.ToString(),
-            "Electrs.TestnetPort" => _settings.Electrs.TestnetPort.ToString(),
-            "Miner.Repository" => _settings.Miner.Repository,
-            "Miner.Tag" => _settings.Miner.Tag,
-            "Plotter.Repository" => _settings.Plotter.Repository,
-            "Plotter.Tag" => _settings.Plotter.Tag,
-            "PlotDirectory" => _settings.PlotDirectory,
-            "MinerConfigPath" => _settings.MinerConfigPath,
-            _ => null
-        };
-    }
-
-    /// <summary>
-    /// Get port number from setting path
-    /// </summary>
-    private int? GetPortFromSetting(string? settingPath)
-    {
-        var value = GetSettingValue(settingPath);
-        if (int.TryParse(value, out var port))
-        {
-            return port;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Get path from setting path
-    /// </summary>
-    private string? GetPathFromSetting(string? settingPath)
-    {
-        return GetSettingValue(settingPath);
     }
 
     /// <summary>

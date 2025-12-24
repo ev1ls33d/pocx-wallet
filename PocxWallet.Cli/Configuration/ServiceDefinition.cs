@@ -141,6 +141,12 @@ public class ContainerConfig
     [YamlMember(Alias = "container_name_setting")]
     public string? ContainerNameSetting { get; set; }
 
+    /// <summary>
+    /// Default container name (used instead of reading from external settings)
+    /// </summary>
+    [YamlMember(Alias = "container_name_default")]
+    public string? ContainerNameDefault { get; set; }
+
     [YamlMember(Alias = "working_dir")]
     public string? WorkingDir { get; set; }
 
@@ -190,6 +196,12 @@ public class PortMapping
     [YamlMember(Alias = "host_port_setting")]
     public string? HostPortSetting { get; set; }
 
+    /// <summary>
+    /// Default host port value (used instead of reading from external settings)
+    /// </summary>
+    [YamlMember(Alias = "host_port_default")]
+    public int? HostPortDefault { get; set; }
+
     [YamlMember(Alias = "description")]
     public string Description { get; set; } = "";
 
@@ -216,6 +228,12 @@ public class VolumeMapping
 
     [YamlMember(Alias = "host_path_setting")]
     public string? HostPathSetting { get; set; }
+
+    /// <summary>
+    /// Default host path value (used instead of reading from external settings)
+    /// </summary>
+    [YamlMember(Alias = "host_path_default")]
+    public string? HostPathDefault { get; set; }
 
     [YamlMember(Alias = "container_path")]
     public string ContainerPath { get; set; } = "";

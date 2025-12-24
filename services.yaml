@@ -37,7 +37,7 @@ services:
       image: "bitcoin"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "BitcoinContainerName"
+      container_name_default: "pocx-node"
       working_dir: "/root"
       entrypoint: null
       binary: "bitcoind"
@@ -53,30 +53,30 @@ services:
     ports:
       - name: "rpc"
         container_port: 18332
-        host_port_setting: "BitcoinNode.RpcPort"
+        host_port_default: 18332
         description: "JSON-RPC API port for wallet and mining communication"
         protocol: "tcp"
       - name: "p2p"
         container_port: 18333
-        host_port_setting:  "BitcoinNode.P2PPort"
+        host_port_default: 18333
         description:  "P2P network port for node communication"
         protocol:  "tcp"
       - name: "zmq-block"
         container_port: 28332
-        host_port_setting: "BitcoinNode.ZmqBlockPort"
+        host_port_default: 28332
         description:  "ZeroMQ block notification port"
         protocol: "tcp"
         optional: true
       - name: "zmq-tx"
         container_port: 28333
-        host_port_setting:  "BitcoinNode.ZmqTxPort"
+        host_port_default: 28333
         description: "ZeroMQ transaction notification port"
         protocol:  "tcp"
         optional: true
     
     volumes:
       - name: "data"
-        host_path_setting: "BitcoinNode.DataDirectory"
+        host_path_default: "./bitcoin-data"
         container_path:  "/root/.bitcoin-pocx"
         read_only: false
         description: "Blockchain data, wallet files, and node configuration"
@@ -441,7 +441,7 @@ services:
       image: "electrs"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag:  "latest"
-      container_name_setting: "ElectrsContainerName"
+      container_name_default: "pocx-electrs"
       working_dir: "/data"
       binary: "electrs"
       
@@ -455,37 +455,37 @@ services:
     ports: 
       - name: "http"
         container_port: 3000
-        host_port_setting: "Electrs.HttpPort"
+        host_port_default: 3000
         description: "HTTP REST API for blockchain queries"
         protocol: "tcp"
       - name: "electrum-rpc"
         container_port: 50001
-        host_port_setting: "Electrs.RpcPort"
+        host_port_default: 50001
         description: "Electrum protocol RPC port (mainnet)"
         protocol: "tcp"
       - name: "electrum-testnet"
         container_port: 60001
-        host_port_setting: "Electrs.TestnetPort"
+        host_port_default: 60001
         description: "Electrum protocol RPC port (testnet)"
         protocol: "tcp"
       - name: "monitoring"
         container_port: 4224
-        host_port_setting: "Electrs.MonitoringPort"
+        host_port_default: 4224
         description: "Prometheus metrics endpoint"
         protocol: "tcp"
         optional: true
     
     volumes: 
       - name: "data"
-        host_path_setting:  "Electrs.DataDirectory"
+        host_path_default: "./electrs-data"
         container_path: "/data"
         read_only: false
         description: "Electrs index database storage"
       - name: "bitcoin-data"
-        host_path_setting:  "BitcoinNode.DataDirectory"
-        container_path:  "/root/.bitcoin"
+        host_path_default: "./bitcoin-data"
+        container_path:  "/root/.bitcoin-pocx"
         read_only: true
-        description: "Bitcoin node data (read-only access for . cookie and blocks)"
+        description: "Bitcoin node data (read-only access for .cookie and blocks)"
     
     environment: []
     
@@ -708,7 +708,7 @@ services:
       image:  "pocx"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "AggregatorContainerName"
+      container_name_default: "pocx-aggregator"
       working_dir: "/config"
       binary: "pocx_aggregator"
       
@@ -722,25 +722,25 @@ services:
     ports:
       - name: "api"
         container_port: 8080
-        host_port_setting: "Aggregator.ApiPort"
+        host_port_default: 8080
         description: "Mining API port for downstream miners"
         protocol:  "tcp"
       - name: "dashboard"
         container_port: 8081
-        host_port_setting: "Aggregator.DashboardPort"
+        host_port_default: 8081
         description: "Web dashboard port"
         protocol: "tcp"
         optional: true
     
     volumes:
       - name: "config"
-        host_path_setting: "Aggregator.ConfigPath"
+        host_path_default: "./aggregator_config.yaml"
         container_path: "/config/aggregator_config.yaml"
         read_only: true
         description: "Aggregator configuration file"
         is_file: true
       - name: "data"
-        host_path_setting: "Aggregator.DataDirectory"
+        host_path_default: "./aggregator-data"
         container_path: "/data"
         read_only: false
         description: "Database and log storage"
@@ -931,7 +931,7 @@ services:
       image:  "pocx"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "MinerContainerName"
+      container_name_default: "pocx-miner"
       working_dir: "/config"
       binary: "pocx_miner"
       
@@ -946,12 +946,12 @@ services:
     
     volumes:
       - name: "plots"
-        host_path_setting: "PlotDirectory"
+        host_path_default: "./plots"
         container_path: "/plots"
         read_only: true
         description: "Directory containing plot files"
       - name: "config"
-        host_path_setting: "MinerConfigPath"
+        host_path_default: "./config.yaml"
         container_path: "/config/config.yaml"
         read_only: true
         description: "Miner configuration file"
@@ -1184,7 +1184,7 @@ services:
       image:  "pocx"
       repository: "ghcr.io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting: "PlotterContainerName"
+      container_name_default: "pocx-plotter"
       working_dir: "/plots"
       binary: "pocx_plotter"
       
@@ -1199,7 +1199,7 @@ services:
     
     volumes: 
       - name:  "plots"
-        host_path_setting: "PlotDirectory"
+        host_path_default: "./plots"
         container_path: "/plots"
         read_only: false
         description: "Output directory for generated plot files"
@@ -1433,7 +1433,7 @@ services:
       image: "pocx"
       repository:  "ghcr. io/ev1ls33d/pocx-wallet"
       default_tag: "latest"
-      container_name_setting:  "VerifierContainerName"
+      container_name_default: "pocx-verifier"
       working_dir: "/plots"
       binary: "pocx_verifier"
       
@@ -1446,7 +1446,7 @@ services:
     
     volumes: 
       - name:  "plots"
-        host_path_setting: "PlotDirectory"
+        host_path_default: "./plots"
         container_path: "/plots"
         read_only: true
     
