@@ -309,11 +309,18 @@ public class DynamicServiceMenuBuilder
             
             // Build dynamic submenu from service definition
             var choices = new List<string>();
+            var mode = service.GetExecutionMode();
             
             if (service.Menu?.Submenu != null)
             {
                 foreach (var item in service.Menu.Submenu)
                 {
+                    // Skip logs in native mode
+                    if (item.Action == "logs" && mode == ExecutionMode.Native)
+                    {
+                        continue;
+                    }
+                    
                     var label = item.Action switch
                     {
                         "toggle" => isRunning ? (item.LabelRunning ?? Strings.ServiceMenu.StopService) : (item.LabelStopped ?? Strings.ServiceMenu.StartService),
@@ -330,7 +337,13 @@ public class DynamicServiceMenuBuilder
             {
                 // Default menu if not defined
                 choices.Add(isRunning ? Strings.ServiceMenu.StopService : Strings.ServiceMenu.StartService);
-                choices.Add(Strings.ServiceMenu.ViewLogs);
+                
+                // Skip View Logs in native mode
+                if (mode != ExecutionMode.Native)
+                {
+                    choices.Add(Strings.ServiceMenu.ViewLogs);
+                }
+                
                 choices.Add(Strings.ServiceMenu.Parameters);
                 choices.Add(Strings.ServiceMenu.Settings);
             }
