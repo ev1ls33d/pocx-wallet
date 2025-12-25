@@ -1264,12 +1264,18 @@ services:
       
     source:
       docker:
+        dynamic:
+          repository: "https://github.com/ev1ls33d/pocx-wallet/pkgs/container/pocx-wallet%2Fpocx"
+          filter: "latest|[0-9]\\.[0-9]\\.[0-9]"
         images:
           - repository: "ghcr.io/ev1ls33d/pocx-wallet"
             image: "pocx"
             tag: "latest"
             description: "ghcr.io/ev1ls33d/pocx-wallet"
       native:
+        dynamic:
+          repository: "https://github.com/PoC-Consortium/pocx/releases/"
+          filter: "unknown-linux-gnu-opencl\\.tar\\.gz|windows.*opencl\\.zip"
         downloads:
           - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0-rc4/pocx-v1.0.0-rc4-x86_64-unknown-linux-gnu-opencl.tar.gz"
             version: "v1.0.0"

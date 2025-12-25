@@ -17,6 +17,7 @@ public class DynamicServiceMenuBuilder
     private readonly ServiceConfiguration? _serviceConfig;
     private readonly CommandTemplateEngine _templateEngine;
     private readonly Func<HDWallet?> _walletProvider;
+    private readonly VersionCrawlerService _versionCrawler;
 
     public DynamicServiceMenuBuilder(
         ServiceConfiguration? serviceConfig, 
@@ -28,6 +29,7 @@ public class DynamicServiceMenuBuilder
         _nativeManager = new NativeServiceManager();
         _walletProvider = walletProvider ?? (() => null);
         _templateEngine = new CommandTemplateEngine(_walletProvider);
+        _versionCrawler = new VersionCrawlerService();
     }
 
     /// <summary>
@@ -1513,12 +1515,31 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private async Task ShowDockerVersionManagementAsync(ServiceDefinition service, Action showBanner)
     {
-        var images = service.Source?.Docker?.Images;
+        var images = new List<DockerImage>();
         
-        if (images == null || images.Count == 0)
+        // Check for dynamic source first
+        if (service.Source?.Docker?.Dynamic != null)
+        {
+            var dynamic = service.Source.Docker.Dynamic;
+            AnsiConsole.MarkupLine("[dim]Discovering versions from dynamic source...[/]");
+            
+            var crawledImages = await _versionCrawler.CrawlContainerRegistryAsync(
+                dynamic.Repository,
+                dynamic.Filter
+            );
+            images.AddRange(crawledImages);
+        }
+        
+        // Add static images (legacy support)
+        if (service.Source?.Docker?.Images != null)
+        {
+            images.AddRange(service.Source.Docker.Images);
+        }
+        
+        if (images.Count == 0)
         {
             AnsiConsole.MarkupLine("[yellow]No Docker images configured for this service[/]");
-            AnsiConsole.MarkupLine("[dim]Add images in services.yaml under source.docker.images[/]");
+            AnsiConsole.MarkupLine("[dim]Add images in services.yaml under source.docker.images or source.docker.dynamic[/]");
             return;
         }
         
@@ -1607,12 +1628,31 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private async Task ShowNativeVersionManagementAsync(ServiceDefinition service, Action showBanner)
     {
-        var downloads = service.Source?.Native?.Downloads;
+        var downloads = new List<NativeDownload>();
         
-        if (downloads == null || downloads.Count == 0)
+        // Check for dynamic source first
+        if (service.Source?.Native?.Dynamic != null)
+        {
+            var dynamic = service.Source.Native.Dynamic;
+            AnsiConsole.MarkupLine("[dim]Discovering versions from dynamic source...[/]");
+            
+            var crawledDownloads = await _versionCrawler.CrawlGitHubReleasesAsync(
+                dynamic.Repository,
+                dynamic.Filter
+            );
+            downloads.AddRange(crawledDownloads);
+        }
+        
+        // Add static downloads (legacy support)
+        if (service.Source?.Native?.Downloads != null)
+        {
+            downloads.AddRange(service.Source.Native.Downloads);
+        }
+        
+        if (downloads.Count == 0)
         {
             AnsiConsole.MarkupLine("[yellow]No native downloads configured for this service[/]");
-            AnsiConsole.MarkupLine("[dim]Add downloads in services.yaml under source.native.downloads[/]");
+            AnsiConsole.MarkupLine("[dim]Add downloads in services.yaml under source.native.downloads or source.native.dynamic[/]");
             return;
         }
         
