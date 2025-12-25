@@ -18,12 +18,30 @@ public class VersionCrawlerService : IDisposable
     private readonly Dictionary<string, CachedResult> _cache;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
     private bool _disposed;
+    private string? _githubToken;
 
     public VersionCrawlerService()
     {
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "PocxWallet/1.0");
         _cache = new Dictionary<string, CachedResult>();
+    }
+
+    /// <summary>
+    /// Set GitHub authentication token for API access
+    /// </summary>
+    public void SetGitHubToken(string token)
+    {
+        _githubToken = token;
+        
+        // Remove existing Authorization header if present
+        _httpClient.DefaultRequestHeaders.Remove("Authorization");
+        
+        // Add new Authorization header with Bearer token
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+        }
     }
 
     /// <summary>
@@ -164,25 +182,143 @@ public class VersionCrawlerService : IDisposable
             
             if (!response.IsSuccessStatusCode)
             {
-                AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.GitHubPackagesApiAuthRequired, response.StatusCode));
-                AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
-                
-                // Return only 'latest' tag as fallback
-                var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-                if (regex.IsMatch("latest"))
+                // Check if authentication is required
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized || 
+                    response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                    response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    return new List<DockerImage>
+                    // Prompt for authentication if we haven't tried yet
+                    if (string.IsNullOrEmpty(_githubToken))
                     {
-                        new DockerImage
+                        AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.GitHubPackagesApiAuthRequired, response.StatusCode));
+                        AnsiConsole.WriteLine();
+                        
+                        if (AnsiConsole.Confirm(Strings.VersionCrawler.PromptForAuthentication, defaultValue: false))
                         {
-                            Repository = repository,
-                            Image = imageName,
-                            Tag = "latest",
-                            Description = "Latest version"
+                            AnsiConsole.MarkupLine(Strings.VersionCrawler.TokenInfo);
+                            AnsiConsole.MarkupLine(Strings.VersionCrawler.TokenRequired);
+                            AnsiConsole.WriteLine();
+                            
+                            var token = AnsiConsole.Prompt(
+                                new TextPrompt<string>(Strings.VersionCrawler.EnterGitHubToken)
+                                    .Secret()
+                                    .AllowEmpty());
+                            
+                            if (!string.IsNullOrWhiteSpace(token))
+                            {
+                                SetGitHubToken(token);
+                                
+                                // Retry the request with authentication
+                                response = await _httpClient.GetAsync(apiUrl);
+                                
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationSuccess);
+                                    AnsiConsole.WriteLine();
+                                    // Continue with successful response processing below
+                                }
+                                else
+                                {
+                                    AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationFailed);
+                                    AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
+                                    AnsiConsole.WriteLine();
+                                    
+                                    // Return only 'latest' tag as fallback
+                                    var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                                    if (regex.IsMatch("latest"))
+                                    {
+                                        return new List<DockerImage>
+                                        {
+                                            new DockerImage
+                                            {
+                                                Repository = repository,
+                                                Image = imageName,
+                                                Tag = "latest",
+                                                Description = "Latest version"
+                                            }
+                                        };
+                                    }
+                                    return new List<DockerImage>();
+                                }
+                            }
+                            else
+                            {
+                                // User skipped authentication
+                                AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
+                                AnsiConsole.WriteLine();
+                                
+                                // Return only 'latest' tag as fallback
+                                var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                                if (regex.IsMatch("latest"))
+                                {
+                                    return new List<DockerImage>
+                                    {
+                                        new DockerImage
+                                        {
+                                            Repository = repository,
+                                            Image = imageName,
+                                            Tag = "latest",
+                                            Description = "Latest version"
+                                        }
+                                    };
+                                }
+                                return new List<DockerImage>();
+                            }
                         }
-                    };
+                        else
+                        {
+                            // User declined authentication
+                            AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
+                            AnsiConsole.WriteLine();
+                            
+                            // Return only 'latest' tag as fallback
+                            var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                            if (regex.IsMatch("latest"))
+                            {
+                                return new List<DockerImage>
+                                {
+                                    new DockerImage
+                                    {
+                                        Repository = repository,
+                                        Image = imageName,
+                                        Tag = "latest",
+                                        Description = "Latest version"
+                                    }
+                                };
+                            }
+                            return new List<DockerImage>();
+                        }
+                    }
+                    else
+                    {
+                        // Already have a token but still failed
+                        AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationFailed);
+                        AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
+                        
+                        // Return only 'latest' tag as fallback
+                        var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                        if (regex.IsMatch("latest"))
+                        {
+                            return new List<DockerImage>
+                            {
+                                new DockerImage
+                                {
+                                    Repository = repository,
+                                    Image = imageName,
+                                    Tag = "latest",
+                                    Description = "Latest version"
+                                }
+                            };
+                        }
+                        return new List<DockerImage>();
+                    }
                 }
-                return new List<DockerImage>();
+                else
+                {
+                    // Other error
+                    AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.GitHubPackagesApiAuthRequired, response.StatusCode));
+                    return new List<DockerImage>();
+                }
             }
 
             var versionsData = await response.Content.ReadFromJsonAsync<JsonElement>();

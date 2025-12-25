@@ -362,6 +362,12 @@ public static class Strings
         public const string ErrorParsingUrl = "[dim]Error parsing URL: {0}[/]";
         public const string InvalidGhcrUrlFormat = "[dim]Invalid GHCR URL format: {0}[/]";
         public const string ErrorParsingGhcrUrl = "[dim]Error parsing GHCR URL: {0}[/]";
+        public const string PromptForAuthentication = "GitHub Packages API requires authentication. Would you like to provide a Personal Access Token?";
+        public const string EnterGitHubToken = "Enter your [green]GitHub Personal Access Token[/] (or press ENTER to skip):";
+        public const string TokenInfo = "[dim]You can create a token at: https://github.com/settings/tokens[/]";
+        public const string TokenRequired = "[dim]Token needs 'read:packages' scope[/]";
+        public const string AuthenticationSuccess = "[green]√[/] Authentication successful";
+        public const string AuthenticationFailed = "[yellow]Authentication failed, showing limited results[/]";
     }
 
     // ========================================
