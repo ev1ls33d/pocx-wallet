@@ -61,6 +61,9 @@ public static class Strings
     public static class SettingsMenu
     {
         public const string TitleFormat = "[bold green]{0} Settings[/]";
+        public const string ExecutionMode = "Execution Mode";
+        public const string ManageVersions = "Manage Versions";
+        public const string SpawnNewConsole = "Spawn New Console";
         public const string Repository = "Repository";
         public const string Tag = "Tag";
         public const string ContainerName = "Container Name";
