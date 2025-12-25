@@ -602,17 +602,6 @@ public class DynamicServiceMenuBuilder
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"[yellow]Tip: Use 'Manage Versions' to download the binary if it's not already installed[/]");
         }
-        else
-        {
-            // Only show logs if not spawning new console
-            if (!spawnNewConsole)
-            {
-                // Show last 5 log lines after starting
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[dim]Last 5 log lines:[/]");
-                await _nativeManager.DisplayNativeServiceLogsAsync(service.Id, service.Name, 5);
-            }
-        }
     }
 
     /// <summary>
@@ -653,7 +642,9 @@ public class DynamicServiceMenuBuilder
         
         if (mode == ExecutionMode.Native)
         {
-            await _nativeManager.DisplayNativeServiceLogsAsync(service.Id, service.Name, 50);
+            // Native mode doesn't support log viewing
+            AnsiConsole.MarkupLine("[yellow]Log viewing is not available for native mode services[/]");
+            AnsiConsole.MarkupLine("[dim]Native services run in their own console windows or as background processes[/]");
         }
         else
         {
