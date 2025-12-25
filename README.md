@@ -23,12 +23,13 @@ A comprehensive CLI HD Wallet implementation for [PoCX](https://github.com/PoC-C
 - Pattern matching on Bech32 encoded addresses
 - Valid characters: `qpzry9x8gf2tvdw0s3jn54khce6mua7l` (Bech32 charset)
 
-### 🐳 Docker Container Management
-- **Docker-first approach** for easy deployment
-- Dynamic service configuration via `services.yaml`
-- Pre-built Docker images via GitHub Actions
-- Per-service parameter configuration
-- Cross-platform compatibility (Windows WSL2, Linux, macOS)
+### 🐳 Docker & Native Execution Modes
+- **Docker Mode (default)**: Services run in isolated Docker containers
+- **Native Mode**: Services run as native processes on the host system
+- Switch execution modes per service in `services.yaml`
+- Version management for both Docker images and native binaries
+- Automatic platform detection for native downloads
+- Whitelist filtering for multi-binary archives
 
 ### 🔗 Bitcoin-PoCX Node Integration
 - Full Bitcoin-PoCX node running in Docker
@@ -59,7 +60,9 @@ A comprehensive CLI HD Wallet implementation for [PoCX](https://github.com/PoC-C
 
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download) or later
-- [Docker](https://www.docker.com/products/docker-desktop) (recommended)
+- [Docker](https://www.docker.com/products/docker-desktop) (optional, for Docker mode services)
+
+**Note**: Docker is optional. Services can run in native mode without Docker installed.
 
 ### Installation
 
@@ -139,6 +142,47 @@ Main Menu
 ```
 
 ## Configuration
+
+### Execution Modes
+
+PoCX Wallet supports two execution modes for services:
+
+#### Docker Mode (Default)
+Services run in Docker containers with isolated environments:
+- **Pros**: Consistent environment, easy updates, isolated networking
+- **Cons**: Requires Docker installed, higher resource usage
+- **Use case**: Development, testing, production deployments
+
+#### Native Mode
+Services run as native processes directly on your system:
+- **Pros**: Lower overhead, direct host access, no Docker required
+- **Cons**: Manual binary management, less isolation
+- **Use case**: Resource-constrained systems, direct hardware access
+
+To switch modes, edit `services.yaml`:
+```yaml
+- id: "bitcoin-node"
+  execution_mode: "native"  # Change from "docker" to "native"
+```
+
+Then use the **"Manage Versions"** menu to download the appropriate binary for your platform.
+
+### Version Management
+
+Both Docker and Native modes support version management:
+
+**Docker Mode**:
+1. Navigate to service menu
+2. Select "Manage Versions"
+3. Choose Docker image version to pull
+4. Service automatically updates to use new image
+
+**Native Mode**:
+1. Navigate to service menu
+2. Select "Manage Versions"
+3. Choose binary version (filtered by your OS/architecture)
+4. Binary automatically downloads and extracts
+5. Start service to use new version
 
 ### services.yaml
 
