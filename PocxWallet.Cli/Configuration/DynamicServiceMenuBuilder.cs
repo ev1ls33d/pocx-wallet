@@ -586,6 +586,9 @@ public class DynamicServiceMenuBuilder
         
         // Working directory
         var workingDir = service.Container?.WorkingDir ?? serviceDir;
+        
+        // Get spawn new console setting
+        var spawnNewConsole = service.SpawnNewConsole;
 
         var success = await _nativeManager.StartNativeServiceAsync(
             service.Id,
@@ -593,7 +596,8 @@ public class DynamicServiceMenuBuilder
             binaryPath,
             arguments,
             workingDir,
-            environmentVars.Count > 0 ? environmentVars : null
+            environmentVars.Count > 0 ? environmentVars : null,
+            spawnNewConsole
         );
 
         if (!success)
@@ -603,10 +607,14 @@ public class DynamicServiceMenuBuilder
         }
         else
         {
-            // Show last 5 log lines after starting
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[dim]Last 5 log lines:[/]");
-            await _nativeManager.DisplayNativeServiceLogsAsync(service.Id, service.Name, 5);
+            // Only show logs if not spawning new console
+            if (!spawnNewConsole)
+            {
+                // Show last 5 log lines after starting
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[dim]Last 5 log lines:[/]");
+                await _nativeManager.DisplayNativeServiceLogsAsync(service.Id, service.Name, 5);
+            }
         }
     }
 

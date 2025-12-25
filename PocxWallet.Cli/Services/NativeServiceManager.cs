@@ -15,9 +15,6 @@ public class NativeServiceManager
     // Track running processes by service ID
     private readonly ConcurrentDictionary<string, ProcessInfo> _runningProcesses = new();
     
-    // Log directory for service stdout/stderr
-    private const string LogsDirectory = "logs";
-    
     // Maximum log size to display
     private const int MaxLogDisplaySize = 5000;
     
@@ -26,8 +23,7 @@ public class NativeServiceManager
 
     public NativeServiceManager()
     {
-        // Ensure logs directory exists
-        Directory.CreateDirectory(LogsDirectory);
+        // Constructor - no global logs directory needed
     }
 
     /// <summary>
@@ -39,7 +35,8 @@ public class NativeServiceManager
         string binaryPath,
         string? arguments = null,
         string? workingDirectory = null,
-        Dictionary<string, string>? environmentVars = null)
+        Dictionary<string, string>? environmentVars = null,
+        bool spawnNewConsole = false)
     {
         try
         {
@@ -66,22 +63,34 @@ public class NativeServiceManager
                 return false;
             }
 
-            // Set up log files
-            var logFilePath = Path.Combine(LogsDirectory, $"{serviceId}.log");
-            var errorLogFilePath = Path.Combine(LogsDirectory, $"{serviceId}.error.log");
+            // Determine working directory and log location
+            var effectiveWorkingDir = workingDirectory ?? Path.GetDirectoryName(binaryPath) ?? ".";
+            
+            // Create logs directory in the service directory (not global logs/)
+            var logsDir = Path.Combine(effectiveWorkingDir, "logs");
+            Directory.CreateDirectory(logsDir);
+            
+            // Set up log files in service directory
+            var logFilePath = Path.Combine(logsDir, $"{serviceId}.log");
+            var errorLogFilePath = Path.Combine(logsDir, $"{serviceId}.error.log");
 
             // Create process start info
             var psi = new ProcessStartInfo
             {
                 FileName = binaryPath,
                 Arguments = arguments ?? "",
-                WorkingDirectory = workingDirectory ?? Path.GetDirectoryName(binaryPath) ?? ".",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = false,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                WorkingDirectory = effectiveWorkingDir,
+                UseShellExecute = spawnNewConsole,
+                CreateNoWindow = !spawnNewConsole
             };
+            
+            // Only redirect streams if not spawning new console
+            if (!spawnNewConsole)
+            {
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.RedirectStandardInput = false;
+            }
 
             // Add environment variables
             if (environmentVars != null)
@@ -115,53 +124,76 @@ public class NativeServiceManager
             {
                 AnsiConsole.MarkupLine($"[dim]Arguments:[/] {Markup.Escape(arguments)}");
             }
+            AnsiConsole.MarkupLine($"[dim]Mode:[/] {(spawnNewConsole ? "New console window" : "Background with logs")}");
+            AnsiConsole.MarkupLine($"[dim]Logs:[/] {Markup.Escape(logsDir)}");
 
             var process = new Process { StartInfo = psi };
+            
+            StreamWriter? logFile = null;
+            StreamWriter? errorLogFile = null;
 
-            // Set up log file writers
-            var logFile = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
-            var errorLogFile = new StreamWriter(errorLogFilePath, append: true) { AutoFlush = true };
-
-            // Redirect output to log files
-            process.OutputDataReceived += (sender, e) =>
+            // Only set up log file writers if not spawning new console
+            if (!spawnNewConsole)
             {
-                if (e.Data != null)
+                // Close any existing log files for this service
+                CloseExistingLogFiles(serviceId);
+                
+                logFile = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
+                errorLogFile = new StreamWriter(errorLogFilePath, append: true) { AutoFlush = true };
+
+                // Redirect output to log files
+                process.OutputDataReceived += (sender, e) =>
                 {
-                    logFile.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e.Data}");
-                }
-            };
+                    if (e.Data != null)
+                    {
+                        logFile.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e.Data}");
+                    }
+                };
 
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
+                process.ErrorDataReceived += (sender, e) =>
                 {
-                    errorLogFile.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e.Data}");
-                }
-            };
+                    if (e.Data != null)
+                    {
+                        errorLogFile.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e.Data}");
+                    }
+                };
 
-            // Handle process exit
-            process.Exited += (sender, e) =>
+                // Handle process exit
+                process.Exited += (sender, e) =>
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Service '{serviceName}' exited[/]");
+                    logFile?.Dispose();
+                    errorLogFile?.Dispose();
+                    _runningProcesses.TryRemove(serviceId, out _);
+                };
+
+                process.EnableRaisingEvents = true;
+            }
+            else
             {
-                AnsiConsole.MarkupLine($"[yellow]Service '{serviceName}' exited[/]");
-                logFile.Dispose();
-                errorLogFile.Dispose();
-                _runningProcesses.TryRemove(serviceId, out _);
-            };
-
-            process.EnableRaisingEvents = true;
+                // For new console, just track the process
+                process.EnableRaisingEvents = true;
+                process.Exited += (sender, e) =>
+                {
+                    _runningProcesses.TryRemove(serviceId, out _);
+                };
+            }
 
             // Start the process
             if (!process.Start())
             {
                 AnsiConsole.MarkupLine($"[red]Failed to start process[/]");
-                logFile.Dispose();
-                errorLogFile.Dispose();
+                logFile?.Dispose();
+                errorLogFile?.Dispose();
                 return false;
             }
 
-            // Begin async reading
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            // Begin async reading only if redirecting
+            if (!spawnNewConsole)
+            {
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+            }
 
             // Store process info
             var processInfo = new ProcessInfo
@@ -172,7 +204,9 @@ public class NativeServiceManager
                 BinaryPath = binaryPath,
                 LogFile = logFile,
                 ErrorLogFile = errorLogFile,
-                StartTime = DateTime.Now
+                StartTime = DateTime.Now,
+                LogFilePath = logFilePath,
+                ErrorLogFilePath = errorLogFilePath
             };
 
             _runningProcesses[serviceId] = processInfo;
@@ -183,7 +217,10 @@ public class NativeServiceManager
             if (!IsProcessAlive(process))
             {
                 AnsiConsole.MarkupLine($"[red]Process exited immediately after starting[/]");
-                AnsiConsole.MarkupLine($"[yellow]Check logs for details:[/] {Markup.Escape(errorLogFilePath)}");
+                if (!spawnNewConsole)
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Check logs for details:[/] {Markup.Escape(errorLogFilePath)}");
+                }
                 return false;
             }
 
@@ -303,13 +340,29 @@ public class NativeServiceManager
     /// </summary>
     public async Task<string> GetNativeServiceLogsAsync(string serviceId, int tailLines = 50)
     {
-        var logFilePath = Path.Combine(LogsDirectory, $"{serviceId}.log");
-        var errorLogFilePath = Path.Combine(LogsDirectory, $"{serviceId}.error.log");
+        // First try to get log paths from running process info
+        string? logFilePath = null;
+        string? errorLogFilePath = null;
+        
+        if (_runningProcesses.TryGetValue(serviceId, out var processInfo))
+        {
+            logFilePath = processInfo.LogFilePath;
+            errorLogFilePath = processInfo.ErrorLogFilePath;
+        }
+        
+        // Fallback to checking service directory
+        if (string.IsNullOrEmpty(logFilePath))
+        {
+            var serviceDir = Path.Combine(".", serviceId);
+            var logsDir = Path.Combine(serviceDir, "logs");
+            logFilePath = Path.Combine(logsDir, $"{serviceId}.log");
+            errorLogFilePath = Path.Combine(logsDir, $"{serviceId}.error.log");
+        }
 
         var logs = new List<string>();
 
         // Read error log first
-        if (File.Exists(errorLogFilePath))
+        if (!string.IsNullOrEmpty(errorLogFilePath) && File.Exists(errorLogFilePath))
         {
             try
             {
@@ -327,7 +380,7 @@ public class NativeServiceManager
         }
 
         // Read standard output log
-        if (File.Exists(logFilePath))
+        if (!string.IsNullOrEmpty(logFilePath) && File.Exists(logFilePath))
         {
             try
             {
@@ -644,6 +697,25 @@ public class NativeServiceManager
     }
 
     /// <summary>
+    /// Close existing log files for a service to prevent file locking issues
+    /// </summary>
+    private void CloseExistingLogFiles(string serviceId)
+    {
+        if (_runningProcesses.TryGetValue(serviceId, out var existingProcess))
+        {
+            try
+            {
+                existingProcess.LogFile?.Dispose();
+                existingProcess.ErrorLogFile?.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+    }
+
+    /// <summary>
     /// Execute a shell command
     /// </summary>
     private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments)
@@ -686,5 +758,7 @@ public class NativeServiceManager
         public StreamWriter? LogFile { get; set; }
         public StreamWriter? ErrorLogFile { get; set; }
         public DateTime StartTime { get; set; }
+        public string LogFilePath { get; set; } = "";
+        public string ErrorLogFilePath { get; set; } = "";
     }
 }
