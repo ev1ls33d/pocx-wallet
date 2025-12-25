@@ -763,8 +763,12 @@ public class DynamicServiceMenuBuilder
             var executionModeValue = mode == ExecutionMode.Docker ? "[cyan]Docker[/]" : "[cyan]Native[/]";
             choices.Add($"{Strings.SettingsMenu.ExecutionMode.PadRight(20)} {executionModeValue}");
             
-            // Second entry: Manage Versions (always shown)
-            choices.Add($"{Strings.SettingsMenu.ManageVersions.PadRight(20)}");
+            // Second entry: Manage Versions (always shown with current version)
+            var currentVersion = GetCurrentVersion(service, mode);
+            var versionDisplay = !string.IsNullOrEmpty(currentVersion) 
+                ? $" [cyan]{Markup.Escape(currentVersion)}[/]" 
+                : "";
+            choices.Add($"{Strings.SettingsMenu.ManageVersions.PadRight(20)}{versionDisplay}");
             
             if (mode == ExecutionMode.Docker)
             {
@@ -1171,6 +1175,30 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
+    /// Get the current version for display in the settings menu
+    /// </summary>
+    private string GetCurrentVersion(ServiceDefinition service, ExecutionMode mode)
+    {
+        if (mode == ExecutionMode.Docker)
+        {
+            // For Docker, show the current tag
+            return service.Container?.DefaultTag ?? "latest";
+        }
+        else
+        {
+            // For Native, try to determine installed version
+            // This is a simple implementation - could be enhanced to read from version files
+            var serviceDir = Path.Combine(".", service.Id);
+            if (Directory.Exists(serviceDir))
+            {
+                // Check if there's a version indicator or just show "installed"
+                return "installed";
+            }
+            return "not installed";
+        }
+    }
+
+    /// <summary>
     /// Get volume path (from override or default in services.yaml)
     /// </summary>
     private string? GetVolumePath(ServiceDefinition service, VolumeMapping volume)
@@ -1498,6 +1526,13 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     private async Task ShowVersionManagementAsync(ServiceDefinition service, Action showBanner)
     {
+        // Load GitHub token from wallet settings when entering version management
+        var storedToken = WalletManager.Instance.Settings.GitHubToken;
+        if (!string.IsNullOrWhiteSpace(storedToken))
+        {
+            _versionCrawler.SetGitHubToken(storedToken);
+        }
+        
         var mode = service.GetExecutionMode();
         
         if (mode == ExecutionMode.Native)
