@@ -184,6 +184,35 @@ Both Docker and Native modes support version management:
 4. Binary automatically downloads and extracts
 5. Start service to use new version
 
+### Dynamic Version Discovery
+
+PoCX Wallet can automatically discover new releases from GitHub:
+
+**For Native Binaries**: Crawls GitHub Releases and filters assets by regex
+**For Docker Images**: Discovers available tags from GitHub Container Registry
+
+This eliminates the need to manually update `services.yaml` for each new release.
+
+**How it works**:
+- Services can configure a `dynamic` source in `services.yaml`
+- The wallet automatically queries GitHub API to discover versions
+- Regex filters are applied to match only relevant versions
+- Results are cached to minimize API calls
+- Backward compatible with static source configurations
+
+**Example configuration**:
+```yaml
+source:
+  docker:
+    dynamic:
+      repository: "https://github.com/owner/repo/pkgs/container/package"
+      filter: "latest|[0-9]\\.[0-9]\\.[0-9]"
+  native:
+    dynamic:
+      repository: "https://github.com/owner/repo/releases/"
+      filter: "linux.*\\.tar\\.gz|windows.*\\.zip"
+```
+
 ### services.yaml
 
 All Docker services are configured in `services.yaml`. This file defines:
