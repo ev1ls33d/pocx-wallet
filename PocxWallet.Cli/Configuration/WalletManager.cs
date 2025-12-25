@@ -99,6 +99,12 @@ public class WalletManager
     {
         _walletFile = new WalletFile();
         _filePath = "./wallet.json";
+        
+        // Automatically load wallet file if it exists
+        if (File.Exists(_filePath))
+        {
+            Load(_filePath);
+        }
     }
     
     /// <summary>
