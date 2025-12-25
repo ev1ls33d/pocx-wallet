@@ -206,60 +206,32 @@ public class VersionCrawlerService : IDisposable
                         AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.GitHubPackagesApiAuthRequired, response.StatusCode));
                         AnsiConsole.WriteLine();
                         
-                        if (AnsiConsole.Confirm(Strings.VersionCrawler.PromptForAuthentication, defaultValue: false))
+                        AnsiConsole.MarkupLine(Strings.VersionCrawler.TokenInfo);
+                        AnsiConsole.MarkupLine(Strings.VersionCrawler.TokenRequired);
+                        AnsiConsole.WriteLine();
+                            
+                        var token = AnsiConsole.Prompt(
+                            new TextPrompt<string>(Strings.VersionCrawler.EnterGitHubToken).AllowEmpty());
+                            
+                        if (!string.IsNullOrWhiteSpace(token))
                         {
-                            AnsiConsole.MarkupLine(Strings.VersionCrawler.TokenInfo);
-                            AnsiConsole.MarkupLine(Strings.VersionCrawler.TokenRequired);
-                            AnsiConsole.WriteLine();
-                            
-                            var token = AnsiConsole.Prompt(
-                                new TextPrompt<string>(Strings.VersionCrawler.EnterGitHubToken)
-                                    .Secret()
-                                    .AllowEmpty());
-                            
-                            if (!string.IsNullOrWhiteSpace(token))
+                            SetGitHubToken(token);
+                                
+                            // Retry the request with authentication
+                            response = await _httpClient.GetAsync(apiUrl);
+                                
+                            if (response.IsSuccessStatusCode)
                             {
-                                SetGitHubToken(token);
-                                
-                                // Retry the request with authentication
-                                response = await _httpClient.GetAsync(apiUrl);
-                                
-                                if (response.IsSuccessStatusCode)
-                                {
-                                    AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationSuccess);
-                                    AnsiConsole.WriteLine();
-                                    // Continue with successful response processing below
-                                }
-                                else
-                                {
-                                    AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationFailed);
-                                    AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
-                                    AnsiConsole.WriteLine();
-                                    
-                                    // Return only 'latest' tag as fallback
-                                    var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-                                    if (regex.IsMatch("latest"))
-                                    {
-                                        return new List<DockerImage>
-                                        {
-                                            new DockerImage
-                                            {
-                                                Repository = repository,
-                                                Image = imageName,
-                                                Tag = "latest",
-                                                Description = "Latest version"
-                                            }
-                                        };
-                                    }
-                                    return new List<DockerImage>();
-                                }
+                                AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationSuccess);
+                                AnsiConsole.WriteLine();
+                                // Continue with successful response processing below
                             }
                             else
                             {
-                                // User skipped authentication
+                                AnsiConsole.MarkupLine(Strings.VersionCrawler.AuthenticationFailed);
                                 AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
                                 AnsiConsole.WriteLine();
-                                
+                                    
                                 // Return only 'latest' tag as fallback
                                 var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
                                 if (regex.IsMatch("latest"))
@@ -280,10 +252,10 @@ public class VersionCrawlerService : IDisposable
                         }
                         else
                         {
-                            // User declined authentication
+                            // User skipped authentication
                             AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
                             AnsiConsole.WriteLine();
-                            
+                                
                             // Return only 'latest' tag as fallback
                             var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
                             if (regex.IsMatch("latest"))
@@ -301,6 +273,7 @@ public class VersionCrawlerService : IDisposable
                             }
                             return new List<DockerImage>();
                         }
+                        
                     }
                     else
                     {
@@ -446,7 +419,7 @@ public class VersionCrawlerService : IDisposable
             if (segments.Length >= 5 && segments[2] == "pkgs" && segments[3] == "container")
             {
                 var owner = segments[0];
-                var packageName = Uri.UnescapeDataString(segments[4]);
+                var packageName = segments[4];
                 
                 // Extract repository and image from package name
                 // Format: "repo/image" or just "image"
