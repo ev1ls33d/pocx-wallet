@@ -10,11 +10,13 @@ namespace PocxWallet.Cli.Services;
 /// <summary>
 /// Service for dynamically discovering service versions from GitHub repositories and container registries
 /// </summary>
-public class VersionCrawlerService
+public class VersionCrawlerService : IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly Dictionary<string, CachedResult> _cache;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
+    private static readonly string[] FallbackTags = new[] { "latest", "0.7.0", "0.6.0", "0.5.0" };
+    private bool _disposed;
 
     public VersionCrawlerService()
     {
@@ -78,7 +80,7 @@ public class VersionCrawlerService
             // Get assets
             if (releaseData.TryGetProperty("assets", out var assets))
             {
-                var regex = new Regex(filterRegex, RegexOptions.IgnoreCase);
+                var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
                 
                 foreach (var asset in assets.EnumerateArray())
                 {
@@ -165,7 +167,7 @@ public class VersionCrawlerService
 
             var versionsData = await response.Content.ReadFromJsonAsync<JsonElement>();
             var images = new List<DockerImage>();
-            var regex = new Regex(filterRegex, RegexOptions.IgnoreCase);
+            var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
             
             if (versionsData.ValueKind == JsonValueKind.Array)
             {
@@ -218,11 +220,10 @@ public class VersionCrawlerService
     /// </summary>
     private List<DockerImage> GetFallbackDockerTags(string repository, string imageName, string filterRegex)
     {
-        var commonTags = new[] { "latest", "0.7.0", "0.6.0", "0.5.0" };
-        var regex = new Regex(filterRegex, RegexOptions.IgnoreCase);
+        var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
         var images = new List<DockerImage>();
         
-        foreach (var tag in commonTags)
+        foreach (var tag in FallbackTags)
         {
             if (regex.IsMatch(tag))
             {
@@ -259,9 +260,13 @@ public class VersionCrawlerService
                 return (segments[0], segments[1]);
             }
         }
-        catch
+        catch (UriFormatException ex)
         {
-            // Ignore parsing errors
+            Console.WriteLine($"[dim]Invalid URL format: {ex.Message}[/]");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[dim]Error parsing URL: {ex.Message}[/]");
         }
         
         return ("", "");
@@ -297,9 +302,13 @@ public class VersionCrawlerService
                 return (owner, packageName, repository, imageName);
             }
         }
-        catch
+        catch (UriFormatException ex)
         {
-            // Ignore parsing errors
+            Console.WriteLine($"[dim]Invalid GHCR URL format: {ex.Message}[/]");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[dim]Error parsing GHCR URL: {ex.Message}[/]");
         }
         
         return ("", "", "", "");
@@ -381,5 +390,29 @@ public class VersionCrawlerService
     {
         public object Data { get; set; } = null!;
         public DateTime Timestamp { get; set; }
+    }
+
+    /// <summary>
+    /// Dispose of resources
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Dispose pattern implementation
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _httpClient?.Dispose();
+            }
+            _disposed = true;
+        }
     }
 }

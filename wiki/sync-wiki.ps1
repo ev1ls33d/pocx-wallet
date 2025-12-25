@@ -73,8 +73,32 @@ try {
         Write-Host "✓ Changes committed" -ForegroundColor Green
         Write-Host ""
         
+        # Detect default branch
+        Write-Host "Detecting default branch..." -ForegroundColor Yellow
+        $DefaultBranch = git symbolic-ref refs/remotes/origin/HEAD 2>$null | ForEach-Object { $_ -replace '^refs/remotes/origin/', '' }
+        
+        if ([string]::IsNullOrEmpty($DefaultBranch)) {
+            # Fallback to common branch names
+            $CommonBranches = @("main", "master")
+            foreach ($Branch in $CommonBranches) {
+                $BranchExists = git show-ref --verify --quiet "refs/remotes/origin/$Branch"
+                if ($LASTEXITCODE -eq 0) {
+                    $DefaultBranch = $Branch
+                    break
+                }
+            }
+        }
+        
+        if ([string]::IsNullOrEmpty($DefaultBranch)) {
+            Write-Host "Could not detect default branch, defaulting to 'master'" -ForegroundColor Yellow
+            $DefaultBranch = "master"
+        }
+        
+        Write-Host "  Using branch: $DefaultBranch" -ForegroundColor Gray
+        Write-Host ""
+        
         Write-Host "Pushing to wiki repository..." -ForegroundColor Yellow
-        git push origin master 2>&1 | Out-Null
+        git push origin $DefaultBranch 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Failed to push changes. Make sure you have write access to the wiki." -ForegroundColor Red
