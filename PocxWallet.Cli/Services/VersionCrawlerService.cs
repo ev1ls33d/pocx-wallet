@@ -19,16 +19,25 @@ public class VersionCrawlerService : IDisposable
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
     private bool _disposed;
     private string? _githubToken;
+    private readonly WalletManager _walletManager;
 
     public VersionCrawlerService()
     {
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "PocxWallet/1.0");
         _cache = new Dictionary<string, CachedResult>();
+        _walletManager = WalletManager.Instance;
+        
+        // Load token from wallet settings if available
+        var storedToken = _walletManager.Settings.GitHubToken;
+        if (!string.IsNullOrWhiteSpace(storedToken))
+        {
+            SetGitHubToken(storedToken);
+        }
     }
 
     /// <summary>
-    /// Set GitHub authentication token for API access
+    /// Set GitHub authentication token for API access and save it to wallet settings
     /// </summary>
     public void SetGitHubToken(string token)
     {
@@ -41,6 +50,10 @@ public class VersionCrawlerService : IDisposable
         if (!string.IsNullOrWhiteSpace(token))
         {
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+            
+            // Save token to wallet settings
+            _walletManager.Settings.GitHubToken = token;
+            _walletManager.Save();
         }
     }
 

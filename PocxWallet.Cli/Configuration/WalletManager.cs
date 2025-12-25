@@ -65,6 +65,9 @@ public class WalletSettings
     
     [JsonPropertyName("auto_import_to_node")]
     public bool AutoImportToNode { get; set; } = false;
+    
+    [JsonPropertyName("github_token")]
+    public string? GitHubToken { get; set; }
 }
 
 /// <summary>
