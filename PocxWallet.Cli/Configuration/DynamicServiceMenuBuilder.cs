@@ -2,6 +2,8 @@ using PocxWallet.Cli.Resources;
 using PocxWallet.Cli.Services;
 using PocxWallet.Core.Wallet;
 using Spectre.Console;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace PocxWallet.Cli.Configuration;
 
@@ -11,6 +13,7 @@ namespace PocxWallet.Cli.Configuration;
 public class DynamicServiceMenuBuilder
 {
     private readonly DockerServiceManager _dockerManager;
+    private readonly NativeServiceManager _nativeManager;
     private readonly ServiceConfiguration? _serviceConfig;
     private readonly CommandTemplateEngine _templateEngine;
     private readonly Func<HDWallet?> _walletProvider;
@@ -22,6 +25,7 @@ public class DynamicServiceMenuBuilder
     {
         _serviceConfig = serviceConfig;
         _dockerManager = dockerManager;
+        _nativeManager = new NativeServiceManager();
         _walletProvider = walletProvider ?? (() => null);
         _templateEngine = new CommandTemplateEngine(_walletProvider);
     }
@@ -39,8 +43,7 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     public async Task<string> GetServiceStatusIndicatorAsync(ServiceDefinition service)
     {
-        var containerName = GetContainerName(service);
-        var status = await _dockerManager.GetContainerStatusAsync(containerName);
+        var status = await GetServiceStatusAsync(service);
         return status == "running" ? "[green]●[/]" : "[red]●[/]";
     }
 
@@ -49,9 +52,26 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     public async Task<bool> IsServiceRunningAsync(ServiceDefinition service)
     {
-        var containerName = GetContainerName(service);
-        var status = await _dockerManager.GetContainerStatusAsync(containerName);
+        var status = await GetServiceStatusAsync(service);
         return status == "running";
+    }
+    
+    /// <summary>
+    /// Get service status (works for both Docker and Native modes)
+    /// </summary>
+    private async Task<string> GetServiceStatusAsync(ServiceDefinition service)
+    {
+        var mode = service.GetExecutionMode();
+        
+        if (mode == ExecutionMode.Native)
+        {
+            return await _nativeManager.GetNativeServiceStatusAsync(service.Id);
+        }
+        else
+        {
+            var containerName = GetContainerName(service);
+            return await _dockerManager.GetContainerStatusAsync(containerName);
+        }
     }
 
     /// <summary>
@@ -300,6 +320,7 @@ public class DynamicServiceMenuBuilder
                         "logs" => item.Label ?? Strings.ServiceMenu.ViewLogs,
                         "parameters" => item.Label ?? Strings.ServiceMenu.Parameters,
                         "settings" => item.Label ?? Strings.ServiceMenu.Settings,
+                        "pull_version" => item.Label ?? "Manage Versions",
                         "custom" => item.Label ?? item.Id ?? "Custom Action",
                         _ => item.Label ?? item.Action
                     };
@@ -311,6 +332,7 @@ public class DynamicServiceMenuBuilder
                 // Default menu if not defined
                 choices.Add(isRunning ? Strings.ServiceMenu.StopService : Strings.ServiceMenu.StartService);
                 choices.Add(Strings.ServiceMenu.ViewLogs);
+                choices.Add("Manage Versions");
                 choices.Add(Strings.ServiceMenu.Parameters);
                 choices.Add(Strings.ServiceMenu.Settings);
             }
@@ -364,6 +386,10 @@ public class DynamicServiceMenuBuilder
             {
                 return new SubmenuItem { Action = "logs" };
             }
+            if (choice == "Manage Versions")
+            {
+                return new SubmenuItem { Action = "pull_version" };
+            }
             if (choice == Strings.ServiceMenu.Parameters)
             {
                 return new SubmenuItem { Action = "parameters" };
@@ -383,6 +409,7 @@ public class DynamicServiceMenuBuilder
                 "logs" => item.Label ?? Strings.ServiceMenu.ViewLogs,
                 "parameters" => item.Label ?? Strings.ServiceMenu.Parameters,
                 "settings" => item.Label ?? Strings.ServiceMenu.Settings,
+                "pull_version" => item.Label ?? "Manage Versions",
                 "custom" => item.Label ?? item.Id ?? "Custom Action",
                 _ => item.Label ?? item.Action
             };
@@ -415,6 +442,10 @@ public class DynamicServiceMenuBuilder
                 await ViewServiceLogsAsync(service);
                 break;
 
+            case "pull_version":
+                await ShowVersionManagementAsync(service, showBanner);
+                break;
+
             case "parameters":
                 ShowServiceParameters(service, showBanner);
                 break;
@@ -430,9 +461,26 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Start a service container using settings from services.yaml
+    /// Start a service (Docker or Native based on execution_mode)
     /// </summary>
     public async Task StartServiceAsync(ServiceDefinition service)
+    {
+        var mode = service.GetExecutionMode();
+        
+        if (mode == ExecutionMode.Native)
+        {
+            await StartNativeServiceAsync(service);
+        }
+        else
+        {
+            await StartDockerServiceAsync(service);
+        }
+    }
+
+    /// <summary>
+    /// Start a Docker service container using settings from services.yaml
+    /// </summary>
+    private async Task StartDockerServiceAsync(ServiceDefinition service)
     {
         var containerName = GetContainerName(service);
         var imageName = GetImageName(service);
@@ -520,32 +568,100 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Stop a service container
+    /// Start a native service process
     /// </summary>
-    public async Task StopServiceAsync(ServiceDefinition service)
+    private async Task StartNativeServiceAsync(ServiceDefinition service)
     {
-        var containerName = GetContainerName(service);
-        AnsiConsole.MarkupLine(string.Format(Strings.Container.StoppingFormat, service.Name));
-
-        var success = await _dockerManager.StopContainerAsync(containerName);
-
-        if (success)
+        // Determine binary path
+        var serviceDir = Path.Combine(".", service.Id);
+        var binaryName = service.Container?.Binary ?? service.Id;
+        
+        // Add .exe extension on Windows
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !binaryName.EndsWith(".exe"))
         {
-            AnsiConsole.MarkupLine(string.Format(Strings.Container.StoppedSuccessFormat, service.Name));
+            binaryName += ".exe";
+        }
+        
+        var binaryPath = Path.Combine(serviceDir, binaryName);
+
+        // Build command arguments
+        var command = BuildCommand(service);
+        var arguments = command?.Replace(service.Container?.Binary ?? "", "").Trim();
+        
+        // Build environment variables
+        var environmentVars = BuildEnvironmentVariables(service);
+        
+        // Working directory
+        var workingDir = service.Container?.WorkingDir ?? serviceDir;
+
+        var success = await _nativeManager.StartNativeServiceAsync(
+            service.Id,
+            service.Name,
+            binaryPath,
+            arguments,
+            workingDir,
+            environmentVars.Count > 0 ? environmentVars : null
+        );
+
+        if (!success)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"[yellow]Tip: Use 'Manage Versions' to download the binary if it's not already installed[/]");
         }
         else
         {
-            AnsiConsole.MarkupLine(string.Format(Strings.Container.MayNotBeRunningFormat, service.Name));
+            // Show last 5 log lines after starting
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[dim]Last 5 log lines:[/]");
+            await _nativeManager.DisplayNativeServiceLogsAsync(service.Id, service.Name, 5);
         }
     }
 
     /// <summary>
-    /// View service logs
+    /// Stop a service (Docker or Native)
+    /// </summary>
+    public async Task StopServiceAsync(ServiceDefinition service)
+    {
+        var mode = service.GetExecutionMode();
+        
+        if (mode == ExecutionMode.Native)
+        {
+            await _nativeManager.StopNativeServiceAsync(service.Id, service.Name);
+        }
+        else
+        {
+            var containerName = GetContainerName(service);
+            AnsiConsole.MarkupLine(string.Format(Strings.Container.StoppingFormat, service.Name));
+
+            var success = await _dockerManager.StopContainerAsync(containerName);
+
+            if (success)
+            {
+                AnsiConsole.MarkupLine(string.Format(Strings.Container.StoppedSuccessFormat, service.Name));
+            }
+            else
+            {
+                AnsiConsole.MarkupLine(string.Format(Strings.Container.MayNotBeRunningFormat, service.Name));
+            }
+        }
+    }
+
+    /// <summary>
+    /// View service logs (Docker or Native)
     /// </summary>
     public async Task ViewServiceLogsAsync(ServiceDefinition service)
     {
-        var containerName = GetContainerName(service);
-        await _dockerManager.DisplayContainerLogsAsync(containerName, 50, $"{service.Name} Logs");
+        var mode = service.GetExecutionMode();
+        
+        if (mode == ExecutionMode.Native)
+        {
+            await _nativeManager.DisplayNativeServiceLogsAsync(service.Id, service.Name, 50);
+        }
+        else
+        {
+            var containerName = GetContainerName(service);
+            await _dockerManager.DisplayContainerLogsAsync(containerName, 50, $"{service.Name} Logs");
+        }
     }
 
     /// <summary>
@@ -1313,5 +1429,173 @@ public class DynamicServiceMenuBuilder
         }
 
         return false;
+    }
+    
+    /// <summary>
+    /// Show version management menu for downloading/pulling service versions
+    /// </summary>
+    private async Task ShowVersionManagementAsync(ServiceDefinition service, Action showBanner)
+    {
+        var mode = service.GetExecutionMode();
+        
+        if (mode == ExecutionMode.Native)
+        {
+            await ShowNativeVersionManagementAsync(service, showBanner);
+        }
+        else
+        {
+            await ShowDockerVersionManagementAsync(service, showBanner);
+        }
+    }
+    
+    /// <summary>
+    /// Show Docker image version management
+    /// </summary>
+    private async Task ShowDockerVersionManagementAsync(ServiceDefinition service, Action showBanner)
+    {
+        var images = service.Source?.Docker?.Images;
+        
+        if (images == null || images.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No Docker images configured for this service[/]");
+            AnsiConsole.MarkupLine("[dim]Add images in services.yaml under source.docker.images[/]");
+            return;
+        }
+        
+        // Build choices
+        var choices = new List<string>();
+        foreach (var image in images)
+        {
+            var desc = !string.IsNullOrEmpty(image.Description) ? $" - {image.Description}" : "";
+            choices.Add($"{image.Tag}{desc}");
+        }
+        choices.Add("Back");
+        
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold]Select Docker image to pull for {service.Name}:[/]")
+                .PageSize(15)
+                .AddChoices(choices)
+        );
+        
+        if (choice == "Back")
+        {
+            return;
+        }
+        
+        // Find selected image
+        var selectedIndex = choices.IndexOf(choice);
+        if (selectedIndex >= 0 && selectedIndex < images.Count)
+        {
+            var image = images[selectedIndex];
+            var fullImageName = $"{image.Repository}/{image.Image}:{image.Tag}";
+            
+            AnsiConsole.MarkupLine($"[bold]Pulling Docker image:[/] {Markup.Escape(fullImageName)}");
+            
+            // Execute docker pull
+            await AnsiConsole.Status()
+                .StartAsync("Pulling image...", async ctx =>
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "docker",
+                        Arguments = $"pull {fullImageName}",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using var process = new Process { StartInfo = psi };
+                    process.Start();
+
+                    var output = await process.StandardOutput.ReadToEndAsync();
+                    var error = await process.StandardError.ReadToEndAsync();
+                    
+                    await process.WaitForExitAsync();
+
+                    if (process.ExitCode == 0)
+                    {
+                        ctx.Status("[green]Pull complete![/]");
+                        AnsiConsole.MarkupLine("[green]√[/] Image pulled successfully");
+                        
+                        // Update service configuration to use this image
+                        if (service.Container != null)
+                        {
+                            service.Container.Repository = image.Repository;
+                            service.Container.Image = image.Image;
+                            service.Container.DefaultTag = image.Tag;
+                            SaveServicesToYaml();
+                            AnsiConsole.MarkupLine("[green]√[/] Service configured to use this image");
+                        }
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine($"[red]Pull failed:[/] {Markup.Escape(error)}");
+                    }
+                });
+        }
+    }
+    
+    /// <summary>
+    /// Show native binary version management
+    /// </summary>
+    private async Task ShowNativeVersionManagementAsync(ServiceDefinition service, Action showBanner)
+    {
+        var downloads = service.Source?.Native?.Downloads;
+        
+        if (downloads == null || downloads.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No native downloads configured for this service[/]");
+            AnsiConsole.MarkupLine("[dim]Add downloads in services.yaml under source.native.downloads[/]");
+            return;
+        }
+        
+        // Filter by current platform
+        var currentPlatform = NativeServiceManager.GetCurrentPlatform();
+        var compatibleDownloads = downloads.Where(d => d.Platform == currentPlatform).ToList();
+        
+        if (compatibleDownloads.Count == 0)
+        {
+            AnsiConsole.MarkupLine($"[yellow]No downloads available for platform: {currentPlatform}[/]");
+            AnsiConsole.MarkupLine($"[dim]Available platforms: {string.Join(", ", downloads.Select(d => d.Platform).Distinct())}[/]");
+            return;
+        }
+        
+        // Build choices
+        var choices = new List<string>();
+        foreach (var download in compatibleDownloads)
+        {
+            var desc = !string.IsNullOrEmpty(download.Description) ? $" - {download.Description}" : "";
+            choices.Add($"{download.Version} ({download.Platform}){desc}");
+        }
+        choices.Add("Back");
+        
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold]Select version to download for {service.Name}:[/]")
+                .PageSize(15)
+                .AddChoices(choices)
+        );
+        
+        if (choice == "Back")
+        {
+            return;
+        }
+        
+        // Find selected download
+        var selectedIndex = choices.IndexOf(choice);
+        if (selectedIndex >= 0 && selectedIndex < compatibleDownloads.Count)
+        {
+            var download = compatibleDownloads[selectedIndex];
+            
+            await _nativeManager.DownloadAndExtractNativeAsync(
+                download.Url,
+                download.Version,
+                service.Id,
+                service.Name,
+                download.Whitelist
+            );
+        }
     }
 }
