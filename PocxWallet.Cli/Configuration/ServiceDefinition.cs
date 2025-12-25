@@ -228,10 +228,28 @@ public class ServiceSource
 }
 
 /// <summary>
+/// Dynamic source configuration for runtime discovery
+/// </summary>
+public class DynamicSourceConfig
+{
+    [YamlMember(Alias = "repository")]
+    public string Repository { get; set; } = "";
+    
+    [YamlMember(Alias = "filter")]
+    public string Filter { get; set; } = "";
+    
+    [YamlMember(Alias = "whitelist")]
+    public List<string>? Whitelist { get; set; }
+}
+
+/// <summary>
 /// Docker source configuration with available images
 /// </summary>
 public class DockerSource
 {
+    [YamlMember(Alias = "dynamic")]
+    public DynamicSourceConfig? Dynamic { get; set; }
+    
     [YamlMember(Alias = "images")]
     public List<DockerImage>? Images { get; set; }
 }
@@ -259,6 +277,9 @@ public class DockerImage
 /// </summary>
 public class NativeSource
 {
+    [YamlMember(Alias = "dynamic")]
+    public DynamicSourceConfig? Dynamic { get; set; }
+    
     [YamlMember(Alias = "downloads")]
     public List<NativeDownload>? Downloads { get; set; }
 }

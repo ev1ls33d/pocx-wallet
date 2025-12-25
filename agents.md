@@ -1,5 +1,10 @@
 # PoCX Wallet - Agent Technical Documentation
 
+> **⚠️ DOCUMENTATION REQUIREMENT**: Every pull request MUST update:
+> 1. This file (`agents.md`) if architecture or code changes occur
+> 2. `README.md` if user-facing features change
+> 3. Wiki documentation (via `/wiki` directory with PowerShell sync script)
+
 > **⚠️ IMPORTANT**: This document MUST be updated with every pull request to reflect the latest code changes.
 
 ## Quick Start for Coding Agents
@@ -18,6 +23,7 @@
 | `services.yaml` | Service definitions (ports, volumes, parameters, execution mode) |
 | `PocxWallet.Cli/Services/DockerServiceManager.cs` | Docker container lifecycle management |
 | `PocxWallet.Cli/Services/NativeServiceManager.cs` | Native process lifecycle management |
+| `PocxWallet.Cli/Services/VersionCrawlerService.cs` | Dynamic version discovery from GitHub |
 | `PocxWallet.Cli/Configuration/ServiceDefinition.cs` | YAML model classes and data structures |
 | `PocxWallet.Cli/Configuration/DynamicServiceMenuBuilder.cs` | Service menu UI and action routing |
 | `PocxWallet.Cli/Configuration/ServiceDefinitionLoader.cs` | YAML loading and validation |
@@ -131,6 +137,35 @@ services.yaml
           whitelist:  # Optional: files to keep after extraction
             - "binary-name"
             - "binary-cli"
+
+### Dynamic Version Crawling
+
+Services can be configured with dynamic source discovery instead of static URLs:
+
+```yaml
+source:
+  docker:
+    dynamic:
+      repository: "https://github.com/owner/repo/pkgs/container/package-name"
+      filter: "latest|[0-9]\\.[0-9]\\.[0-9]"  # Regex pattern for version tags
+    images: []  # Legacy static images, can be empty
+  native:
+    dynamic:
+      repository: "https://github.com/owner/repo/releases/"
+      filter: "linux.*\\.tar\\.gz|windows.*\\.zip"  # Regex pattern for asset names
+    downloads: []  # Legacy static downloads, can be empty
+```
+
+The `filter` is a regex pattern applied to:
+- **Docker**: Version tags in container registry
+- **Native**: Release asset filenames
+
+**Dynamic source benefits**:
+- Automatic discovery of new releases
+- No manual YAML updates needed for each release
+- Backward compatible with static sources
+
+**Important for Agents**: When adding or modifying services, prefer `dynamic` source configuration over static `downloads`/`images` to enable automatic version discovery.
   
   ports:
     - name: "port-name"
@@ -245,6 +280,22 @@ public enum ExecutionMode
 - Handles parameter editing and persistence
 - Manages environment variables and port/volume overrides
 
+### VersionCrawlerService
+
+**Purpose**: Dynamically discovers service versions from GitHub repositories and container registries
+
+**Key Methods**:
+- `CrawlGitHubReleasesAsync()` - Discover native binaries from GitHub Releases
+- `CrawlContainerRegistryAsync()` - Discover Docker images from GitHub Container Registry
+
+**Implementation Details**:
+- Uses GitHub API for releases and packages
+- Applies regex filtering to version tags and asset names
+- Auto-detects platform from filename patterns (linux, windows, x64, arm64)
+- Caches results for 5 minutes to avoid repeated API calls
+- Provides fallback to common tags when API fails
+- Parses GitHub URLs to extract owner/repo/package information
+
 ## Common Development Tasks
 
 ### Adding a New Service
@@ -358,6 +409,15 @@ dotnet run
 - Methods: PascalCase (`StartServiceAsync`)
 - Private fields: _camelCase (`_dockerManager`)
 
+### UI and Output
+- **ALWAYS use Spectre.Console for CLI output** - Never use `Console.WriteLine`
+- **ALWAYS use AnsiConsole.MarkupLine()** for formatted output with markup
+- **ALWAYS define strings in `Strings.cs`** - Never hardcode user-facing strings
+  - Organize strings by functional area (e.g., `Strings.ServiceMenu`, `Strings.VersionCrawler`)
+  - Use format strings with placeholders: `"[green]√[/] {0} installed successfully"`
+  - Include markup for colors and formatting in the string constants
+- Use `Markup.Escape()` for any user-provided data to prevent markup injection
+
 ### Async/Await
 - All I/O operations are async
 - Method names end with `Async`
@@ -449,6 +509,23 @@ See `wiki/` directory for detailed user documentation:
 - Wallet management
 - Mining & plotting guides
 - Troubleshooting
+
+### Updating Documentation
+
+The wiki is stored in a separate repository but mirrored in `/wiki`:
+
+1. Edit files in `/wiki/*.md`
+2. Run `.\wiki\sync-wiki.ps1` to push to the wiki (requires PowerShell and git access)
+3. Alternatively, changes in `/wiki` will be synced by maintainers
+
+**PowerShell Sync Script**:
+```powershell
+# From repository root
+.\wiki\sync-wiki.ps1
+
+# With custom commit message
+.\wiki\sync-wiki.ps1 -CommitMessage "Update installation guide"
+```
 
 ---
 

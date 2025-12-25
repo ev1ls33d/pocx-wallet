@@ -53,10 +53,7 @@ public class WalletFile
 /// Wallet settings stored in the wallet file
 /// </summary>
 public class WalletSettings
-{
-    [JsonPropertyName("default_wallet_path")]
-    public string DefaultWalletPath { get; set; } = "./wallet.json";
-    
+{    
     [JsonPropertyName("auto_save")]
     public bool AutoSave { get; set; } = false;
     
@@ -65,6 +62,9 @@ public class WalletSettings
     
     [JsonPropertyName("auto_import_to_node")]
     public bool AutoImportToNode { get; set; } = false;
+    
+    [JsonPropertyName("github_token")]
+    public string? GitHubToken { get; set; }
 }
 
 /// <summary>
@@ -99,6 +99,12 @@ public class WalletManager
     {
         _walletFile = new WalletFile();
         _filePath = "./wallet.json";
+        
+        // Automatically load wallet file if it exists
+        if (File.Exists(_filePath))
+        {
+            Load(_filePath);
+        }
     }
     
     /// <summary>
@@ -156,7 +162,7 @@ public class WalletManager
             try
             {
                 var walletFile = JsonSerializer.Deserialize<WalletFile>(json);
-                if (walletFile != null && walletFile.Wallets.Count > 0)
+                if (walletFile != null)
                 {
                     _walletFile = walletFile;
                     
