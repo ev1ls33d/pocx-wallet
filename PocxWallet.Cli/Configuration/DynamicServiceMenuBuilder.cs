@@ -858,11 +858,10 @@ public class DynamicServiceMenuBuilder
     {
         var currentMode = service.GetExecutionMode();
         var options = new[] { "Docker", "Native" };
-        var defaultOption = currentMode == ExecutionMode.Docker ? "Docker" : "Native";
         
         var newMode = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title($"Select execution mode for [bold]{service.Name}[/]:")
+                .Title($"Select execution mode for [bold]{service.Name}[/]:\n[dim]Current: {(currentMode == ExecutionMode.Docker ? "Docker" : "Native")}[/]")
                 .AddChoices(options)
                 .HighlightStyle(new Style(Color.Green))
         );
