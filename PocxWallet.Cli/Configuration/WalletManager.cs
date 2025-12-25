@@ -162,7 +162,7 @@ public class WalletManager
             try
             {
                 var walletFile = JsonSerializer.Deserialize<WalletFile>(json);
-                if (walletFile != null && walletFile.Wallets.Count > 0)
+                if (walletFile != null)
                 {
                     _walletFile = walletFile;
                     
