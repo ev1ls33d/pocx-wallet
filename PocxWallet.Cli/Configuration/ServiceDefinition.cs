@@ -147,6 +147,13 @@ public class ServiceDefinition
     public string? NetworkOverride { get; set; }
 
     /// <summary>
+    /// For native mode: whether to spawn in new console process (true) or redirect to log file (false)
+    /// Default is true
+    /// </summary>
+    [YamlMember(Alias = "spawn_new_console")]
+    public bool SpawnNewConsole { get; set; } = true;
+
+    /// <summary>
     /// Get the container name for this service
     /// </summary>
     public string GetContainerName()

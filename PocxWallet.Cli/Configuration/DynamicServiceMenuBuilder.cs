@@ -745,7 +745,7 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Show service settings menu (Docker service-level: repository, tag, volumes, ports, etc.)
+    /// Show service settings menu - different options based on execution mode
     /// </summary>
     public void ShowServiceSettings(ServiceDefinition service, Action showBanner)
     {
@@ -753,34 +753,42 @@ public class DynamicServiceMenuBuilder
         while (!back)
         {
             var choices = new List<string>();
+            var mode = service.GetExecutionMode();
             
-            // Repository
-            var repo = GetServiceRepository(service);
-            choices.Add($"{Strings.SettingsMenu.Repository.PadRight(20)} [cyan]{Markup.Escape(repo)}[/]");
+            // First entry: Execution Mode (always shown)
+            var executionModeValue = mode == ExecutionMode.Docker ? "[cyan]Docker[/]" : "[cyan]Native[/]";
+            choices.Add($"{Strings.SettingsMenu.ExecutionMode.PadRight(20)} {executionModeValue}");
             
-            // Tag
-            var tag = GetServiceTag(service);
-            choices.Add($"{Strings.SettingsMenu.Tag.PadRight(20)} [cyan]{Markup.Escape(tag)}[/]");
-            
-            // Container Name
-            var containerName = GetContainerName(service);
-            choices.Add($"{Strings.SettingsMenu.ContainerName.PadRight(20)} [cyan]{Markup.Escape(containerName)}[/]");
-            
-            // Network
-            var network = GetServiceNetwork(service);
-            choices.Add($"{Strings.SettingsMenu.Network.PadRight(20)} [cyan]{Markup.Escape(network)}[/]");
-            
-            // Volumes count
-            var volumeCount = service.Volumes?.Count ?? 0;
-            choices.Add($"{Strings.SettingsMenu.Volumes.PadRight(20)} [cyan]{volumeCount} configured[/]");
-            
-            // Ports count
-            var portCount = service.Ports?.Count ?? 0;
-            choices.Add($"{Strings.SettingsMenu.Ports.PadRight(20)} [cyan]{portCount} configured[/]");
-            
-            // Environment variables count
-            var envCount = service.Environment?.Count ?? 0;
-            choices.Add($"{Strings.SettingsMenu.Environment.PadRight(20)} [cyan]{envCount} configured[/]");
+            if (mode == ExecutionMode.Docker)
+            {
+                // Docker mode settings in order: Container Name, Environment, Volumes, Ports, Network
+                
+                // Container Name
+                var containerName = GetContainerName(service);
+                choices.Add($"{Strings.SettingsMenu.ContainerName.PadRight(20)} [cyan]{Markup.Escape(containerName)}[/]");
+                
+                // Environment variables count
+                var envCount = service.Environment?.Count ?? 0;
+                choices.Add($"{Strings.SettingsMenu.Environment.PadRight(20)} [cyan]{envCount} configured[/]");
+                
+                // Volumes count
+                var volumeCount = service.Volumes?.Count ?? 0;
+                choices.Add($"{Strings.SettingsMenu.Volumes.PadRight(20)} [cyan]{volumeCount} configured[/]");
+                
+                // Ports count
+                var portCount = service.Ports?.Count ?? 0;
+                choices.Add($"{Strings.SettingsMenu.Ports.PadRight(20)} [cyan]{portCount} configured[/]");
+                
+                // Network
+                var network = GetServiceNetwork(service);
+                choices.Add($"{Strings.SettingsMenu.Network.PadRight(20)} [cyan]{Markup.Escape(network)}[/]");
+            }
+            else
+            {
+                // Native mode settings: Spawn in new process
+                var spawnValue = service.SpawnNewConsole ? "[green]true[/]" : "[red]false[/]";
+                choices.Add($"{Strings.SettingsMenu.SpawnNewConsole.PadRight(20)} {spawnValue}");
+            }
             
             choices.Add(Strings.ServiceMenu.Back);
 
@@ -799,34 +807,87 @@ public class DynamicServiceMenuBuilder
 
             // Find which setting was selected
             var selectedIndex = choices.IndexOf(choice);
-            switch (selectedIndex)
+            
+            if (selectedIndex == 0)
             {
-                case 0: // Repository
-                    EditServiceSetting(service, "repository", Strings.SettingsMenu.Repository, showBanner);
-                    break;
-                case 1: // Tag
-                    EditServiceSetting(service, "tag", Strings.SettingsMenu.Tag, showBanner);
-                    break;
-                case 2: // Container Name
-                    EditServiceSetting(service, "container_name", Strings.SettingsMenu.ContainerName, showBanner);
-                    break;
-                case 3: // Network
-                    EditServiceSetting(service, "network", Strings.SettingsMenu.Network, showBanner);
-                    break;
-                case 4: // Volumes
-                    ShowVolumesMenu(service, showBanner);
-                    break;
-                case 5: // Ports
-                    ShowPortsMenu(service, showBanner);
-                    break;
-                case 6: // Environment
-                    ShowEnvironmentMenu(service, showBanner);
-                    break;
+                // Execution Mode
+                EditExecutionMode(service);
+            }
+            else if (mode == ExecutionMode.Docker)
+            {
+                // Docker mode settings
+                switch (selectedIndex)
+                {
+                    case 1: // Container Name
+                        EditServiceSetting(service, "container_name", Strings.SettingsMenu.ContainerName, showBanner);
+                        break;
+                    case 2: // Environment
+                        ShowEnvironmentMenu(service, showBanner);
+                        break;
+                    case 3: // Volumes
+                        ShowVolumesMenu(service, showBanner);
+                        break;
+                    case 4: // Ports
+                        ShowPortsMenu(service, showBanner);
+                        break;
+                    case 5: // Network
+                        EditServiceSetting(service, "network", Strings.SettingsMenu.Network, showBanner);
+                        break;
+                }
+            }
+            else
+            {
+                // Native mode settings
+                switch (selectedIndex)
+                {
+                    case 1: // Spawn New Console
+                        EditSpawnNewConsole(service);
+                        break;
+                }
             }
             
             AnsiConsole.Clear();
             showBanner();
         }
+    }
+
+    /// <summary>
+    /// Edit execution mode setting
+    /// </summary>
+    private void EditExecutionMode(ServiceDefinition service)
+    {
+        var currentMode = service.GetExecutionMode();
+        var options = new[] { "Docker", "Native" };
+        var defaultOption = currentMode == ExecutionMode.Docker ? "Docker" : "Native";
+        
+        var newMode = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"Select execution mode for [bold]{service.Name}[/]:")
+                .AddChoices(options)
+                .HighlightStyle(new Style(Color.Green))
+        );
+        
+        service.ExecutionModeString = newMode.ToLower();
+        SaveServicesToYaml();
+        
+        AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, Strings.SettingsMenu.ExecutionMode));
+        AnsiConsole.MarkupLine($"[yellow]Note: You may need to download binaries (Native mode) or pull images (Docker mode) via 'Manage Versions'[/]");
+    }
+
+    /// <summary>
+    /// Edit spawn new console setting for native mode
+    /// </summary>
+    private void EditSpawnNewConsole(ServiceDefinition service)
+    {
+        var currentValue = service.SpawnNewConsole;
+        
+        service.SpawnNewConsole = AnsiConsole.Confirm(
+            $"Spawn {service.Name} in new console window?\n[dim](false = redirect output to log file)[/]",
+            currentValue
+        );
+        
+        SaveServicesToYaml();
+        AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, Strings.SettingsMenu.SpawnNewConsole));
     }
 
     /// <summary>
@@ -836,8 +897,6 @@ public class DynamicServiceMenuBuilder
     {
         string currentValue = settingType switch
         {
-            "repository" => GetServiceRepository(service),
-            "tag" => GetServiceTag(service),
             "container_name" => GetContainerName(service),
             "network" => GetServiceNetwork(service),
             _ => ""
@@ -848,14 +907,6 @@ public class DynamicServiceMenuBuilder
         // Update the service configuration
         switch (settingType)
         {
-            case "repository":
-                if (service.Container != null)
-                    service.Container.Repository = newValue;
-                break;
-            case "tag":
-                if (service.Container != null)
-                    service.Container.DefaultTag = newValue;
-                break;
             case "container_name":
                 // Store as a custom setting value
                 service.ContainerNameOverride = newValue;
