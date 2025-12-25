@@ -31,11 +31,13 @@ public class VersionCrawlerService : IDisposable
     /// <param name="repositoryUrl">GitHub repository URL (e.g., https://github.com/owner/repo/releases/)</param>
     /// <param name="filterRegex">Regex pattern to match against asset filenames</param>
     /// <param name="releaseTag">Specific release tag to fetch, or null for latest</param>
+    /// <param name="whitelist">Optional whitelist of files to extract from archives</param>
     /// <returns>List of native downloads discovered</returns>
     public async Task<List<NativeDownload>> CrawlGitHubReleasesAsync(
         string repositoryUrl,
         string filterRegex,
-        string? releaseTag = null)
+        string? releaseTag = null,
+        List<string>? whitelist = null)
     {
         var cacheKey = $"github-releases:{repositoryUrl}:{filterRegex}:{releaseTag}";
         
@@ -101,7 +103,8 @@ public class VersionCrawlerService : IDisposable
                         Url = downloadUrl,
                         Version = tag,
                         Platform = platform,
-                        Description = $"{tag} - {platform}"
+                        Description = $"Release {tag} - {name}",
+                        Whitelist = whitelist
                     });
                 }
             }

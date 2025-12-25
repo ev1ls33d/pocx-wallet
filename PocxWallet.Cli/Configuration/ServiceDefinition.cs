@@ -237,6 +237,9 @@ public class DynamicSourceConfig
     
     [YamlMember(Alias = "filter")]
     public string Filter { get; set; } = "";
+    
+    [YamlMember(Alias = "whitelist")]
+    public List<string>? Whitelist { get; set; }
 }
 
 /// <summary>

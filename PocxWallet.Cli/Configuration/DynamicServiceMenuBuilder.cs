@@ -1638,7 +1638,9 @@ public class DynamicServiceMenuBuilder
             
             var crawledDownloads = await _versionCrawler.CrawlGitHubReleasesAsync(
                 dynamic.Repository,
-                dynamic.Filter
+                dynamic.Filter,
+                null,
+                dynamic.Whitelist
             );
             downloads.AddRange(crawledDownloads);
         }
