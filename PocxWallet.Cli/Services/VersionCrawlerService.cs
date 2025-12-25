@@ -189,7 +189,7 @@ public class VersionCrawlerService : IDisposable
             // For public packages, we can try to scrape the package page or use Docker registry API
             
             // Attempt to use GitHub Packages API
-            var apiUrl = $"https://api.github.com/users/{owner}/packages/container/{packageName}/versions";
+            var apiUrl = $"https://api.github.com/users/{Uri.EscapeDataString(owner)}/packages/container/{Uri.EscapeDataString(packageName)}/versions";
             
             var response = await _httpClient.GetAsync(apiUrl);
             
@@ -419,7 +419,7 @@ public class VersionCrawlerService : IDisposable
             if (segments.Length >= 5 && segments[2] == "pkgs" && segments[3] == "container")
             {
                 var owner = segments[0];
-                var packageName = segments[4];
+                var packageName = Uri.UnescapeDataString(segments[4]);
                 
                 // Extract repository and image from package name
                 // Format: "repo/image" or just "image"
