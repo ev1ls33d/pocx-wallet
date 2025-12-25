@@ -4,11 +4,11 @@
 # This file defines all container services that can be managed by the wallet. 
 # Adding a new service is as simple as defining it here - no code changes needed. 
 #
-# Schema Version: 1.0
+# Schema Version: 2.0
 # Generated from: PoC-Consortium/bitcoin, PoC-Consortium/pocx, PoC-Consortium/electrs-pocx
 # ============================================================================
 
-version: "1.0"
+version: "2.0"
 
 # Global defaults applied to all services
 defaults:
@@ -32,17 +32,43 @@ services:
     category: "infrastructure"
     menu_label: "[Node]"
     documentation_url: "https://github.com/PoC-Consortium/bitcoin"
+    execution_mode: "docker"  # Options: docker (default), native
     
     container: 
       image: "bitcoin"
-      repository: "ghcr.io/ev1ls33d/pocx-wallet"
-      default_tag: "latest"
       container_name_default: "pocx-node"
       working_dir: "/root"
       entrypoint: null
       binary: "bitcoind"
       
-    source: 
+    source:
+      docker:
+        images:
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "bitcoin"
+            tag: "v30-RC3"
+            description: "Bitcoin-PoCX v30 Release Candidate 3"
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "bitcoin"
+            tag: "latest"
+            description: "Latest development build"
+      native:
+        downloads:
+          - url: "https://github.com/PoC-Consortium/bitcoin/releases/download/v30-RC3/bitcoin-pocx-v30-RC3-linux-x64.tar.gz"
+            version: "v30-RC3"
+            platform: "linux-x64"
+            description: "Bitcoin-PoCX v30 RC3 for Linux x64"
+            whitelist:
+              - "bitcoind"
+              - "bitcoin-cli"
+          - url: "https://github.com/PoC-Consortium/bitcoin/releases/download/v30-RC3/bitcoin-pocx-v30-RC3-win-x64.zip"
+            version: "v30-RC3"
+            platform: "win-x64"
+            description: "Bitcoin-PoCX v30 RC3 for Windows x64"
+            whitelist:
+              - "bitcoind.exe"
+              - "bitcoin-cli.exe"
+      # Legacy fields for backward compatibility
       repository: "https://github.com/PoC-Consortium/bitcoin.git"
       branch: "pocx-v30-RC3"
       build_command: "cmake -B build && cmake --build build"
@@ -412,20 +438,14 @@ services:
           label_stopped: "Start Node"
         - action: "logs"
           label:  "View Logs"
+        - action: "pull_version"
+          label: "Manage Versions"
         - action: "parameters"
           label:  "Parameters"
         - action: "settings"
           label:  "Settings"
     
     settings:
-      - key: "Repository"
-        setting_path: "BitcoinNode.Repository"
-        type: "string"
-        category: "container"
-      - key: "Tag"
-        setting_path: "BitcoinNode.Tag"
-        type: "string"
-        category: "container"
       - key: "RPC Port"
         setting_path: "BitcoinNode.RpcPort"
         type: "int"
