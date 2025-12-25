@@ -106,7 +106,7 @@ public class NativeServiceManager
             else
             {
                 psi.FileName = "cmd.exe";
-                psi.Arguments = $"/k \"\"{binaryName}\" {arguments ?? ""}\"";
+                psi.Arguments = $"/c \"{binaryName} {arguments ?? ""} || pause;exit\""; //  Keep console open on error
             }
 
             AnsiConsole.MarkupLine($"[bold]Starting native service:[/] {serviceName}");
