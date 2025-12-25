@@ -1335,7 +1335,7 @@ services:
         default:  ["/plots"]
         description: "Target disk path(s) for plot files"
         category:  "output"
-        value: ["/plots"]
+        value: ["."]
         
       # === Compression ===
       - name: "compression"
@@ -1438,6 +1438,7 @@ services:
         default: false
         description: "Run plotter with low CPU priority"
         category: "process"
+        value: true
         
       # === Output Mode ===
       - name: "quiet"
@@ -1460,7 +1461,7 @@ services:
         default:  false
         description:  "Machine-readable progress output for GUI"
         category: "output"
-        value: true
+        value: false
     
     depends_on:  []
     
