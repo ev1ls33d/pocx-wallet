@@ -342,5 +342,46 @@ public static class Strings
         public const string EnterFormat = "Enter {0}:";
         public const string SelectFormat = "Select {0}:";
         public const string EnterCommaSeparatedFormat = "Enter {0} (comma-separated):";
+        public const string InvalidInput = "[red]Invalid input[/]";
+        public const string OperationCancelled = "[yellow]Operation cancelled[/]";
+    }
+
+    // ========================================
+    // Version Crawler Service
+    // ========================================
+    public static class VersionCrawler
+    {
+        public const string FailedToParseRepoUrl = "[yellow]Failed to parse GitHub repository URL: {0}[/]";
+        public const string GitHubApiRequestFailed = "[yellow]GitHub API request failed: {0}[/]";
+        public const string ErrorCrawlingReleases = "[red]Error crawling GitHub releases: {0}[/]";
+        public const string FailedToParseGhcrUrl = "[yellow]Failed to parse GHCR package URL: {0}[/]";
+        public const string GitHubPackagesApiAuthRequired = "[yellow]GitHub Packages API requires authentication (Status: {0})[/]";
+        public const string OnlyLatestTagAvailable = "[dim]Showing only 'latest' tag without authentication[/]";
+        public const string ErrorCrawlingRegistry = "[red]Error crawling container registry: {0}[/]";
+        public const string InvalidUrlFormat = "[dim]Invalid URL format: {0}[/]";
+        public const string ErrorParsingUrl = "[dim]Error parsing URL: {0}[/]";
+        public const string InvalidGhcrUrlFormat = "[dim]Invalid GHCR URL format: {0}[/]";
+        public const string ErrorParsingGhcrUrl = "[dim]Error parsing GHCR URL: {0}[/]";
+    }
+
+    // ========================================
+    // Native Service Manager
+    // ========================================
+    public static class NativeService
+    {
+        public const string DownloadComplete = "[green]√[/] Download complete";
+        public const string ExtractingToFormat = "[bold]Extracting to {0}...[/]";
+        public const string ExtractionComplete = "[green]√[/] Extraction complete";
+        public const string ApplyingWhitelist = "[bold]Applying whitelist filter...[/]";
+        public const string WhitelistApplied = "[green]√[/] Whitelist applied";
+        public const string InstalledSuccessFormat = "[green]√[/] {0} {1} installed successfully";
+        public const string ErrorDownloadingFormat = "[red]Error downloading/extracting:[/] {0}";
+        public const string UnsupportedArchiveFormat = "[red]Unsupported archive format:[/] {0}";
+        public const string CheckingIfArchive = "[dim]Checking if file is an archive...[/]";
+        public const string DetectedAsArchive = "[dim]Detected as archive, attempting extraction...[/]";
+        public const string NotAnArchive = "[yellow]File does not appear to be an archive[/]";
+        public const string MovingWhitelistedFiles = "[bold]Moving whitelisted files...[/]";
+        public const string MovedFilesFormat = "[green]√[/] Moved {0} file(s)";
+        public const string NoWhitelistedFilesFound = "[yellow]Warning: No whitelisted files found in archive[/]";
     }
 }

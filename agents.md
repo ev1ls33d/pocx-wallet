@@ -409,6 +409,15 @@ dotnet run
 - Methods: PascalCase (`StartServiceAsync`)
 - Private fields: _camelCase (`_dockerManager`)
 
+### UI and Output
+- **ALWAYS use Spectre.Console for CLI output** - Never use `Console.WriteLine`
+- **ALWAYS use AnsiConsole.MarkupLine()** for formatted output with markup
+- **ALWAYS define strings in `Strings.cs`** - Never hardcode user-facing strings
+  - Organize strings by functional area (e.g., `Strings.ServiceMenu`, `Strings.VersionCrawler`)
+  - Use format strings with placeholders: `"[green]√[/] {0} installed successfully"`
+  - Include markup for colors and formatting in the string constants
+- Use `Markup.Escape()` for any user-provided data to prevent markup injection
+
 ### Async/Await
 - All I/O operations are async
 - Method names end with `Async`

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using PocxWallet.Cli.Resources;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Services;
@@ -327,8 +328,8 @@ public class NativeServiceManager
                     });
             }
 
-            AnsiConsole.MarkupLine($"[green]√[/] Download complete");
-            AnsiConsole.MarkupLine($"[bold]Extracting to {Markup.Escape(serviceDir)}...[/]");
+            AnsiConsole.MarkupLine(Strings.NativeService.DownloadComplete);
+            AnsiConsole.MarkupLine(string.Format(Strings.NativeService.ExtractingToFormat, Markup.Escape(serviceDir)));
 
             // Extract based on file extension
             if (fileName.EndsWith(".tar.gz") || fileName.EndsWith(".tgz"))
@@ -339,31 +340,47 @@ public class NativeServiceManager
             {
                 ZipFile.ExtractToDirectory(downloadPath, serviceDir, overwriteFiles: true);
             }
+            else if (fileName.EndsWith(".exe"))
+            {
+                // Check if the .exe is actually an archive (like setup.exe)
+                AnsiConsole.MarkupLine(Strings.NativeService.CheckingIfArchive);
+                
+                if (await TryExtractExeAsArchiveAsync(downloadPath, serviceDir))
+                {
+                    AnsiConsole.MarkupLine(Strings.NativeService.DetectedAsArchive);
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine(Strings.NativeService.NotAnArchive);
+                    AnsiConsole.MarkupLine(string.Format(Strings.NativeService.UnsupportedArchiveFormat, fileName));
+                    return false;
+                }
+            }
             else
             {
-                AnsiConsole.MarkupLine($"[red]Unsupported archive format:[/] {fileName}");
+                AnsiConsole.MarkupLine(string.Format(Strings.NativeService.UnsupportedArchiveFormat, fileName));
                 return false;
             }
 
-            AnsiConsole.MarkupLine($"[green]√[/] Extraction complete");
+            AnsiConsole.MarkupLine(Strings.NativeService.ExtractionComplete);
 
             // Apply whitelist filtering if provided
             if (whitelist != null && whitelist.Count > 0)
             {
-                AnsiConsole.MarkupLine($"[bold]Applying whitelist filter...[/]");
-                ApplyWhitelistFilter(serviceDir, whitelist);
-                AnsiConsole.MarkupLine($"[green]√[/] Whitelist applied");
+                AnsiConsole.MarkupLine(Strings.NativeService.ApplyingWhitelist);
+                MoveWhitelistedFiles(serviceDir, whitelist);
+                AnsiConsole.MarkupLine(Strings.NativeService.WhitelistApplied);
             }
 
             // Clean up downloaded archive
             File.Delete(downloadPath);
 
-            AnsiConsole.MarkupLine($"[green]√[/] {serviceName} {version} installed successfully");
+            AnsiConsole.MarkupLine(string.Format(Strings.NativeService.InstalledSuccessFormat, serviceName, version));
             return true;
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error downloading/extracting:[/] {Markup.Escape(ex.Message)}");
+            AnsiConsole.MarkupLine(string.Format(Strings.NativeService.ErrorDownloadingFormat, Markup.Escape(ex.Message)));
             return false;
         }
     }
@@ -401,7 +418,119 @@ public class NativeServiceManager
     }
 
     /// <summary>
-    /// Apply whitelist filter - delete all files NOT in the whitelist
+    /// Try to extract .exe file as an archive using 7-Zip or similar tools
+    /// </summary>
+    private async Task<bool> TryExtractExeAsArchiveAsync(string exePath, string destinationPath)
+    {
+        // Try using 7z command if available
+        try
+        {
+            var result = await ExecuteCommandAsync("7z", $"x \"{exePath}\" -o\"{destinationPath}\" -y");
+            if (result.exitCode == 0)
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            // 7z not available, try alternative methods
+        }
+
+        // On Windows, try using expand command for self-extracting archives
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            try
+            {
+                var result = await ExecuteCommandAsync("expand", $"\"{exePath}\" -F:* \"{destinationPath}\"");
+                if (result.exitCode == 0)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // expand failed
+            }
+        }
+
+        // Try as ZIP archive (some .exe files are actually ZIP files)
+        try
+        {
+            ZipFile.ExtractToDirectory(exePath, destinationPath, overwriteFiles: true);
+            return true;
+        }
+        catch
+        {
+            // Not a ZIP file
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Move whitelisted files from extracted directory to target directory
+    /// Instead of deleting non-whitelisted files, we move only the whitelisted ones
+    /// This handles cases where binaries are in subdirectories
+    /// </summary>
+    private void MoveWhitelistedFiles(string directory, List<string> whitelist)
+    {
+        var allFiles = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
+        var movedCount = 0;
+        var tempDir = Path.Combine(Path.GetTempPath(), $"whitelist_temp_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            // Create HashSet for O(1) lookups
+            var comparer = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var whitelistSet = new HashSet<string>(whitelist, comparer);
+
+            AnsiConsole.MarkupLine(Strings.NativeService.MovingWhitelistedFiles);
+
+            // Move whitelisted files to temp directory (keeping only filename, not subdirectory structure)
+            foreach (var file in allFiles)
+            {
+                var fileName = Path.GetFileName(file);
+                
+                // Check if filename is in whitelist
+                if (whitelistSet.Contains(fileName))
+                {
+                    var destPath = Path.Combine(tempDir, fileName);
+                    File.Copy(file, destPath, overwrite: true);
+                    movedCount++;
+                }
+            }
+
+            if (movedCount == 0)
+            {
+                AnsiConsole.MarkupLine(Strings.NativeService.NoWhitelistedFilesFound);
+            }
+            else
+            {
+                // Delete original extraction directory
+                Directory.Delete(directory, recursive: true);
+                
+                // Move temp directory to target location
+                Directory.Move(tempDir, directory);
+                
+                AnsiConsole.MarkupLine(string.Format(Strings.NativeService.MovedFilesFormat, movedCount));
+            }
+        }
+        catch (Exception ex)
+        {
+            // Clean up temp directory on error
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, recursive: true); } catch { }
+            }
+            throw new Exception($"Error applying whitelist: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Apply whitelist filter - delete all files NOT in the whitelist (legacy method, kept for compatibility)
     /// </summary>
     private void ApplyWhitelistFilter(string directory, List<string> whitelist)
     {

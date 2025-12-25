@@ -1,4 +1,6 @@
 using PocxWallet.Cli.Configuration;
+using PocxWallet.Cli.Resources;
+using Spectre.Console;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -15,7 +17,6 @@ public class VersionCrawlerService : IDisposable
     private readonly HttpClient _httpClient;
     private readonly Dictionary<string, CachedResult> _cache;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
-    private static readonly string[] FallbackTags = new[] { "latest", "0.7.0", "0.6.0", "0.5.0" };
     private bool _disposed;
 
     public VersionCrawlerService()
@@ -56,7 +57,7 @@ public class VersionCrawlerService : IDisposable
             var (owner, repo) = ParseGitHubRepoUrl(repositoryUrl);
             if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
             {
-                Console.WriteLine($"[yellow]Failed to parse GitHub repository URL: {repositoryUrl}[/]");
+                AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.FailedToParseRepoUrl, Markup.Escape(repositoryUrl)));
                 return new List<NativeDownload>();
             }
 
@@ -69,7 +70,7 @@ public class VersionCrawlerService : IDisposable
             
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[yellow]GitHub API request failed: {response.StatusCode}[/]");
+                AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.GitHubApiRequestFailed, response.StatusCode));
                 return new List<NativeDownload>();
             }
 
@@ -116,7 +117,7 @@ public class VersionCrawlerService : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[red]Error crawling GitHub releases: {ex.Message}[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.ErrorCrawlingReleases, Markup.Escape(ex.Message)));
             return new List<NativeDownload>();
         }
     }
@@ -148,7 +149,7 @@ public class VersionCrawlerService : IDisposable
             var (owner, packageName, repository, imageName) = ParseGhcrPackageUrl(packageUrl);
             if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(packageName))
             {
-                Console.WriteLine($"[yellow]Failed to parse GHCR package URL: {packageUrl}[/]");
+                AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.FailedToParseGhcrUrl, Markup.Escape(packageUrl)));
                 return new List<DockerImage>();
             }
 
@@ -163,14 +164,30 @@ public class VersionCrawlerService : IDisposable
             
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[yellow]GitHub Packages API request failed: {response.StatusCode}[/]");
-                Console.WriteLine($"[dim]Attempting fallback to common tags...[/]");
-                return GetFallbackDockerTags(repository, imageName, filterRegex);
+                AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.GitHubPackagesApiAuthRequired, response.StatusCode));
+                AnsiConsole.MarkupLine(Strings.VersionCrawler.OnlyLatestTagAvailable);
+                
+                // Return only 'latest' tag as fallback
+                var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                if (regex.IsMatch("latest"))
+                {
+                    return new List<DockerImage>
+                    {
+                        new DockerImage
+                        {
+                            Repository = repository,
+                            Image = imageName,
+                            Tag = "latest",
+                            Description = "Latest version"
+                        }
+                    };
+                }
+                return new List<DockerImage>();
             }
 
             var versionsData = await response.Content.ReadFromJsonAsync<JsonElement>();
             var images = new List<DockerImage>();
-            var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            var regex2 = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
             
             if (versionsData.ValueKind == JsonValueKind.Array)
             {
@@ -185,7 +202,7 @@ public class VersionCrawlerService : IDisposable
                             var tagName = tag.GetString() ?? "";
                             
                             // Apply filter
-                            if (!regex.IsMatch(tagName))
+                            if (!regex2.IsMatch(tagName))
                             {
                                 continue;
                             }
@@ -209,38 +226,26 @@ public class VersionCrawlerService : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[red]Error crawling container registry: {ex.Message}[/]");
-            Console.WriteLine($"[dim]Attempting fallback to common tags...[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.ErrorCrawlingRegistry, Markup.Escape(ex.Message)));
             
-            // Fallback to common tags
+            // Return only 'latest' tag as fallback
             var (_, _, repository, imageName) = ParseGhcrPackageUrl(packageUrl);
-            return GetFallbackDockerTags(repository, imageName, filterRegex);
-        }
-    }
-
-    /// <summary>
-    /// Fallback method to provide common Docker tags when API fails
-    /// </summary>
-    private List<DockerImage> GetFallbackDockerTags(string repository, string imageName, string filterRegex)
-    {
-        var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        var images = new List<DockerImage>();
-        
-        foreach (var tag in FallbackTags)
-        {
-            if (regex.IsMatch(tag))
+            var regex = new Regex(filterRegex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            if (regex.IsMatch("latest"))
             {
-                images.Add(new DockerImage
+                return new List<DockerImage>
                 {
-                    Repository = repository,
-                    Image = imageName,
-                    Tag = tag,
-                    Description = $"Common tag - {tag}"
-                });
+                    new DockerImage
+                    {
+                        Repository = repository,
+                        Image = imageName,
+                        Tag = "latest",
+                        Description = "Latest version"
+                    }
+                };
             }
+            return new List<DockerImage>();
         }
-        
-        return images;
     }
 
     /// <summary>
@@ -265,11 +270,11 @@ public class VersionCrawlerService : IDisposable
         }
         catch (UriFormatException ex)
         {
-            Console.WriteLine($"[dim]Invalid URL format: {ex.Message}[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.InvalidUrlFormat, Markup.Escape(ex.Message)));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[dim]Error parsing URL: {ex.Message}[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.ErrorParsingUrl, Markup.Escape(ex.Message)));
         }
         
         return ("", "");
@@ -307,11 +312,11 @@ public class VersionCrawlerService : IDisposable
         }
         catch (UriFormatException ex)
         {
-            Console.WriteLine($"[dim]Invalid GHCR URL format: {ex.Message}[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.InvalidGhcrUrlFormat, Markup.Escape(ex.Message)));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[dim]Error parsing GHCR URL: {ex.Message}[/]");
+            AnsiConsole.MarkupLine(string.Format(Strings.VersionCrawler.ErrorParsingGhcrUrl, Markup.Escape(ex.Message)));
         }
         
         return ("", "", "", "");
