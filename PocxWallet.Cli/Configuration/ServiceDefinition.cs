@@ -3,6 +3,22 @@ using YamlDotNet.Serialization;
 namespace PocxWallet.Cli.Configuration;
 
 /// <summary>
+/// Execution mode for a service
+/// </summary>
+public enum ExecutionMode
+{
+    /// <summary>
+    /// Service runs in a Docker container (default)
+    /// </summary>
+    Docker,
+    
+    /// <summary>
+    /// Service runs as a native process on the host
+    /// </summary>
+    Native
+}
+
+/// <summary>
 /// Root model for the services.yaml configuration file
 /// </summary>
 public class ServiceConfiguration
@@ -70,11 +86,26 @@ public class ServiceDefinition
     [YamlMember(Alias = "enabled")]
     public bool Enabled { get; set; } = true;
 
+    [YamlMember(Alias = "execution_mode")]
+    public string ExecutionModeString { get; set; } = "docker";
+    
+    /// <summary>
+    /// Get the execution mode for this service
+    /// </summary>
+    public ExecutionMode GetExecutionMode()
+    {
+        return ExecutionModeString?.ToLower() switch
+        {
+            "native" => ExecutionMode.Native,
+            _ => ExecutionMode.Docker
+        };
+    }
+
     [YamlMember(Alias = "container")]
     public ContainerConfig? Container { get; set; }
 
     [YamlMember(Alias = "source")]
-    public SourceConfig? Source { get; set; }
+    public ServiceSource? Source { get; set; }
 
     [YamlMember(Alias = "ports")]
     public List<PortMapping>? Ports { get; set; }
@@ -165,21 +196,85 @@ public class ContainerConfig
 }
 
 /// <summary>
-/// Source code repository configuration
+/// Service source configuration containing Docker and native options
 /// </summary>
-public class SourceConfig
+public class ServiceSource
 {
+    [YamlMember(Alias = "docker")]
+    public DockerSource? Docker { get; set; }
+
+    [YamlMember(Alias = "native")]
+    public NativeSource? Native { get; set; }
+    
+    // Legacy support - keep for backward compatibility
     [YamlMember(Alias = "repository")]
-    public string Repository { get; set; } = "";
+    public string? Repository { get; set; }
 
     [YamlMember(Alias = "branch")]
-    public string Branch { get; set; } = "master";
+    public string? Branch { get; set; }
 
     [YamlMember(Alias = "build_command")]
     public string? BuildCommand { get; set; }
 
     [YamlMember(Alias = "binary_paths")]
     public List<string>? BinaryPaths { get; set; }
+}
+
+/// <summary>
+/// Docker source configuration with available images
+/// </summary>
+public class DockerSource
+{
+    [YamlMember(Alias = "images")]
+    public List<DockerImage>? Images { get; set; }
+}
+
+/// <summary>
+/// Docker image definition
+/// </summary>
+public class DockerImage
+{
+    [YamlMember(Alias = "repository")]
+    public string Repository { get; set; } = "";
+
+    [YamlMember(Alias = "image")]
+    public string Image { get; set; } = "";
+
+    [YamlMember(Alias = "tag")]
+    public string Tag { get; set; } = "";
+
+    [YamlMember(Alias = "description")]
+    public string? Description { get; set; }
+}
+
+/// <summary>
+/// Native source configuration with available downloads
+/// </summary>
+public class NativeSource
+{
+    [YamlMember(Alias = "downloads")]
+    public List<NativeDownload>? Downloads { get; set; }
+}
+
+/// <summary>
+/// Native binary download definition
+/// </summary>
+public class NativeDownload
+{
+    [YamlMember(Alias = "url")]
+    public string Url { get; set; } = "";
+
+    [YamlMember(Alias = "version")]
+    public string Version { get; set; } = "";
+
+    [YamlMember(Alias = "platform")]
+    public string Platform { get; set; } = "";
+
+    [YamlMember(Alias = "description")]
+    public string? Description { get; set; }
+
+    [YamlMember(Alias = "whitelist")]
+    public List<string>? Whitelist { get; set; }
 }
 
 /// <summary>
