@@ -53,10 +53,7 @@ public class WalletFile
 /// Wallet settings stored in the wallet file
 /// </summary>
 public class WalletSettings
-{
-    [JsonPropertyName("default_wallet_path")]
-    public string DefaultWalletPath { get; set; } = "./wallet.json";
-    
+{    
     [JsonPropertyName("auto_save")]
     public bool AutoSave { get; set; } = false;
     
