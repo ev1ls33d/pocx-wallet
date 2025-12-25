@@ -32,7 +32,7 @@ public class NativeServiceManager
     public async Task<bool> StartNativeServiceAsync(
         string serviceId,
         string serviceName,
-        string binaryPath,
+        string binaryName,
         string? arguments = null,
         string? workingDirectory = null,
         Dictionary<string, string>? environmentVars = null,
@@ -56,15 +56,15 @@ public class NativeServiceManager
             }
 
             // Validate binary exists
-            if (!File.Exists(binaryPath))
+            if (!File.Exists(Path.Combine(workingDirectory, binaryName)))
             {
-                AnsiConsole.MarkupLine($"[red]Binary not found:[/] {Markup.Escape(binaryPath)}");
+                AnsiConsole.MarkupLine($"[red]Binary not found:[/] {Markup.Escape(binaryName)}");
                 AnsiConsole.MarkupLine($"[yellow]Please download the binary using the version management menu[/]");
                 return false;
             }
 
             // Determine working directory and log location
-            var effectiveWorkingDir = workingDirectory ?? Path.GetDirectoryName(binaryPath) ?? ".";
+            var effectiveWorkingDir = workingDirectory ?? Path.GetDirectoryName(binaryName) ?? ".";
             
             // Create logs directory in the service directory (not global logs/)
             var logsDir = Path.Combine(effectiveWorkingDir, "logs");
@@ -77,7 +77,7 @@ public class NativeServiceManager
             // Create process start info
             var psi = new ProcessStartInfo
             {
-                FileName = binaryPath,
+                FileName = binaryName,
                 Arguments = arguments ?? "",
                 WorkingDirectory = effectiveWorkingDir,
                 UseShellExecute = spawnNewConsole,
@@ -92,6 +92,7 @@ public class NativeServiceManager
                 psi.RedirectStandardInput = false;
             }
 
+            /*
             // Add environment variables
             if (environmentVars != null)
             {
@@ -100,13 +101,14 @@ public class NativeServiceManager
                     psi.Environment[key] = value;
                 }
             }
+            */
 
             // Make binary executable on Unix systems
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 try
                 {
-                    var chmodResult = await ExecuteCommandAsync("chmod", $"+x {binaryPath}");
+                    var chmodResult = await ExecuteCommandAsync("chmod", $"+x {binaryName}");
                     if (chmodResult.exitCode != 0)
                     {
                         AnsiConsole.MarkupLine($"[yellow]Warning: Could not make binary executable[/]");
@@ -116,10 +118,15 @@ public class NativeServiceManager
                 {
                     // Ignore chmod errors
                 }
+            } 
+            else
+            {
+                psi.FileName = "cmd.exe";
+                psi.Arguments = $"/k \"\"{binaryName}\" {arguments ?? ""}\"";
             }
 
             AnsiConsole.MarkupLine($"[bold]Starting native service:[/] {serviceName}");
-            AnsiConsole.MarkupLine($"[dim]Binary:[/] {Markup.Escape(binaryPath)}");
+            AnsiConsole.MarkupLine($"[dim]Binary:[/] {Markup.Escape(binaryName)}");
             if (!string.IsNullOrEmpty(arguments))
             {
                 AnsiConsole.MarkupLine($"[dim]Arguments:[/] {Markup.Escape(arguments)}");
@@ -201,7 +208,7 @@ public class NativeServiceManager
                 Process = process,
                 ServiceId = serviceId,
                 ServiceName = serviceName,
-                BinaryPath = binaryPath,
+                BinaryPath = binaryName,
                 LogFile = logFile,
                 ErrorLogFile = errorLogFile,
                 StartTime = DateTime.Now,

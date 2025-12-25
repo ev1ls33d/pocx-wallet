@@ -583,19 +583,16 @@ public class DynamicServiceMenuBuilder
         
         // Build environment variables
         var environmentVars = BuildEnvironmentVariables(service);
-        
-        // Working directory
-        var workingDir = service.Container?.WorkingDir ?? serviceDir;
-        
+                
         // Get spawn new console setting
         var spawnNewConsole = service.SpawnNewConsole;
 
         var success = await _nativeManager.StartNativeServiceAsync(
             service.Id,
             service.Name,
-            binaryPath,
+            binaryName,
             arguments,
-            workingDir,
+            serviceDir,
             environmentVars.Count > 0 ? environmentVars : null,
             spawnNewConsole
         );
