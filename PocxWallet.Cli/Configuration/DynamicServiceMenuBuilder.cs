@@ -320,7 +320,6 @@ public class DynamicServiceMenuBuilder
                         "logs" => item.Label ?? Strings.ServiceMenu.ViewLogs,
                         "parameters" => item.Label ?? Strings.ServiceMenu.Parameters,
                         "settings" => item.Label ?? Strings.ServiceMenu.Settings,
-                        "pull_version" => item.Label ?? "Manage Versions",
                         "custom" => item.Label ?? item.Id ?? "Custom Action",
                         _ => item.Label ?? item.Action
                     };
@@ -332,7 +331,6 @@ public class DynamicServiceMenuBuilder
                 // Default menu if not defined
                 choices.Add(isRunning ? Strings.ServiceMenu.StopService : Strings.ServiceMenu.StartService);
                 choices.Add(Strings.ServiceMenu.ViewLogs);
-                choices.Add("Manage Versions");
                 choices.Add(Strings.ServiceMenu.Parameters);
                 choices.Add(Strings.ServiceMenu.Settings);
             }
@@ -386,10 +384,6 @@ public class DynamicServiceMenuBuilder
             {
                 return new SubmenuItem { Action = "logs" };
             }
-            if (choice == "Manage Versions")
-            {
-                return new SubmenuItem { Action = "pull_version" };
-            }
             if (choice == Strings.ServiceMenu.Parameters)
             {
                 return new SubmenuItem { Action = "parameters" };
@@ -409,7 +403,6 @@ public class DynamicServiceMenuBuilder
                 "logs" => item.Label ?? Strings.ServiceMenu.ViewLogs,
                 "parameters" => item.Label ?? Strings.ServiceMenu.Parameters,
                 "settings" => item.Label ?? Strings.ServiceMenu.Settings,
-                "pull_version" => item.Label ?? "Manage Versions",
                 "custom" => item.Label ?? item.Id ?? "Custom Action",
                 _ => item.Label ?? item.Action
             };
@@ -1592,6 +1585,11 @@ public class DynamicServiceMenuBuilder
                         AnsiConsole.MarkupLine($"[red]Pull failed:[/] {Markup.Escape(error)}");
                     }
                 });
+            
+            // Wait for user to read the feedback
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+            Console.ReadLine();
         }
     }
     
@@ -1654,6 +1652,11 @@ public class DynamicServiceMenuBuilder
                 service.Name,
                 download.Whitelist
             );
+            
+            // Wait for user to read the feedback
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+            Console.ReadLine();
         }
     }
 }

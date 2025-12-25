@@ -431,8 +431,6 @@ services:
           label_stopped: "Start Node"
         - action: "logs"
           label:  "View Logs"
-        - action: "pull_version"
-          label: "Manage Versions"
         - action: "parameters"
           label:  "Parameters"
         - action: "settings"
