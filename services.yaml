@@ -46,37 +46,28 @@ services:
         images:
           - repository: "ghcr.io/ev1ls33d/pocx-wallet"
             image: "bitcoin"
-            tag: "v30-RC3"
-            description: "Bitcoin-PoCX v30 Release Candidate 3"
-          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
-            image: "bitcoin"
             tag: "latest"
             description: "Latest development build"
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "bitcoin"
+            tag: "v30-RC3"
+            description: "Bitcoin-PoCX v30 Release Candidate 3"
       native:
         downloads:
           - url: "https://github.com/PoC-Consortium/bitcoin/releases/download/v30-RC3/bitcoin-pocx-v30-RC3-linux-x64.tar.gz"
             version: "v30-RC3"
             platform: "linux-x64"
-            description: "Bitcoin-PoCX v30 RC3 for Linux x64"
+            description: "v30-RC3 - Linux x64"
             whitelist:
               - "bitcoind"
               - "bitcoin-cli"
           - url: "https://github.com/PoC-Consortium/bitcoin/releases/download/v30-RC3/bitcoin-pocx-v30-RC3-win-x64.zip"
             version: "v30-RC3"
             platform: "win-x64"
-            description: "Bitcoin-PoCX v30 RC3 for Windows x64"
+            description: "v30-RC3 - Windows x64"
             whitelist:
               - "bitcoind.exe"
               - "bitcoin-cli.exe"
-      # Legacy fields for backward compatibility - DEPRECATED
-      # These fields will be removed in a future version
-      # Use source.docker.images for Docker mode configuration instead
-      repository: "https://github.com/PoC-Consortium/bitcoin.git"
-      branch: "pocx-v30-RC3"
-      build_command: "cmake -B build && cmake --build build"
-      binary_paths:
-        - "build/src/bitcoind"
-        - "build/src/bitcoin-cli"
     
     ports:
       - name: "rpc"
@@ -481,21 +472,21 @@ services:
     category: "infrastructure"
     menu_label: "[Electrs]"
     documentation_url: "https://github.com/PoC-Consortium/electrs-pocx"
+    execution_mode: "docker"
     
     container: 
       image: "electrs"
-      repository: "ghcr.io/ev1ls33d/pocx-wallet"
-      default_tag:  "latest"
       container_name_default: "pocx-electrs"
       working_dir: "/data"
       binary: "electrs"
       
     source:
-      repository: "https://github.com/PoC-Consortium/electrs-pocx.git"
-      branch: "pocx"
-      build_command: "cargo build --release --bin electrs"
-      binary_paths: 
-        - "target/release/electrs"
+      docker:
+        images:
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "electrs"
+            tag: "latest"
+            description: "Latest development build"
     
     ports: 
       - name: "http"
@@ -751,21 +742,35 @@ services:
     category:  "mining"
     menu_label: "[Aggregator]"
     documentation_url: "https://github.com/PoC-Consortium/pocx"
+    execution_mode: "docker"
     
     container:
       image:  "pocx"
-      repository: "ghcr.io/ev1ls33d/pocx-wallet"
-      default_tag: "latest"
       container_name_default: "pocx-aggregator"
       working_dir: "/config"
       binary: "pocx_aggregator"
       
     source:
-      repository:  "https://github.com/PoC-Consortium/pocx. git"
-      branch: "master"
-      build_command:  "cargo build --release -p pocx_aggregator"
-      binary_paths:
-        - "target/release/pocx_aggregator"
+      docker:
+        images:
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "pocx"
+            tag: "latest"
+            description: "Latest development build"
+      native:
+        downloads:
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-linux-x64.tar.gz"
+            version: "v1.0.0"
+            platform: "linux-x64"
+            description: "v1.0.0 - Linux x64"
+            whitelist:
+              - "pocx_aggregator"
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-win-x64.zip"
+            version: "v1.0.0"
+            platform: "win-x64"
+            description: "v1.0.0 - Windows x64"
+            whitelist:
+              - "pocx_aggregator.exe"
     
     ports:
       - name: "api"
@@ -977,21 +982,35 @@ services:
     category:  "mining"
     menu_label: "[Mine]"
     documentation_url: "https://github.com/PoC-Consortium/pocx"
+    execution_mode: "docker"
     
     container:
       image:  "pocx"
-      repository: "ghcr.io/ev1ls33d/pocx-wallet"
-      default_tag: "latest"
       container_name_default: "pocx-miner"
       working_dir: "/config"
       binary: "pocx_miner"
       
     source:
-      repository:  "https://github.com/PoC-Consortium/pocx.git"
-      branch: "master"
-      build_command: "cargo build --release -p pocx_miner"
-      binary_paths:
-        - "target/release/pocx_miner"
+      docker:
+        images:
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "pocx"
+            tag: "latest"
+            description: "Latest development build"
+      native:
+        downloads:
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-linux-x64.tar.gz"
+            version: "v1.0.0"
+            platform: "linux-x64"
+            description: "v1.0.0 - Linux x64"
+            whitelist:
+              - "pocx_miner"
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-win-x64.zip"
+            version: "v1.0.0"
+            platform: "win-x64"
+            description: "v1.0.0 - Windows x64"
+            whitelist:
+              - "pocx_miner.exe"
     
     ports:  []
     
@@ -1233,21 +1252,35 @@ services:
     category:  "mining"
     menu_label: "[Plot]"
     documentation_url: "https://github.com/PoC-Consortium/pocx"
+    execution_mode: "docker"
     
     container:
       image:  "pocx"
-      repository: "ghcr.io/ev1ls33d/pocx-wallet"
-      default_tag: "latest"
       container_name_default: "pocx-plotter"
       working_dir: "/plots"
       binary: "pocx_plotter"
       
     source:
-      repository: "https://github.com/PoC-Consortium/pocx.git"
-      branch:  "master"
-      build_command: "cargo build --release -p pocx_plotter"
-      binary_paths:
-        - "target/release/pocx_plotter"
+      docker:
+        images:
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "pocx"
+            tag: "latest"
+            description: "Latest development build"
+      native:
+        downloads:
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-linux-x64.tar.gz"
+            version: "v1.0.0"
+            platform: "linux-x64"
+            description: "v1.0.0 - Linux x64"
+            whitelist:
+              - "pocx_plotter"
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-win-x64.zip"
+            version: "v1.0.0"
+            platform: "win-x64"
+            description: "v1.0.0 - Windows x64"
+            whitelist:
+              - "pocx_plotter.exe"
     
     ports: []
     
@@ -1493,18 +1526,31 @@ services:
     
     container:
       image: "pocx"
-      repository:  "ghcr. io/ev1ls33d/pocx-wallet"
-      default_tag: "latest"
       container_name_default: "pocx-verifier"
       working_dir: "/plots"
       binary: "pocx_verifier"
       
     source:
-      repository: "https://github.com/PoC-Consortium/pocx.git"
-      branch:  "master"
-      build_command: "cargo build --release -p pocx_verifier"
-      binary_paths:
-        - "target/release/pocx_verifier"
+      docker:
+        images:
+          - repository: "ghcr.io/ev1ls33d/pocx-wallet"
+            image: "pocx"
+            tag: "latest"
+            description: "Latest development build"
+      native:
+        downloads:
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-linux-x64.tar.gz"
+            version: "v1.0.0"
+            platform: "linux-x64"
+            description: "v1.0.0 - Linux x64"
+            whitelist:
+              - "pocx_verifier"
+          - url: "https://github.com/PoC-Consortium/pocx/releases/download/v1.0.0/pocx-1.0.0-win-x64.zip"
+            version: "v1.0.0"
+            platform: "win-x64"
+            description: "v1.0.0 - Windows x64"
+            whitelist:
+              - "pocx_verifier.exe"
     
     volumes: 
       - name:  "plots"

@@ -451,7 +451,7 @@ public class DynamicServiceMenuBuilder
                 break;
 
             case "settings":
-                ShowServiceSettings(service, showBanner);
+                await ShowServiceSettings(service, showBanner);
                 break;
 
             case "custom":
@@ -747,7 +747,7 @@ public class DynamicServiceMenuBuilder
     /// <summary>
     /// Show service settings menu - different options based on execution mode
     /// </summary>
-    public void ShowServiceSettings(ServiceDefinition service, Action showBanner)
+    public async Task ShowServiceSettings(ServiceDefinition service, Action showBanner)
     {
         bool back = false;
         while (!back)
@@ -758,6 +758,9 @@ public class DynamicServiceMenuBuilder
             // First entry: Execution Mode (always shown)
             var executionModeValue = mode == ExecutionMode.Docker ? "[cyan]Docker[/]" : "[cyan]Native[/]";
             choices.Add($"{Strings.SettingsMenu.ExecutionMode.PadRight(20)} {executionModeValue}");
+            
+            // Second entry: Manage Versions (always shown)
+            choices.Add($"{Strings.SettingsMenu.ManageVersions.PadRight(20)}");
             
             if (mode == ExecutionMode.Docker)
             {
@@ -813,34 +816,39 @@ public class DynamicServiceMenuBuilder
                 // Execution Mode
                 EditExecutionMode(service);
             }
+            else if (selectedIndex == 1)
+            {
+                // Manage Versions
+                await ShowVersionManagementAsync(service, showBanner);
+            }
             else if (mode == ExecutionMode.Docker)
             {
-                // Docker mode settings
+                // Docker mode settings (indices shifted by 2: execution mode + manage versions)
                 switch (selectedIndex)
                 {
-                    case 1: // Container Name
+                    case 2: // Container Name
                         EditServiceSetting(service, "container_name", Strings.SettingsMenu.ContainerName, showBanner);
                         break;
-                    case 2: // Environment
+                    case 3: // Environment
                         ShowEnvironmentMenu(service, showBanner);
                         break;
-                    case 3: // Volumes
+                    case 4: // Volumes
                         ShowVolumesMenu(service, showBanner);
                         break;
-                    case 4: // Ports
+                    case 5: // Ports
                         ShowPortsMenu(service, showBanner);
                         break;
-                    case 5: // Network
+                    case 6: // Network
                         EditServiceSetting(service, "network", Strings.SettingsMenu.Network, showBanner);
                         break;
                 }
             }
             else
             {
-                // Native mode settings
+                // Native mode settings (indices shifted by 2: execution mode + manage versions)
                 switch (selectedIndex)
                 {
-                    case 1: // Spawn New Console
+                    case 2: // Spawn New Console
                         EditSpawnNewConsole(service);
                         break;
                 }
