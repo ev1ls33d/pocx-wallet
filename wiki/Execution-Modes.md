@@ -55,8 +55,11 @@ Services run as native processes directly on the host operating system.
 Open `services.yaml` and change the `execution_mode` for the desired service:
 
 ```yaml
-- id: "bitcoin-node"
-  execution_mode: "native"  # Change from "docker" to "native"
+services:
+  - id: "bitcoin-node"
+    name: "Bitcoin-PoCX Node"
+    execution_mode: "native"  # Change from "docker" to "native"
+    # ... rest of configuration
 ```
 
 ### Step 2: Download Binary (Native Mode Only)

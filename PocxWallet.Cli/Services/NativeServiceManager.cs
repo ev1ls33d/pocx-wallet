@@ -496,10 +496,17 @@ public class NativeServiceManager
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // On Windows, try using tar command (available in Windows 10+)
-            var result = await ExecuteCommandAsync("tar", $"-xzf \"{archivePath}\" -C \"{destinationPath}\"");
-            if (result.exitCode != 0)
+            try
             {
-                throw new Exception($"Failed to extract tar.gz: {result.output}");
+                var result = await ExecuteCommandAsync("tar", $"-xzf \"{archivePath}\" -C \"{destinationPath}\"");
+                if (result.exitCode != 0)
+                {
+                    throw new Exception($"tar extraction failed: {result.output}. On older Windows systems, you may need to install a tool like 7-Zip or manually extract the archive.");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to extract tar.gz on Windows. Please ensure tar is available (Windows 10+ includes it) or manually extract to: {destinationPath}. Error: {ex.Message}");
             }
         }
         else
@@ -521,17 +528,19 @@ public class NativeServiceManager
         var allFiles = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
         var deletedCount = 0;
 
+        // Create HashSet for O(1) lookups
+        var comparer = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        var whitelistSet = new HashSet<string>(whitelist, comparer);
+
         foreach (var file in allFiles)
         {
             var relativePath = Path.GetRelativePath(directory, file);
             var fileName = Path.GetFileName(file);
             
-            // Check if file or relative path is in whitelist (case-insensitive on Windows)
-            var comparer = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? StringComparer.OrdinalIgnoreCase
-                : StringComparer.Ordinal;
-
-            if (!whitelist.Any(w => comparer.Equals(w, fileName) || comparer.Equals(w, relativePath)))
+            // Check if file or relative path is in whitelist using HashSet
+            if (!whitelistSet.Contains(fileName) && !whitelistSet.Contains(relativePath))
             {
                 try
                 {

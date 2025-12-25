@@ -68,7 +68,9 @@ services:
             whitelist:
               - "bitcoind.exe"
               - "bitcoin-cli.exe"
-      # Legacy fields for backward compatibility
+      # Legacy fields for backward compatibility - DEPRECATED
+      # These fields will be removed in a future version
+      # Use source.docker.images for Docker mode configuration instead
       repository: "https://github.com/PoC-Consortium/bitcoin.git"
       branch: "pocx-v30-RC3"
       build_command: "cmake -B build && cmake --build build"
