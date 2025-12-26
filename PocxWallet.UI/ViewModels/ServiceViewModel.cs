@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PocxWallet.UI.Services;
-using PocxWallet.UI.Models;
+using CliConfig = PocxWallet.Cli.Configuration;
 
 namespace PocxWallet.UI.ViewModels;
 
@@ -27,7 +27,7 @@ public partial class ServiceViewModel : ViewModelBase
     private string _logs = "";
     
     [ObservableProperty]
-    private ServiceDefinition? _serviceDefinition;
+    private CliConfig.ServiceDefinition? _serviceDefinition;
     
     public ServiceViewModel(
         IDockerService dockerService,

@@ -6,9 +6,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     
-    <!-- Non-self-contained to allow faster builds and smaller output -->
-    <!-- UI project is designed to work without direct CLI dependency -->
-    <SelfContained>false</SelfContained>
+    <!-- Self-contained to allow referencing CLI project which is self-contained -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
     
     <!-- Version and metadata -->
     <Version>0.7.3</Version>

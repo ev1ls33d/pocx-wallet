@@ -1,9 +1,9 @@
-using PocxWallet.UI.Models;
+using PocxWallet.Cli.Configuration;
 
 namespace PocxWallet.UI.Services;
 
 /// <summary>
-/// Implementation of IConfigurationService
+/// Implementation of IConfigurationService using ServiceDefinitionLoader from CLI
 /// </summary>
 public class ConfigurationService : IConfigurationService
 {
@@ -11,8 +11,8 @@ public class ConfigurationService : IConfigurationService
 
     public ServiceConfiguration GetServiceConfiguration()
     {
-        // TODO: Load from services.yaml
-        _configuration ??= new ServiceConfiguration { Services = new List<ServiceDefinition>() };
+        // Load from services.yaml using CLI loader
+        _configuration ??= ServiceDefinitionLoader.LoadServices();
         return _configuration;
     }
 
@@ -27,5 +27,6 @@ public class ConfigurationService : IConfigurationService
     {
         _configuration = configuration;
         // TODO: Save to services.yaml
+        // This would require implementing YAML serialization
     }
 }

@@ -1,37 +1,54 @@
-using PocxWallet.Core.Wallet;
-
+using PocxWallet.Cli.Configuration;
 using PocxWallet.UI.Models;
 
 namespace PocxWallet.UI.Services;
 
 /// <summary>
-/// Default implementation of IWalletService
+/// Implementation of IWalletService using WalletManager from CLI
 /// </summary>
 public class WalletService : IWalletService
 {
-    private UIWalletEntry? _activeWallet;
+    private readonly WalletManager _walletManager;
+
+    public WalletService()
+    {
+        _walletManager = WalletManager.Instance;
+    }
 
     public void Load()
     {
-        // TODO: Load wallet from file
-        _activeWallet = null;
+        _walletManager.Load();
     }
 
     public void Save()
     {
-        // TODO: Save wallet to file
+        _walletManager.Save();
     }
 
     public string? GetActiveWalletDisplay()
     {
-        if (_activeWallet == null)
+        var activeEntry = _walletManager.ActiveWalletEntry;
+        if (activeEntry == null)
             return null;
         
-        return $"{_activeWallet.Name}: {_activeWallet.MainnetAddress}";
+        // Return just the name and address without markup
+        return $"{activeEntry.Name}: {activeEntry.MainnetAddress}";
     }
 
     public UIWalletEntry? GetActiveWallet()
     {
-        return _activeWallet;
+        var activeEntry = _walletManager.ActiveWalletEntry;
+        if (activeEntry == null)
+            return null;
+
+        // Convert CLI WalletEntry to UI model
+        return new UIWalletEntry
+        {
+            Name = activeEntry.Name,
+            MainnetAddress = activeEntry.MainnetAddress,
+            TestnetAddress = activeEntry.TestnetAddress,
+            Created = activeEntry.Created,
+            IsSingleKeyWallet = activeEntry.IsSingleKeyWallet
+        };
     }
 }

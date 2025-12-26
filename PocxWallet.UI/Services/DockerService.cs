@@ -1,37 +1,64 @@
+using PocxWallet.Cli.Services;
+
 namespace PocxWallet.UI.Services;
 
 /// <summary>
-/// Stub implementation of IDockerService for initial UI development
+/// Implementation of IDockerService using DockerServiceManager from CLI
 /// </summary>
 public class DockerService : IDockerService
 {
-    public Task<bool> IsServiceRunningAsync(string serviceId)
+    private readonly DockerServiceManager _dockerManager;
+
+    public DockerService()
     {
-        // TODO: Integrate with DockerServiceManager from CLI
-        return Task.FromResult(false);
+        _dockerManager = new DockerServiceManager();
+    }
+
+    public async Task<bool> IsServiceRunningAsync(string serviceId)
+    {
+        // Map service ID to container name
+        var containerName = GetContainerName(serviceId);
+        
+        var status = await _dockerManager.GetContainerStatusAsync(containerName);
+        return status.Equals("running", StringComparison.OrdinalIgnoreCase);
     }
 
     public Task<bool> StartServiceAsync(string serviceId)
     {
-        // TODO: Integrate with DockerServiceManager from CLI
+        // TODO: Implement service start with proper configuration from services.yaml
+        // This requires integration with ServiceDefinitionLoader and command building
+        // For now, return false as it needs complex setup
         return Task.FromResult(false);
     }
 
-    public Task<bool> StopServiceAsync(string serviceId)
+    public async Task<bool> StopServiceAsync(string serviceId)
     {
-        // TODO: Integrate with DockerServiceManager from CLI
-        return Task.FromResult(false);
+        var containerName = GetContainerName(serviceId);
+        return await _dockerManager.StopContainerAsync(containerName);
     }
 
-    public Task<string> GetServiceLogsAsync(string serviceId, int tailLines = 100)
+    public async Task<string> GetServiceLogsAsync(string serviceId, int tailLines = 100)
     {
-        // TODO: Integrate with DockerServiceManager from CLI
-        return Task.FromResult("Logs not available yet...");
+        var containerName = GetContainerName(serviceId);
+        return await _dockerManager.GetContainerLogsAsync(containerName, tailLines);
     }
 
-    public Task<(int exitCode, string output)> ExecuteInContainerAsync(string containerName, string command)
+    public async Task<(int exitCode, string output)> ExecuteInContainerAsync(string containerName, string command)
     {
-        // TODO: Integrate with DockerServiceManager from CLI
-        return Task.FromResult((0, ""));
+        return await _dockerManager.ExecInContainerAsync(containerName, command);
+    }
+
+    private string GetContainerName(string serviceId)
+    {
+        // Map service IDs to container names based on services.yaml defaults
+        return serviceId switch
+        {
+            "bitcoin-node" or "node" => "pocx-node",
+            "plotter" => "pocx-plotter",
+            "miner" => "pocx-miner",
+            "aggregator" => "pocx-aggregator",
+            "electrs" => "pocx-electrs",
+            _ => $"pocx-{serviceId}"
+        };
     }
 }

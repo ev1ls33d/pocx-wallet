@@ -1,4 +1,4 @@
-using PocxWallet.UI.Models;
+using CliConfig = PocxWallet.Cli.Configuration;
 
 namespace PocxWallet.UI.Services;
 
@@ -10,15 +10,15 @@ public interface IConfigurationService
     /// <summary>
     /// Gets the service configuration from services.yaml
     /// </summary>
-    ServiceConfiguration GetServiceConfiguration();
+    CliConfig.ServiceConfiguration GetServiceConfiguration();
     
     /// <summary>
     /// Gets a specific service definition
     /// </summary>
-    ServiceDefinition? GetServiceDefinition(string serviceId);
+    CliConfig.ServiceDefinition? GetServiceDefinition(string serviceId);
     
     /// <summary>
     /// Saves the service configuration
     /// </summary>
-    void SaveServiceConfiguration(ServiceConfiguration configuration);
+    void SaveServiceConfiguration(CliConfig.ServiceConfiguration configuration);
 }
