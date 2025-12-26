@@ -141,9 +141,15 @@ public static class Strings
         // Import submenu
         public const string ImportToNode = "To Node";
         public const string ImportFromMnemonic = "From Mnemonic";
+        public const string ImportFromPrivateKey = "From Private Key";
         public const string ImportMenuTitle = "[bold green]Import Wallet[/]";
         public const string SelectWalletToImport = "[bold green]Select wallet to import to node[/]";
         public const string RestoreFromMnemonicTitle = "[bold green]Restore wallet from mnemonic phrase[/]";
+        public const string ImportFromPrivateKeyTitle = "[bold green]Import wallet from private key or WIF[/]";
+        public const string EnterPrivateKeyPrompt = "Enter [green]private key[/] (hex) or [green]WIF[/] (mainnet or testnet):";
+        public const string InvalidPrivateKey = "[red]Invalid private key or WIF format[/]";
+        public const string SingleKeyWalletImportedSuccess = "[green]√[/] Single-key wallet imported successfully!";
+        public const string SingleKeyWalletNote = "[dim]Note: This is a single-key wallet without a mnemonic phrase.[/]";
         
         // Select wallet (renamed from Switch)
         public const string SelectMenuTitle = "[bold green]Select Wallet[/]";
