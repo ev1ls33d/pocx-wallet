@@ -331,14 +331,6 @@ public static class Strings
     }
 
     // ========================================
-    // Banner
-    // ========================================
-    public static class Banner
-    {
-        public const string Title = "[red]PoCX HD Wallet[/]";
-    }
-
-    // ========================================
     // Common
     // ========================================
     public static class Common

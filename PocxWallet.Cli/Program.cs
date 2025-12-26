@@ -5,6 +5,7 @@ using PocxWallet.Cli.Services;
 using Spectre.Console;
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace PocxWallet.Cli;
@@ -18,6 +19,24 @@ class Program
     // Constants for hardcoded menu items
     private static string MenuWallet = $"{Markup.Escape(Strings.MainMenu.WalletLabel).PadRight(15)} {Strings.MainMenu.WalletDescription}";
     private static string MenuExit   = $"{Markup.Escape(Strings.MainMenu.ExitLabel).PadRight(15)} {Strings.MainMenu.ExitDescription}";
+
+    // Readonly instance fields initialized in the constructor
+    private static readonly string? _version;
+    private static readonly string? _product;
+
+    static Program()
+    {
+        var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+        var raw = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        string? version = null;
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            int i = raw.IndexOf('+');
+            version = i > -1 ? raw.Substring(0, i).Trim() : raw.Trim();
+        }
+        _version = version;
+        _product = asm.GetCustomAttribute<AssemblyProductAttribute>()?.Product;
+    }
 
     private static DockerServiceManager GetDockerManager()
     {
@@ -164,7 +183,7 @@ class Program
 
     static void ShowBanner()
     {
-        var rule = new Rule(Strings.Banner.Title);
+        var rule = new Rule($"[bold red]{_product}{(string.IsNullOrWhiteSpace(_version) ? "" : " v" + _version)}[/]");
         var ruleLine = new Rule();
         ruleLine.RuleStyle("blue dim");
         rule.RuleStyle("blue dim");

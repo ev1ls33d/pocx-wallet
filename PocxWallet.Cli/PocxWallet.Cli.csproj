@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <ItemGroup>
     <ProjectReference Include="..\PocxWallet.Core\PocxWallet.Core.csproj" />
   </ItemGroup>
@@ -20,7 +19,7 @@
     <AssemblyName>pocxwallet</AssemblyName>
     
     <!-- Version and metadata -->
-    <Version>0.7.2</Version>
+    <Version>0.7.3</Version>
     <Authors>EviLSeeD</Authors>
     <Product>PoCX Wallet</Product>
     <Description>A comprehensive CLI HD Wallet for PoCX with full node integration, plotting, mining, and transaction capabilities</Description>
@@ -39,22 +38,4 @@
   <ItemGroup>
     <Content Include="..\services.yaml" Link="services.yaml" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
-
-  <!-- Pre-build target to build PoCX dependencies -->
-  <!-- Note: Enable this if you want automatic builds on every compilation -->
-  <!-- For now, run ./build-dependencies.sh (or .ps1) manually before first use -->
-  <!--
-  <Target Name="BuildPoCXDependencies" BeforeTargets="PreBuildEvent">
-    <Message Text="Checking PoCX dependencies..." Importance="high" />
-    <Exec Condition="'$(OS)' != 'Windows_NT'" 
-          Command="bash $(ProjectDir)../build-dependencies.sh" 
-          ContinueOnError="true" 
-          IgnoreExitCode="true" />
-    <Exec Condition="'$(OS)' == 'Windows_NT'" 
-          Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)../build-dependencies.ps1" 
-          ContinueOnError="true" 
-          IgnoreExitCode="true" />
-  </Target>
-  -->
-
 </Project>
