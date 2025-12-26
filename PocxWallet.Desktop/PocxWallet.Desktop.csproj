@@ -16,7 +16,11 @@
     <Product>PoCX Wallet</Product>
     <Description>Cross-platform desktop wallet for PoCX</Description>
     <Copyright>Copyright © 2025</Copyright>
+    <ApplicationIcon>wallet.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="wallet.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.2" />
