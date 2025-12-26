@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20">
+            <!-- Page Title -->
+            <TextBlock Text="Settings" Classes="heading1" />
+
+            <!-- General Settings Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="General" Classes="heading2" />
+                    
+                    <TextBlock Text="Settings will be available in future updates." 
+                               Foreground="{StaticResource PocxTextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,20" />
+                </StackPanel>
+            </Border>
+
+            <!-- Wallet Settings Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Wallet" Classes="heading2" />
+                    
+                    <StackPanel Spacing="10">
+                        <CheckBox Content="Auto-save wallet changes" />
+                        <CheckBox Content="Auto-import new wallets to node" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Node Settings Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Node" Classes="heading2" />
+                    
+                    <StackPanel Spacing="10">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Network Mode:" Classes="secondary" />
+                            <ComboBox SelectedIndex="1" MinWidth="200">
+                                <ComboBoxItem Content="Mainnet" />
+                                <ComboBoxItem Content="Testnet" />
+                                <ComboBoxItem Content="Regtest" />
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Appearance Settings Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Appearance" Classes="heading2" />
+                    
+                    <StackPanel Spacing="10">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Theme:" Classes="secondary" />
+                            <ComboBox SelectedIndex="0" MinWidth="200">
+                                <ComboBoxItem Content="Dark (Default)" />
+                                <ComboBoxItem Content="Light" IsEnabled="False" />
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
