@@ -1,6 +1,5 @@
 using NBitcoin;
 using PocxWallet.Core.Address;
-using System.Security.Cryptography;
 
 namespace PocxWallet.Core.Wallet;
 
@@ -11,7 +10,6 @@ namespace PocxWallet.Core.Wallet;
 public class SingleKeyWallet
 {
     private readonly Key _privateKey;
-    private readonly Network _network;
 
     /// <summary>
     /// Gets the raw private key as hex string
@@ -33,10 +31,9 @@ public class SingleKeyWallet
     /// </summary>
     public string PublicKeyHex => _privateKey.PubKey.ToHex();
 
-    private SingleKeyWallet(Key privateKey, Network network)
+    private SingleKeyWallet(Key privateKey)
     {
         _privateKey = privateKey ?? throw new ArgumentNullException(nameof(privateKey));
-        _network = network;
     }
 
     /// <summary>
@@ -61,7 +58,7 @@ public class SingleKeyWallet
 
         var bytes = HexToBytes(privateKeyHex);
         var key = new Key(bytes);
-        return new SingleKeyWallet(key, Network.Main);
+        return new SingleKeyWallet(key);
     }
 
     /// <summary>
@@ -81,7 +78,7 @@ public class SingleKeyWallet
         try
         {
             var secret = new BitcoinSecret(wif, Network.Main);
-            return new SingleKeyWallet(secret.PrivateKey, Network.Main);
+            return new SingleKeyWallet(secret.PrivateKey);
         }
         catch
         {
@@ -89,7 +86,7 @@ public class SingleKeyWallet
             try
             {
                 var secret = new BitcoinSecret(wif, Network.TestNet);
-                return new SingleKeyWallet(secret.PrivateKey, Network.TestNet);
+                return new SingleKeyWallet(secret.PrivateKey);
             }
             catch
             {

@@ -1169,6 +1169,34 @@ public static class WalletCommands
     }
     
     /// <summary>
+    /// Parse the import descriptors result JSON to check for success
+    /// </summary>
+    private static bool ParseImportDescriptorsResult(string output)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(output);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    if (item.TryGetProperty("success", out var successElement) &&
+                        successElement.GetBoolean())
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to string matching if JSON parsing fails
+            return output.Contains("\"success\": true") || output.Contains("\"success\":true");
+        }
+        return false;
+    }
+    
+    /// <summary>
     /// Import wallet to the Bitcoin node
     /// Workflow: listwalletdir -> check if exists -> load or create -> import descriptors
     /// </summary>
@@ -1308,29 +1336,8 @@ public static class WalletCommands
         var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
-        // Parse import result using JSON for more robust checking
-        bool importSuccess = false;
-        try
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(importOutput);
-            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                foreach (var item in doc.RootElement.EnumerateArray())
-                {
-                    if (item.TryGetProperty("success", out var successElement) &&
-                        successElement.GetBoolean())
-                    {
-                        importSuccess = true;
-                        break;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Fallback to string matching if JSON parsing fails
-            importSuccess = importOutput.Contains("\"success\": true") || importOutput.Contains("\"success\":true");
-        }
+        // Parse import result using helper method
+        var importSuccess = ParseImportDescriptorsResult(importOutput);
         
         if (importExitCode == 0 && importSuccess)
         {
@@ -1480,28 +1487,8 @@ public static class WalletCommands
         var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
-        // Parse import result
-        bool importSuccess = false;
-        try
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(importOutput);
-            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                foreach (var item in doc.RootElement.EnumerateArray())
-                {
-                    if (item.TryGetProperty("success", out var successElement) &&
-                        successElement.GetBoolean())
-                    {
-                        importSuccess = true;
-                        break;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            importSuccess = importOutput.Contains("\"success\": true") || importOutput.Contains("\"success\":true");
-        }
+        // Parse import result using helper method
+        var importSuccess = ParseImportDescriptorsResult(importOutput);
         
         if (importExitCode == 0 && importSuccess)
         {
