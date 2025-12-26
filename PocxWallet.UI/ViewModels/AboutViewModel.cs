@@ -18,4 +18,10 @@ public partial class AboutViewModel : ViewModelBase
     
     [ObservableProperty]
     private string _license = "MIT License";
+    
+    [ObservableProperty]
+    private string _githubUrl = "github.com/ev1ls33d/pocx-wallet";
+    
+    [ObservableProperty]
+    private string _documentationUrl = "View README.md";
 }

@@ -61,9 +61,9 @@
                 <StackPanel Spacing="15">
                     <TextBlock Text="Links" Classes="heading2" />
                     <StackPanel Spacing="8">
-                        <TextBlock Text="GitHub: github.com/ev1ls33d/pocx-wallet" 
+                        <TextBlock Text="{Binding GithubUrl, StringFormat='GitHub: {0}'}" 
                                    Foreground="{StaticResource PocxAccentBrush}" />
-                        <TextBlock Text="Documentation: View README.md" 
+                        <TextBlock Text="{Binding DocumentationUrl, StringFormat='Documentation: {0}'}" 
                                    Foreground="{StaticResource PocxAccentBrush}" />
                     </StackPanel>
                 </StackPanel>

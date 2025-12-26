@@ -27,5 +27,5 @@ public interface IWalletService
     /// <summary>
     /// Gets the active wallet entry
     /// </summary>
-    WalletEntry? GetActiveWallet();
+    UIWalletEntry? GetActiveWallet();
 }

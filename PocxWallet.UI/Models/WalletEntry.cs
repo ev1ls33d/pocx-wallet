@@ -1,9 +1,10 @@
 namespace PocxWallet.UI.Models;
 
 /// <summary>
-/// Represents a wallet entry for the UI
+/// Represents a wallet entry for UI display purposes
+/// Separate from Core wallet models to avoid coupling
 /// </summary>
-public class WalletEntry
+public class UIWalletEntry
 {
     public string Name { get; set; } = string.Empty;
     public string MainnetAddress { get; set; } = string.Empty;

@@ -9,7 +9,7 @@ namespace PocxWallet.UI.Services;
 /// </summary>
 public class WalletService : IWalletService
 {
-    private WalletEntry? _activeWallet;
+    private UIWalletEntry? _activeWallet;
 
     public void Load()
     {
@@ -30,7 +30,7 @@ public class WalletService : IWalletService
         return $"{_activeWallet.Name}: {_activeWallet.MainnetAddress}";
     }
 
-    public WalletEntry? GetActiveWallet()
+    public UIWalletEntry? GetActiveWallet()
     {
         return _activeWallet;
     }
