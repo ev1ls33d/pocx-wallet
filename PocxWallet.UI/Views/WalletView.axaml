@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.WalletView"
+             x:DataType="vm:WalletViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20">
+            <!-- Page Title -->
+            <TextBlock Text="Wallet" Classes="heading1" />
+
+            <!-- Active Wallet Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Active Wallet" Classes="heading2" />
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Address:" Classes="secondary" />
+                        <TextBlock Text="{Binding ActiveWalletDisplay}" 
+                                   FontSize="12"
+                                   FontFamily="Consolas, Courier New, monospace" />
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Balance:" Classes="secondary" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Balance}" 
+                                       FontSize="24"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource PocxAccentBrush}" />
+                            <TextBlock Text="POCX" 
+                                       FontSize="16"
+                                       VerticalAlignment="Bottom"
+                                       Margin="0,0,0,4"
+                                       Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <!-- Quick Actions -->
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                        <Button Content="Send" 
+                                Classes="primary"
+                                Command="{Binding SendFundsCommand}"
+                                IsEnabled="{Binding HasActiveWallet}" />
+                        <Button Content="Receive" 
+                                Classes="primary"
+                                Command="{Binding ReceiveFundsCommand}"
+                                IsEnabled="{Binding HasActiveWallet}" />
+                        <Button Content="Refresh" 
+                                Classes="secondary"
+                                Command="{Binding RefreshBalanceCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Wallet Management Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Wallet Management" Classes="heading2" />
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Create Wallet" 
+                                Classes="secondary"
+                                Command="{Binding CreateWalletCommand}" />
+                        <Button Content="Import Wallet" 
+                                Classes="secondary"
+                                Command="{Binding ImportWalletCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Recent Transactions Card (Placeholder) -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Recent Transactions" Classes="heading2" />
+                    <TextBlock Text="No transactions yet" 
+                               Classes="secondary"
+                               HorizontalAlignment="Center"
+                               Margin="0,20" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
