@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PocxWallet.UI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="PocxWallet.UI.Views.AboutView"
+             x:DataType="vm:AboutViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Center">
+            <!-- Logo and Title -->
+            <TextBlock Text="PoCX Wallet" 
+                       FontSize="48"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource PocxAccentBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,40,0,0" />
+            
+            <TextBlock Text="{Binding Version, StringFormat='Version {0}'}" 
+                       FontSize="16"
+                       Foreground="{StaticResource PocxTextSecondaryBrush}"
+                       HorizontalAlignment="Center" />
+
+            <!-- Description Card -->
+            <Border Classes="card" Margin="0,20,0,0">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="About" Classes="heading2" />
+                    <TextBlock Text="{Binding Description}" 
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- License Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="License" Classes="heading2" />
+                    <TextBlock Text="{Binding License}" 
+                               Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                    <TextBlock Text="{Binding Copyright}" 
+                               Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Technologies Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Built With" Classes="heading2" />
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="• .NET 9.0" Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                        <TextBlock Text="• Avalonia UI 11.2" Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                        <TextBlock Text="• NBitcoin 7.0" Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                        <TextBlock Text="• CommunityToolkit.Mvvm" Foreground="{StaticResource PocxTextSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Links Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Links" Classes="heading2" />
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding GithubUrl, StringFormat='GitHub: {0}'}" 
+                                   Foreground="{StaticResource PocxAccentBrush}" />
+                        <TextBlock Text="{Binding DocumentationUrl, StringFormat='Documentation: {0}'}" 
+                                   Foreground="{StaticResource PocxAccentBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

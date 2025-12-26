@@ -1,0 +1,137 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Include Colors -->
+    <StyleInclude Source="/Styles/Colors.axaml" />
+    
+    <!-- Base Window Style -->
+    <Style Selector="Window">
+        <Setter Property="Background" Value="{StaticResource PocxBackgroundGradientBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="Inter, Segoe UI, sans-serif" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+    
+    <!-- Card/Panel Style -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource PocxPanelBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PocxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+    
+    <Style Selector="Border.card:pointerover">
+        <Setter Property="Background" Value="{StaticResource PocxPanelHoverBrush}" />
+    </Style>
+    
+    <!-- Button Styles -->
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{StaticResource PocxAccentBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PocxBackgroundDarkBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PocxAccentHoverBrush}" />
+    </Style>
+    
+    <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PocxAccentPressedBrush}" />
+    </Style>
+    
+    <Style Selector="Button.secondary">
+        <Setter Property="Background" Value="{StaticResource PocxPanelBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PocxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16,8" />
+    </Style>
+    
+    <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PocxPanelHoverBrush}" />
+    </Style>
+    
+    <!-- TextBox Style -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="{StaticResource PocxBackgroundLightBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PocxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,8" />
+    </Style>
+    
+    <Style Selector="TextBox:focus">
+        <Setter Property="BorderBrush" Value="{StaticResource PocxAccentBrush}" />
+    </Style>
+    
+    <!-- ListBox Style -->
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    
+    <Style Selector="ListBoxItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PocxPanelBrush}" />
+    </Style>
+    
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PocxPrimaryBrush}" />
+    </Style>
+    
+    <!-- TextBlock Styles -->
+    <Style Selector="TextBlock.heading1">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+    </Style>
+    
+    <Style Selector="TextBlock.heading2">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+    </Style>
+    
+    <Style Selector="TextBlock.heading3">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource PocxTextPrimaryBrush}" />
+    </Style>
+    
+    <Style Selector="TextBlock.secondary">
+        <Setter Property="Foreground" Value="{StaticResource PocxTextSecondaryBrush}" />
+    </Style>
+    
+    <Style Selector="TextBlock.success">
+        <Setter Property="Foreground" Value="{StaticResource PocxSuccessBrush}" />
+    </Style>
+    
+    <Style Selector="TextBlock.warning">
+        <Setter Property="Foreground" Value="{StaticResource PocxWarningBrush}" />
+    </Style>
+    
+    <Style Selector="TextBlock.error">
+        <Setter Property="Foreground" Value="{StaticResource PocxErrorBrush}" />
+    </Style>
+    
+    <!-- ProgressBar Style -->
+    <Style Selector="ProgressBar">
+        <Setter Property="Background" Value="{StaticResource PocxBackgroundLightBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PocxAccentBrush}" />
+        <Setter Property="Height" Value="8" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    
+</Styles>

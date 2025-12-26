@@ -1,0 +1,93 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PocxWallet.UI.ViewModels"
+        xmlns:views="using:PocxWallet.UI.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
+        x:Class="PocxWallet.UI.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1200" Height="700"
+        MinWidth="800" MinHeight="600">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/Theme.axaml" />
+    </Window.Styles>
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:WalletViewModel">
+            <views:WalletView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ServiceViewModel">
+            <views:ServiceView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:SettingsViewModel">
+            <views:SettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:AboutViewModel">
+            <views:AboutView />
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar Navigation -->
+        <Border Grid.Column="0" 
+                Background="{StaticResource PocxPanelBrush}"
+                BorderBrush="{StaticResource PocxBorderBrush}"
+                BorderThickness="0,0,1,0">
+            <StackPanel>
+                <!-- Logo and Title -->
+                <StackPanel Margin="20" Spacing="10">
+                    <TextBlock Text="PoCX" 
+                               FontSize="32" 
+                               FontWeight="Bold"
+                               Foreground="{StaticResource PocxAccentBrush}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Version}" 
+                               FontSize="12"
+                               Foreground="{StaticResource PocxTextSecondaryBrush}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <Separator Height="1" 
+                           Background="{StaticResource PocxBorderBrush}"
+                           Margin="10,0" />
+
+                <!-- Navigation Items -->
+                <ListBox ItemsSource="{Binding NavigationItems}"
+                         SelectedIndex="0"
+                         Margin="10,20,10,10"
+                         Name="NavigationList"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         SelectionChanged="NavigationList_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" 
+                                        Spacing="12"
+                                        Margin="8">
+                                <TextBlock Text="{Binding Icon}" 
+                                           FontSize="18" 
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Label}" 
+                                           FontSize="14"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content Area -->
+        <ContentControl Grid.Column="1" 
+                        Content="{Binding CurrentView}"
+                        Margin="20" />
+    </Grid>
+</Window>

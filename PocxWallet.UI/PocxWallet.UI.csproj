@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- Version and metadata -->
+    <Version>0.7.3</Version>
+    <Authors>EviLSeeD</Authors>
+    <Product>PoCX Wallet</Product>
+    <Description>Cross-platform UI library for PoCX Wallet using Avalonia</Description>
+    <Copyright>Copyright © 2025</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.2" />
+    <PackageReference Include="Avalonia.Svg.Skia" Version="11.2.0.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Spectre.Console" Version="0.49.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PocxWallet.Core\PocxWallet.Core.csproj" />
+    <ProjectReference Include="..\PocxWallet.Cli\PocxWallet.Cli.csproj" />
+  </ItemGroup>
+
+  <!-- Include AXAML files as AvaloniaResource -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**\*" />
+  </ItemGroup>
+
+</Project>
