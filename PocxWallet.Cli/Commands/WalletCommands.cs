@@ -220,6 +220,7 @@ public static class WalletCommands
         {
             Strings.WalletMenu.ImportToNode,
             Strings.WalletMenu.ImportFromMnemonic,
+            Strings.WalletMenu.ImportFromPrivateKey,
             Strings.ServiceMenu.Back
         };
         
@@ -240,6 +241,9 @@ public static class WalletCommands
                 break;
             case var c when c == Strings.WalletMenu.ImportFromMnemonic:
                 await ImportFromMnemonicAsync();
+                break;
+            case var c when c == Strings.WalletMenu.ImportFromPrivateKey:
+                await ImportFromPrivateKeyAsync();
                 break;
         }
     }
@@ -291,12 +295,20 @@ public static class WalletCommands
         if (walletEntry == null)
             return;
         
-        // Restore the HDWallet from the entry
-        var hdWallet = HDWallet.FromMnemonic(walletEntry.Mnemonic, 
-            string.IsNullOrEmpty(walletEntry.Passphrase) ? null : walletEntry.Passphrase);
-        
-        // Import to node
-        await ImportWalletToNodeAsync(hdWallet, walletName);
+        // Handle single-key wallets vs HD wallets
+        if (walletEntry.IsSingleKeyWallet)
+        {
+            // Restore single-key wallet from private key
+            var singleKeyWallet = SingleKeyWallet.FromPrivateKey(walletEntry.PrivateKey!);
+            await ImportSingleKeyWalletToNodeAsync(singleKeyWallet, walletName);
+        }
+        else
+        {
+            // Restore the HDWallet from the entry
+            var hdWallet = HDWallet.FromMnemonic(walletEntry.Mnemonic, 
+                string.IsNullOrEmpty(walletEntry.Passphrase) ? null : walletEntry.Passphrase);
+            await ImportWalletToNodeAsync(hdWallet, walletName);
+        }
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
@@ -385,6 +397,90 @@ public static class WalletCommands
             
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine(Strings.WalletMenu.MnemonicWarning);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.ErrorFormat, ex.Message));
+        }
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(Strings.ServiceMenu.PressEnterToContinue);
+        Console.ReadLine();
+    }
+    
+    /// <summary>
+    /// Import wallet from private key or WIF
+    /// </summary>
+    private static async Task ImportFromPrivateKeyAsync()
+    {
+        var walletManager = WalletManager.Instance;
+        var settings = walletManager.Settings;
+        
+        AnsiConsole.MarkupLine(Strings.WalletMenu.ImportFromPrivateKeyTitle);
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(Strings.WalletMenu.SingleKeyWalletNote);
+        AnsiConsole.WriteLine();
+        
+        // Ask for private key or WIF
+        var input = AnsiConsole.Prompt(
+            new TextPrompt<string>(Strings.WalletMenu.EnterPrivateKeyPrompt)
+                .Secret()
+                .Validate(i =>
+                {
+                    try
+                    {
+                        SingleKeyWallet.FromInput(i);
+                        return ValidationResult.Success();
+                    }
+                    catch
+                    {
+                        return ValidationResult.Error(Strings.WalletMenu.InvalidPrivateKey);
+                    }
+                }));
+        
+        try
+        {
+            // Import wallet
+            var wallet = SingleKeyWallet.FromInput(input);
+            
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(Strings.WalletMenu.SingleKeyWalletImportedSuccess);
+            
+            // Display wallet info
+            DisplaySingleKeyWalletInfo(wallet);
+            
+            // Check settings for auto-save, otherwise ask
+            bool shouldSave = settings.AutoSave || AnsiConsole.Confirm(Strings.WalletMenu.SaveWalletPrompt, true);
+            
+            if (shouldSave)
+            {
+                // Ask for wallet name with uniqueness validation
+                string walletName;
+                while (true)
+                {
+                    walletName = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterWalletName, "imported");
+                    
+                    if (walletManager.WalletNameExists(walletName))
+                    {
+                        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletNameExists, walletName));
+                        continue;
+                    }
+                    break;
+                }
+                
+                // Add wallet to manager and save
+                walletManager.AddSingleKeyWallet(wallet, walletName, makeActive: true);
+                walletManager.Save();
+                
+                AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletCreated, walletName));
+                
+                // Ask to import to node
+                bool shouldImport = settings.AutoImportToNode || AnsiConsole.Confirm(Strings.WalletMenu.ImportToNodePrompt, false);
+                if (shouldImport)
+                {
+                    await ImportSingleKeyWalletToNodeAsync(wallet, walletName);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -634,6 +730,24 @@ public static class WalletCommands
         
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DescriptorMainnetFormat, wallet.GetDescriptor()));
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DescriptorTestnetFormat, wallet.GetDescriptor(true)));
+    }
+    
+    /// <summary>
+    /// Displays single-key wallet info (no mnemonic, just addresses, WIF, descriptor)
+    /// </summary>
+    private static void DisplaySingleKeyWalletInfo(SingleKeyWallet wallet)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.MainnetAddressFormat, wallet.GetPoCXAddress(false)));
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.TestnetAddressFormat, wallet.GetPoCXAddress(true)));
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WifMainnetFormat, wallet.WIFMainnet));
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WifTestnetFormat, wallet.WIFTestnet));
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DescriptorMainnetFormat, wallet.GetDescriptor(false)));
         AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DescriptorTestnetFormat, wallet.GetDescriptor(true)));
     }
     
@@ -1055,6 +1169,34 @@ public static class WalletCommands
     }
     
     /// <summary>
+    /// Parse the import descriptors result JSON to check for success
+    /// </summary>
+    private static bool ParseImportDescriptorsResult(string output)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(output);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    if (item.TryGetProperty("success", out var successElement) &&
+                        successElement.GetBoolean())
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to string matching if JSON parsing fails
+            return output.Contains("\"success\": true") || output.Contains("\"success\":true");
+        }
+        return false;
+    }
+    
+    /// <summary>
     /// Import wallet to the Bitcoin node
     /// Workflow: listwalletdir -> check if exists -> load or create -> import descriptors
     /// </summary>
@@ -1194,19 +1336,107 @@ public static class WalletCommands
         var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
-        // Parse import result using JSON for more robust checking
-        bool importSuccess = false;
+        // Parse import result using helper method
+        var importSuccess = ParseImportDescriptorsResult(importOutput);
+        
+        if (importExitCode == 0 && importSuccess)
+        {
+            AnsiConsole.MarkupLine(Strings.WalletMenu.DescriptorImportSuccess);
+        }
+        else if (importOutput.Contains("already"))
+        {
+            AnsiConsole.MarkupLine(Strings.WalletMenu.DescriptorAlreadyImported);
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[yellow]▲[/] Import result: {Markup.Escape(importOutput)}");
+        }
+    }
+    
+    /// <summary>
+    /// Import single-key wallet to the Bitcoin node
+    /// Similar to ImportWalletToNodeAsync but for SingleKeyWallet
+    /// </summary>
+    private static async Task ImportSingleKeyWalletToNodeAsync(SingleKeyWallet wallet, string walletName)
+    {
+        // Check if node is running using static callback
+        bool nodeRunning = false;
+        if (_isNodeRunningAsync != null)
+        {
+            nodeRunning = await _isNodeRunningAsync();
+        }
+        
+        if (!nodeRunning)
+        {
+            if (!AnsiConsole.Confirm(Strings.WalletMenu.NodeNotRunningStartPrompt, false))
+            {
+                AnsiConsole.MarkupLine(Strings.WalletMenu.SkippingImport);
+                return;
+            }
+            
+            // Try to start the node
+            if (_startNodeAsync != null)
+            {
+                AnsiConsole.MarkupLine(Strings.WalletMenu.StartingBitcoinNode);
+                var started = await _startNodeAsync();
+                
+                if (!started)
+                {
+                    AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartFailed);
+                    return;
+                }
+                
+                AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartedSuccess);
+                
+                // Wait a moment for the node to fully initialize
+                AnsiConsole.MarkupLine(Strings.WalletMenu.WaitingForNodeInit);
+                await Task.Delay(3000);
+            }
+            else
+            {
+                AnsiConsole.MarkupLine(Strings.WalletMenu.NodeStartNotAvailable);
+                return;
+            }
+        }
+        
+        if (_execInContainerAsync == null)
+        {
+            AnsiConsole.MarkupLine(Strings.WalletMenu.NodeExecNotAvailable);
+            return;
+        }
+        
+        AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingToNode);
+        
+        // Check node parameters to determine if testnet is active
+        var isTestnet = IsNodeTestnet();
+        var networkName = isTestnet ? "testnet" : "mainnet";
+        AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DetectedNetworkFormat, networkName));
+        
+        var networkFlag = isTestnet ? "-testnet " : "";
+        
+        var descriptor = wallet.GetDescriptor(isTestnet);
+        
+        // Escape descriptor for safe JSON inclusion
+        var escapedDescriptor = descriptor.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        
+        // Step 1: Check if wallet already exists using listwalletdir
+        AnsiConsole.MarkupLine(Strings.WalletMenu.CheckingWalletExists);
+        var listDirCmd = $"bitcoin-cli {networkFlag}listwalletdir";
+        var (listDirExitCode, listDirOutput) = await _execInContainerAsync(listDirCmd);
+        
+        // Parse wallet existence more carefully
+        bool walletExists = false;
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(importOutput);
-            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            using var doc = System.Text.Json.JsonDocument.Parse(listDirOutput);
+            if (doc.RootElement.TryGetProperty("wallets", out var walletsArray))
             {
-                foreach (var item in doc.RootElement.EnumerateArray())
+                foreach (var walletObj in walletsArray.EnumerateArray())
                 {
-                    if (item.TryGetProperty("success", out var successElement) &&
-                        successElement.GetBoolean())
+                    if (walletObj.TryGetProperty("name", out var nameElement) &&
+                        nameElement.GetString()?.Equals(walletName, StringComparison.Ordinal) == true)
                     {
-                        importSuccess = true;
+                        walletExists = true;
                         break;
                     }
                 }
@@ -1214,9 +1444,51 @@ public static class WalletCommands
         }
         catch
         {
-            // Fallback to string matching if JSON parsing fails
-            importSuccess = importOutput.Contains("\"success\": true") || importOutput.Contains("\"success\":true");
+            walletExists = listDirOutput.Contains($"\"name\": \"{walletName}\"") || 
+                           listDirOutput.Contains($"\"name\":\"{walletName}\"");
         }
+        
+        if (walletExists)
+        {
+            // Wallet exists - load it
+            AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.WalletFoundLoading, walletName));
+            var loadCmd = $"bitcoin-cli {networkFlag}loadwallet \"{walletName}\" true";
+            var (loadExitCode, loadOutput) = await _execInContainerAsync(loadCmd);
+            
+            if (loadExitCode != 0 && !loadOutput.Contains("already loaded"))
+            {
+                AnsiConsole.MarkupLine($"[yellow]▲[/] Load wallet: {Markup.Escape(loadOutput)}");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine(Strings.WalletMenu.WalletLoaded);
+            }
+        }
+        else
+        {
+            // Wallet doesn't exist - create it
+            AnsiConsole.MarkupLine(Strings.WalletMenu.CreatingDescriptorWallet);
+            var createCmd = $"bitcoin-cli {networkFlag}createwallet \"{walletName}\" false";
+            var (createExitCode, createOutput) = await _execInContainerAsync(createCmd);
+            
+            if (createExitCode != 0)
+            {
+                AnsiConsole.MarkupLine($"[yellow]▲[/] Create wallet: {Markup.Escape(createOutput)}");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine(Strings.WalletMenu.WalletCreatedOnNode);
+            }
+        }
+        
+        // Step 3: Import descriptor
+        AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingDescriptor);
+        var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
+        var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
+        var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
+        
+        // Parse import result using helper method
+        var importSuccess = ParseImportDescriptorsResult(importOutput);
         
         if (importExitCode == 0 && importSuccess)
         {

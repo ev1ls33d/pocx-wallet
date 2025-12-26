@@ -29,6 +29,33 @@ public class WalletEntry
     
     [JsonPropertyName("pattern")]
     public string? Pattern { get; set; }
+    
+    // Fields for single-key wallets (imported from private key/WIF)
+    [JsonPropertyName("private_key")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PrivateKey { get; set; }
+    
+    [JsonPropertyName("wif_mainnet")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WifMainnet { get; set; }
+    
+    [JsonPropertyName("wif_testnet")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WifTestnet { get; set; }
+    
+    [JsonPropertyName("descriptor_mainnet")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DescriptorMainnet { get; set; }
+    
+    [JsonPropertyName("descriptor_testnet")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DescriptorTestnet { get; set; }
+    
+    /// <summary>
+    /// Returns true if this is a single-key wallet (no mnemonic)
+    /// </summary>
+    [JsonIgnore]
+    public bool IsSingleKeyWallet => string.IsNullOrEmpty(Mnemonic) && !string.IsNullOrEmpty(PrivateKey);
 }
 
 /// <summary>
@@ -273,6 +300,36 @@ public class WalletManager
     }
     
     /// <summary>
+    /// Adds a new single-key wallet (imported from private key or WIF) and optionally makes it active
+    /// </summary>
+    public void AddSingleKeyWallet(SingleKeyWallet wallet, string name, bool makeActive = true)
+    {
+        var entry = new WalletEntry
+        {
+            Name = name,
+            Mnemonic = "", // Single-key wallets don't have mnemonics
+            Passphrase = "",
+            MainnetAddress = wallet.GetPoCXAddress(false),
+            TestnetAddress = wallet.GetPoCXAddress(true),
+            Created = DateTime.UtcNow.ToString("o"),
+            Pattern = null,
+            PrivateKey = wallet.PrivateKeyHex,
+            WifMainnet = wallet.WIFMainnet,
+            WifTestnet = wallet.WIFTestnet,
+            DescriptorMainnet = wallet.GetDescriptor(false),
+            DescriptorTestnet = wallet.GetDescriptor(true)
+        };
+        
+        _walletFile.Wallets.Add(entry);
+        
+        if (makeActive)
+        {
+            _walletFile.ActiveWallet = name;
+            _activeWallet = null; // Single-key wallets don't have an HDWallet representation
+        }
+    }
+    
+    /// <summary>
     /// Switches to a different wallet by name
     /// </summary>
     public bool SwitchWallet(string name)
@@ -283,6 +340,14 @@ public class WalletManager
         
         try
         {
+            // Handle single-key wallets (no mnemonic)
+            if (entry.IsSingleKeyWallet)
+            {
+                _activeWallet = null; // Single-key wallets don't have an HDWallet representation
+                _walletFile.ActiveWallet = name;
+                return true;
+            }
+            
             _activeWallet = HDWallet.FromMnemonic(entry.Mnemonic, 
                 string.IsNullOrEmpty(entry.Passphrase) ? null : entry.Passphrase);
             _walletFile.ActiveWallet = name;
