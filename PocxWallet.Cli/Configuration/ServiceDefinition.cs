@@ -158,7 +158,70 @@ public class ServiceDefinition
     /// </summary>
     public string GetContainerName()
     {
-        return Container?.ContainerNameSetting ?? $"pocx-{Id}";
+        return ContainerNameOverride 
+            ?? Container?.ContainerNameDefault 
+            ?? Container?.ContainerNameSetting 
+            ?? $"pocx-{Id}";
+    }
+    
+    /// <summary>
+    /// Get the full Docker image reference (repository/image:tag) for this service.
+    /// Uses the active configuration from Container settings.
+    /// </summary>
+    public string GetFullDockerImage()
+    {
+        var repository = GetDockerRepository();
+        var image = GetDockerImageName();
+        var tag = GetDockerTag();
+        
+        // Build full image reference
+        if (!string.IsNullOrEmpty(repository))
+        {
+            return $"{repository}/{image}:{tag}";
+        }
+        return $"{image}:{tag}";
+    }
+    
+    /// <summary>
+    /// Get the Docker repository (e.g., "ghcr.io/ev1ls33d/pocx-wallet")
+    /// </summary>
+    public string GetDockerRepository()
+    {
+        // First check Container.Repository (can be set by version management)
+        if (!string.IsNullOrEmpty(Container?.Repository))
+        {
+            return Container.Repository;
+        }
+        
+        // Default GHCR repository
+        return "ghcr.io/ev1ls33d/pocx-wallet";
+    }
+    
+    /// <summary>
+    /// Get the Docker image name (e.g., "bitcoin", "electrs")
+    /// </summary>
+    public string GetDockerImageName()
+    {
+        return Container?.Image ?? Id;
+    }
+    
+    /// <summary>
+    /// Get the Docker image tag (e.g., "latest", "v1.0.0")
+    /// </summary>
+    public string GetDockerTag()
+    {
+        return Container?.DefaultTag ?? "latest";
+    }
+    
+    /// <summary>
+    /// Update the Docker image configuration after pulling a new version
+    /// </summary>
+    public void SetDockerImage(string repository, string image, string tag)
+    {
+        Container ??= new ContainerConfig();
+        Container.Repository = repository;
+        Container.Image = image;
+        Container.DefaultTag = tag;
     }
 }
 

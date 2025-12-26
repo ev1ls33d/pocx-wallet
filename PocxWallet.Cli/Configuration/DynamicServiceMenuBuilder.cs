@@ -81,20 +81,7 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     public string GetContainerName(ServiceDefinition service)
     {
-        // First check for user override
-        if (!string.IsNullOrEmpty(service.ContainerNameOverride))
-        {
-            return service.ContainerNameOverride;
-        }
-
-        // Check for default container name in services.yaml
-        if (!string.IsNullOrEmpty(service.Container?.ContainerNameDefault))
-        {
-            return service.Container.ContainerNameDefault;
-        }
-        
-        // Fallback to default naming convention
-        return $"pocx-{service.Id}";
+        return service.GetContainerName();
     }
 
     /// <summary>
@@ -102,7 +89,7 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     public string GetImageName(ServiceDefinition service)
     {
-        return service.Container?.Image ?? service.Id;
+        return service.GetDockerImageName();
     }
 
     /// <summary>
@@ -1151,19 +1138,19 @@ public class DynamicServiceMenuBuilder
     }
 
     /// <summary>
-    /// Get service repository (from override or default)
+    /// Get service repository (delegates to ServiceDefinition)
     /// </summary>
     private string GetServiceRepository(ServiceDefinition service)
     {
-        return service.Container?.Repository ?? "ghcr.io/ev1ls33d/pocx-wallet";
+        return service.GetDockerRepository();
     }
 
     /// <summary>
-    /// Get service tag (from override or default)
+    /// Get service tag (delegates to ServiceDefinition)
     /// </summary>
     private string GetServiceTag(ServiceDefinition service)
     {
-        return service.Container?.DefaultTag ?? "latest";
+        return service.GetDockerTag();
     }
 
     /// <summary>
