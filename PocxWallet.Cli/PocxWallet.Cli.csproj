@@ -19,7 +19,7 @@
     <AssemblyName>pocxwallet</AssemblyName>
     
     <!-- Version and metadata -->
-    <Version>0.7.3</Version>
+    <Version>0.7.4</Version>
     <Authors>EviLSeeD</Authors>
     <Product>PoCX Wallet</Product>
     <Description>A comprehensive CLI HD Wallet for PoCX with full node integration, plotting, mining, and transaction capabilities</Description>
