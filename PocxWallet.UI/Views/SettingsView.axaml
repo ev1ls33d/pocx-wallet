@@ -12,26 +12,43 @@
             <!-- Page Title -->
             <TextBlock Text="Settings" Classes="heading1" />
 
-            <!-- General Settings Card -->
-            <Border Classes="card">
-                <StackPanel Spacing="15">
-                    <TextBlock Text="General" Classes="heading2" />
-                    
-                    <TextBlock Text="Settings will be available in future updates." 
-                               Foreground="{StaticResource PocxTextSecondaryBrush}"
-                               HorizontalAlignment="Center"
-                               Margin="0,20" />
-                </StackPanel>
+            <!-- Status Message -->
+            <Border Classes="card" IsVisible="{Binding HasStatusMessage}" 
+                    Background="{StaticResource PocxBackgroundLightBrush}">
+                <TextBlock Text="{Binding StatusMessage}" />
             </Border>
 
             <!-- Wallet Settings Card -->
             <Border Classes="card">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Wallet" Classes="heading2" />
+                    <TextBlock Text="Wallet Settings" Classes="heading2" />
                     
-                    <StackPanel Spacing="10">
-                        <CheckBox Content="Auto-save wallet changes" />
-                        <CheckBox Content="Auto-import new wallets to node" />
+                    <StackPanel Spacing="15">
+                        <CheckBox Content="Auto-save wallet changes" 
+                                  IsChecked="{Binding AutoSave}">
+                            <ToolTip.Tip>Automatically save wallet when changes are made</ToolTip.Tip>
+                        </CheckBox>
+                        
+                        <CheckBox Content="Auto-import new wallets to node" 
+                                  IsChecked="{Binding AutoImportToNode}">
+                            <ToolTip.Tip>Automatically import newly created wallets to the Bitcoin node</ToolTip.Tip>
+                        </CheckBox>
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Startup Wallet:" Classes="secondary" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <ComboBox Grid.Column="0" 
+                                          ItemsSource="{Binding WalletNames}"
+                                          SelectedItem="{Binding StartupWallet}"
+                                          MinWidth="200">
+                                    <ToolTip.Tip>Wallet to activate when the application starts</ToolTip.Tip>
+                                </ComboBox>
+                                <Button Grid.Column="1" Content="Refresh" 
+                                        Classes="secondary"
+                                        Margin="10,0,0,0"
+                                        Command="{Binding RefreshWalletsCommand}" />
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -39,16 +56,21 @@
             <!-- Node Settings Card -->
             <Border Classes="card">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Node" Classes="heading2" />
+                    <TextBlock Text="Node Settings" Classes="heading2" />
                     
                     <StackPanel Spacing="10">
+                        <TextBlock Text="Network settings are configured per-service in the service menu."
+                                   Classes="secondary" TextWrapping="Wrap" />
+                        
                         <StackPanel Spacing="5">
-                            <TextBlock Text="Network Mode:" Classes="secondary" />
-                            <ComboBox SelectedIndex="1" MinWidth="200">
+                            <TextBlock Text="Default Network:" Classes="secondary" />
+                            <ComboBox SelectedIndex="1" MinWidth="200" IsEnabled="False">
                                 <ComboBoxItem Content="Mainnet" />
-                                <ComboBoxItem Content="Testnet" />
+                                <ComboBoxItem Content="Testnet (Default)" />
                                 <ComboBoxItem Content="Regtest" />
                             </ComboBox>
+                            <TextBlock Text="Network can be changed in Node > Parameters"
+                                       Classes="secondary" FontSize="12" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -67,6 +89,22 @@
                                 <ComboBoxItem Content="Light" IsEnabled="False" />
                             </ComboBox>
                         </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- About Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="About" Classes="heading2" />
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="PoCX Wallet" FontWeight="Bold" />
+                        <TextBlock Text="Version 0.8.0-beta" Classes="secondary" />
+                        <TextBlock Text="A comprehensive HD Wallet for PoCX with full node integration."
+                                   Classes="secondary" TextWrapping="Wrap" />
+                        <TextBlock Text="© 2025 EviLSeeD - GNU GPL v3.0 License"
+                                   Classes="secondary" />
                     </StackPanel>
                 </StackPanel>
             </Border>

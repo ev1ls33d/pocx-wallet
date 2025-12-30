@@ -3,41 +3,152 @@
              xmlns:vm="using:PocxWallet.UI.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
              x:Class="PocxWallet.UI.Views.ServiceView"
              x:DataType="vm:ServiceViewModel">
 
     <ScrollViewer>
         <StackPanel Spacing="20">
             <!-- Page Title -->
-            <TextBlock Text="{Binding ServiceName}" Classes="heading1" />
+            <StackPanel Spacing="5">
+                <TextBlock Text="{Binding ServiceName}" Classes="heading1" />
+                <TextBlock Text="{Binding ServiceDescription}" 
+                           Classes="secondary" 
+                           TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- Status Message -->
+            <Border Classes="card" IsVisible="{Binding HasStatusMessage}" 
+                    Background="{StaticResource PocxBackgroundLightBrush}">
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+            </Border>
 
             <!-- Status Card -->
             <Border Classes="card">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Status" Classes="heading2" />
-                    
-                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding StatusText}" 
-                                   FontSize="16"
-                                   FontWeight="SemiBold" />
-                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Service Status" Classes="heading2" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding StatusText}" 
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <Ellipse Width="12" Height="12" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <SolidColorBrush Color="{Binding IsRunning, Converter={StaticResource BoolToColorConverter}}" />
+                                </Ellipse.Fill>
+                            </Ellipse>
+                        </StackPanel>
+                    </Grid>
                     
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
-                        <Button Content="Toggle Service" 
-                                Classes="primary"
-                                Command="{Binding ToggleServiceCommand}" />
+                        <Button Classes="primary"
+                                Command="{Binding ToggleServiceCommand}"
+                                IsEnabled="{Binding !IsLoading}">
+                            <TextBlock>
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0}">
+                                        <Binding Path="IsRunning" Converter="{StaticResource BoolToStringConverter}" ConverterParameter="Stop Service|Start Service" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Button>
+                        <Button Content="Refresh Status" 
+                                Classes="secondary"
+                                Command="{Binding RefreshStatusCommand}" />
                         <Button Content="Refresh Logs" 
                                 Classes="secondary"
                                 Command="{Binding RefreshLogsCommand}"
                                 IsEnabled="{Binding IsRunning}" />
-                        <Button Content="Parameters" 
-                                Classes="secondary"
-                                Command="{Binding EditParametersCommand}" />
-                        <Button Content="Settings" 
-                                Classes="secondary"
-                                Command="{Binding EditSettingsCommand}" />
                     </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Parameters Card -->
+            <Border Classes="card">
+                <StackPanel Spacing="15">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Parameters" Classes="heading2" />
+                            <TextBlock Text="Active parameters (checked) will be passed to the container. Click the checkbox to toggle."
+                                       Classes="secondary"
+                                       FontSize="11" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Save Changes" 
+                                Classes="secondary"
+                                Command="{Binding SaveParametersCommand}" />
+                    </Grid>
+                    
+                    <ItemsControl ItemsSource="{Binding Parameters}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ServiceParameterItem">
+                                <Border CornerRadius="4"
+                                        Padding="12"
+                                        Margin="0,0,0,8"
+                                        BorderThickness="1">
+                                    <Border.Background>
+                                        <MultiBinding Converter="{StaticResource BoolToBackgroundConverter}">
+                                            <Binding Path="IsActive" />
+                                        </MultiBinding>
+                                    </Border.Background>
+                                    <Border.BorderBrush>
+                                        <MultiBinding Converter="{StaticResource BoolToBorderConverter}">
+                                            <Binding Path="IsActive" />
+                                        </MultiBinding>
+                                    </Border.BorderBrush>
+                                    <Grid ColumnDefinitions="Auto,*,200">
+                                        <!-- Active Toggle -->
+                                        <CheckBox Grid.Column="0" 
+                                                  IsChecked="{Binding IsActive}"
+                                                  Margin="0,0,12,0"
+                                                  VerticalAlignment="Center"
+                                                  ToolTip.Tip="Toggle parameter active/inactive" />
+                                        
+                                        <!-- Parameter Info -->
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold">
+                                                    <TextBlock.Foreground>
+                                                        <MultiBinding Converter="{StaticResource BoolToForegroundConverter}">
+                                                            <Binding Path="IsActive" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Foreground>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding CliFlag}" 
+                                                           Classes="secondary"
+                                                           FontFamily="Consolas, Courier New, monospace"
+                                                           FontSize="11" />
+                                                <Border IsVisible="{Binding IsActive}"
+                                                        Background="{StaticResource PocxPrimaryBrush}"
+                                                        CornerRadius="3"
+                                                        Padding="4,1">
+                                                    <TextBlock Text="ACTIVE" 
+                                                               FontSize="9" 
+                                                               FontWeight="Bold"
+                                                               Foreground="White" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Description}" 
+                                                       Classes="secondary"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        
+                                        <!-- Value Input -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBox Text="{Binding Value}" 
+                                                     MinWidth="180"
+                                                     IsEnabled="{Binding IsActive}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <TextBlock Text="No parameters available for this service."
+                               Classes="secondary"
+                               IsVisible="{Binding !Parameters.Count}" />
                 </StackPanel>
             </Border>
 

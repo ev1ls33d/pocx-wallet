@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PocxWallet.UI.Dialogs"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="350"
+        x:Class="PocxWallet.UI.Dialogs.SendFundsDialog"
+        x:DataType="vm:SendFundsDialogViewModel"
+        Title="Send Funds"
+        Width="450" Height="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/Theme.axaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+            <TextBlock Text="Send Funds" Classes="heading1" />
+            <TextBlock Text="{Binding WalletInfo}"
+                       Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Content -->
+        <StackPanel Grid.Row="1" Spacing="15">
+            <!-- Destination Address -->
+            <StackPanel Spacing="5">
+                <TextBlock Text="Destination Address" Classes="heading3" />
+                <TextBox Text="{Binding DestinationAddress}" 
+                         Watermark="Enter recipient address..."
+                         FontFamily="Consolas, Courier New, monospace"
+                         FontSize="12" />
+            </StackPanel>
+
+            <!-- Amount -->
+            <StackPanel Spacing="5">
+                <TextBlock Text="Amount (POCX)" Classes="heading3" />
+                <TextBox Text="{Binding Amount}" 
+                         Watermark="0.00000000" />
+            </StackPanel>
+
+            <!-- Error/Result Message -->
+            <TextBlock Text="{Binding ErrorMessage}" 
+                       Classes="error" 
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasError}" />
+
+            <TextBlock Text="{Binding SuccessMessage}" 
+                       Classes="success" 
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding IsSent}" />
+            
+            <!-- Transaction ID -->
+            <StackPanel Spacing="5" IsVisible="{Binding IsSent}">
+                <TextBlock Text="Transaction ID:" Classes="secondary" />
+                <TextBox Text="{Binding TransactionId}" 
+                         IsReadOnly="True"
+                         FontFamily="Consolas, Courier New, monospace"
+                         FontSize="11" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Footer Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" 
+                    HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Classes="secondary"
+                    Command="{Binding CancelCommand}"
+                    IsVisible="{Binding !IsSent}" />
+            <Button Content="Send" 
+                    Classes="primary"
+                    Command="{Binding SendCommand}"
+                    IsEnabled="{Binding !IsSending}"
+                    IsVisible="{Binding !IsSent}" />
+            <Button Content="Close" 
+                    Classes="primary"
+                    Command="{Binding CloseCommand}"
+                    IsVisible="{Binding IsSent}" />
+        </StackPanel>
+    </Grid>
+</Window>

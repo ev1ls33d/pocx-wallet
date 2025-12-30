@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using PocxWallet.Cli.Resources;
+using PocxWallet.Core.Services;
 using PocxWallet.Core.Wallet;
 using Spectre.Console;
 

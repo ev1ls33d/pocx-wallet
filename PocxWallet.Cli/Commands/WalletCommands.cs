@@ -1,5 +1,6 @@
 ﻿using PocxWallet.Core.Wallet;
 using PocxWallet.Core.VanityAddress;
+using PocxWallet.Core.Services;
 using PocxWallet.Cli.Configuration;
 using PocxWallet.Cli.Resources;
 using Spectre.Console;

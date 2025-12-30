@@ -1,0 +1,104 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PocxWallet.UI.Dialogs"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="450"
+        x:Class="PocxWallet.UI.Dialogs.ImportPrivateKeyDialog"
+        x:DataType="vm:ImportPrivateKeyDialogViewModel"
+        Title="Import Wallet from Private Key"
+        Width="550" Height="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/Theme.axaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+            <TextBlock Text="Import from Private Key" Classes="heading1" />
+            <TextBlock Text="Import a single-key wallet from a private key (hex) or WIF format."
+                       Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="15">
+                <!-- Wallet Name -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Wallet Name" Classes="heading3" />
+                    <TextBox Text="{Binding WalletName}" 
+                             Watermark="Enter wallet name..."
+                             MaxLength="50" />
+                </StackPanel>
+
+                <!-- Private Key / WIF -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Private Key or WIF" Classes="heading3" />
+                    <TextBox Text="{Binding PrivateKeyOrWif}" 
+                             PasswordChar="•"
+                             Watermark="Enter private key (hex) or WIF..." />
+                    <TextBlock Text="Supported formats: 64-character hex, mainnet WIF (5/K/L prefix), testnet WIF (9/c prefix)"
+                               Classes="secondary" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Note -->
+                <Border Background="{StaticResource PocxBackgroundDarkBrush}"
+                        BorderBrush="{StaticResource PocxBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="10">
+                    <TextBlock Text="Note: Single-key wallets do not have a mnemonic phrase. Make sure to backup your private key securely."
+                               Classes="secondary" TextWrapping="Wrap" />
+                </Border>
+
+                <!-- Error Message -->
+                <TextBlock Text="{Binding ErrorMessage}" 
+                           Classes="error" 
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasError}" />
+
+                <!-- Success Message -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsImported}">
+                    <TextBlock Text="? Wallet imported successfully!" 
+                               Classes="success" FontWeight="Bold" />
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Mainnet Address:" Classes="secondary" />
+                        <TextBox Text="{Binding MainnetAddress}" 
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 FontSize="11" />
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Testnet Address:" Classes="secondary" />
+                        <TextBox Text="{Binding TestnetAddress}" 
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 FontSize="11" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" 
+                    HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Classes="secondary"
+                    Command="{Binding CancelCommand}"
+                    IsVisible="{Binding !IsImported}" />
+            <Button Content="Import Wallet" 
+                    Classes="primary"
+                    Command="{Binding ImportCommand}"
+                    IsVisible="{Binding !IsImported}" />
+            <Button Content="Done" 
+                    Classes="primary"
+                    Command="{Binding DoneCommand}"
+                    IsVisible="{Binding IsImported}" />
+        </StackPanel>
+    </Grid>
+</Window>

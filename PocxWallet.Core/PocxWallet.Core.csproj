@@ -16,6 +16,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageReference Include="NBitcoin" Version="7.0.37" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+  <!-- Shared resources that should be copied to output -->
+  <ItemGroup>
+    <Content Include="..\services.yaml" Link="services.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

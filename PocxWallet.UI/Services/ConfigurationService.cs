@@ -1,32 +1,51 @@
+using PocxWallet.Core.Services;
 using PocxWallet.Cli.Configuration;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace PocxWallet.UI.Services;
 
 /// <summary>
-/// Implementation of IConfigurationService using ServiceDefinitionLoader from CLI
+/// Implementation of IConfigurationService using Core ServiceConfigurationLoader
 /// </summary>
 public class ConfigurationService : IConfigurationService
 {
+    private readonly ServiceConfigurationLoader _loader;
     private ServiceConfiguration? _configuration;
+
+    public ConfigurationService()
+    {
+        _loader = new ServiceConfigurationLoader();
+    }
 
     public ServiceConfiguration GetServiceConfiguration()
     {
-        // Load from services.yaml using CLI loader
-        _configuration ??= ServiceDefinitionLoader.LoadServices();
-        return _configuration;
+        return _configuration ??= _loader.LoadServices() ?? new ServiceConfiguration();
     }
 
     public ServiceDefinition? GetServiceDefinition(string serviceId)
     {
         var config = GetServiceConfiguration();
-        return config.Services?.FirstOrDefault(s => 
-            s.Id?.Equals(serviceId, StringComparison.OrdinalIgnoreCase) == true);
+        return ServiceConfigurationHelper.GetServiceById(config, serviceId);
     }
 
     public void SaveServiceConfiguration(ServiceConfiguration configuration)
     {
         _configuration = configuration;
-        // TODO: Save to services.yaml
-        // This would require implementing YAML serialization
+        SaveServiceDefinitions();
+    }
+
+    public void SaveServiceDefinitions()
+    {
+        if (_configuration == null) return;
+        _loader.SaveServices(_configuration);
+    }
+
+    public IEnumerable<string> GetEnabledServiceIds()
+    {
+        var config = GetServiceConfiguration();
+        return ServiceConfigurationHelper.GetEnabledServices(config)
+            .Where(s => !string.IsNullOrEmpty(s.Id))
+            .Select(s => s.Id!);
     }
 }

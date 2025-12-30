@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PocxWallet.UI.Dialogs"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="500"
+        x:Class="PocxWallet.UI.Dialogs.ImportMnemonicDialog"
+        x:DataType="vm:ImportMnemonicDialogViewModel"
+        Title="Import Wallet from Mnemonic"
+        Width="550" Height="500"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/Theme.axaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+            <TextBlock Text="Import from Mnemonic" Classes="heading1" />
+            <TextBlock Text="Restore a wallet using your 12 or 24 word mnemonic phrase."
+                       Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="15">
+                <!-- Wallet Name -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Wallet Name" Classes="heading3" />
+                    <TextBox Text="{Binding WalletName}" 
+                             Watermark="Enter wallet name..."
+                             MaxLength="50" />
+                </StackPanel>
+
+                <!-- Mnemonic Phrase -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Mnemonic Phrase" Classes="heading3" />
+                    <TextBox Text="{Binding MnemonicPhrase}" 
+                             Watermark="Enter your 12 or 24 word mnemonic phrase..."
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             Height="100" />
+                    <TextBlock Text="Enter all words separated by spaces."
+                               Classes="secondary" FontSize="12" />
+                </StackPanel>
+
+                <!-- Passphrase (optional) -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Passphrase (Optional)" Classes="heading3" />
+                    <TextBox Text="{Binding Passphrase}" 
+                             PasswordChar="•"
+                             Watermark="Enter passphrase if used..." />
+                    <TextBlock Text="Only enter a passphrase if you used one when creating the wallet."
+                               Classes="secondary" FontSize="12" />
+                </StackPanel>
+
+                <!-- Error Message -->
+                <TextBlock Text="{Binding ErrorMessage}" 
+                           Classes="error" 
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasError}" />
+
+                <!-- Success Message -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsImported}">
+                    <TextBlock Text="? Wallet imported successfully!" 
+                               Classes="success" FontWeight="Bold" />
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Mainnet Address:" Classes="secondary" />
+                        <TextBox Text="{Binding MainnetAddress}" 
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 FontSize="11" />
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Testnet Address:" Classes="secondary" />
+                        <TextBox Text="{Binding TestnetAddress}" 
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 FontSize="11" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" 
+                    HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Classes="secondary"
+                    Command="{Binding CancelCommand}"
+                    IsVisible="{Binding !IsImported}" />
+            <Button Content="Import Wallet" 
+                    Classes="primary"
+                    Command="{Binding ImportCommand}"
+                    IsVisible="{Binding !IsImported}" />
+            <Button Content="Done" 
+                    Classes="primary"
+                    Command="{Binding DoneCommand}"
+                    IsVisible="{Binding IsImported}" />
+        </StackPanel>
+    </Grid>
+</Window>

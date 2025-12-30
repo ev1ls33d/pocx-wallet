@@ -1,5 +1,6 @@
 using PocxWallet.Cli.Resources;
 using PocxWallet.Cli.Services;
+using PocxWallet.Core.Services;
 using PocxWallet.Core.Wallet;
 using Spectre.Console;
 using System.Diagnostics;
@@ -13,11 +14,11 @@ namespace PocxWallet.Cli.Configuration;
 public class DynamicServiceMenuBuilder
 {
     private readonly DockerServiceManager _dockerManager;
-    private readonly NativeServiceManager _nativeManager;
+    private readonly CliNativeServiceManager _nativeManager;
     private readonly ServiceConfiguration? _serviceConfig;
     private readonly CommandTemplateEngine _templateEngine;
     private readonly Func<HDWallet?> _walletProvider;
-    private readonly VersionCrawlerService _versionCrawler;
+    private readonly CliVersionCrawlerService _versionCrawler;
 
     public DynamicServiceMenuBuilder(
         ServiceConfiguration? serviceConfig, 
@@ -26,10 +27,10 @@ public class DynamicServiceMenuBuilder
     {
         _serviceConfig = serviceConfig;
         _dockerManager = dockerManager;
-        _nativeManager = new NativeServiceManager();
+        _nativeManager = new CliNativeServiceManager();
         _walletProvider = walletProvider ?? (() => null);
         _templateEngine = new CommandTemplateEngine(_walletProvider);
-        _versionCrawler = new VersionCrawlerService();
+        _versionCrawler = new CliVersionCrawlerService();
     }
 
     /// <summary>

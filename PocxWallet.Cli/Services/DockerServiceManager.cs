@@ -1,43 +1,24 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PocxWallet.Core.Services;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Services;
 
 /// <summary>
-/// Manages Docker containers for PoCX services
+/// CLI-specific Docker service manager with Spectre.Console output
+/// Extends the Core DockerManager with CLI-specific features
 /// </summary>
-public class DockerServiceManager
+public class DockerServiceManager : DockerManager
 {
-    // Maximum log size to display before truncation
     private const int MaxLogDisplaySize = 5000;
-    
-    // Container startup/shutdown delays
-    private const int ContainerStartupDelayMs = 1000;
-    private const int ContainerShutdownDelayMs = 500;
 
-    public DockerServiceManager()
+    public DockerServiceManager() : base(SpectreServiceLogger.Instance)
     {
     }
 
     /// <summary>
-    /// Check if Docker is installed and running
-    /// </summary>
-    public async Task<bool> IsDockerAvailableAsync()
-    {
-        try
-        {
-            var result = await ExecuteCommandAsync("docker", "version");
-            return result.exitCode == 0;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Install Docker (or guide user to install)
+    /// Install Docker (or guide user to install) - CLI-specific with interactive prompts
     /// </summary>
     public async Task<bool> EnsureDockerInstalledAsync()
     {
@@ -83,9 +64,6 @@ public class DockerServiceManager
         return false;
     }
 
-    /// <summary>
-    /// Attempt to install Docker on Linux
-    /// </summary>
     private async Task<bool> InstallDockerLinuxAsync()
     {
         try
@@ -94,18 +72,44 @@ public class DockerServiceManager
                 .StartAsync("Installing Docker...", async ctx =>
                 {
                     ctx.Status("Downloading Docker installation script...");
-                    var downloadResult = await ExecuteCommandAsync("curl", "-fsSL https://get.docker.com -o /tmp/get-docker.sh");
-                    
-                    if (downloadResult.exitCode == 0)
+                    var psi = new ProcessStartInfo
                     {
-                        ctx.Status("Running Docker installation...");
-                        var installResult = await ExecuteCommandAsync("sudo", "sh /tmp/get-docker.sh");
+                        FileName = "curl",
+                        Arguments = "-fsSL https://get.docker.com -o /tmp/get-docker.sh",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    
+                    using var downloadProcess = Process.Start(psi);
+                    if (downloadProcess != null)
+                    {
+                        await downloadProcess.WaitForExitAsync();
                         
-                        if (installResult.exitCode == 0)
+                        if (downloadProcess.ExitCode == 0)
                         {
-                            ctx.Status("Starting Docker service...");
-                            await ExecuteCommandAsync("sudo", "systemctl start docker");
-                            await ExecuteCommandAsync("sudo", "systemctl enable docker");
+                            ctx.Status("Running Docker installation...");
+                            psi.FileName = "sudo";
+                            psi.Arguments = "sh /tmp/get-docker.sh";
+                            
+                            using var installProcess = Process.Start(psi);
+                            if (installProcess != null)
+                            {
+                                await installProcess.WaitForExitAsync();
+                                
+                                if (installProcess.ExitCode == 0)
+                                {
+                                    ctx.Status("Starting Docker service...");
+                                    psi.Arguments = "systemctl start docker";
+                                    using var startProcess = Process.Start(psi);
+                                    if (startProcess != null) await startProcess.WaitForExitAsync();
+                                    
+                                    psi.Arguments = "systemctl enable docker";
+                                    using var enableProcess = Process.Start(psi);
+                                    if (enableProcess != null) await enableProcess.WaitForExitAsync();
+                                }
+                            }
                         }
                     }
                 });
@@ -119,230 +123,21 @@ public class DockerServiceManager
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Installation failed:[/] {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Installation failed:[/] {Markup.Escape(ex.Message)}");
         }
 
         return false;
     }
 
     /// <summary>
-    /// Ensure Docker network exists
-    /// </summary>
-    public async Task<bool> EnsureNetworkExistsAsync(string networkName)
-    {
-        // Check if network exists
-        var result = await ExecuteCommandAsync("docker", $"network ls -q -f name=^{networkName}$");
-        
-        if (string.IsNullOrWhiteSpace(result.output))
-        {
-            // Create network
-            AnsiConsole.MarkupLine($"[bold]Creating Docker network:[/] {networkName}");
-            var createResult = await ExecuteCommandAsync("docker", $"network create {networkName}");
-            
-            if (createResult.exitCode == 0)
-            {
-                AnsiConsole.MarkupLine("[green]√[/] Network created successfully");
-                return true;
-            }
-            else
-            {
-                AnsiConsole.MarkupLine($"[red]Failed to create network:[/] {createResult.output}");
-                return false;
-            }
-        }
-        
-        return true;
-    }
-
-    /// <summary>
-    /// Start a Docker container
-    /// </summary>
-    public async Task<bool> StartContainerAsync(
-        string containerName,
-        string imageName,
-        string repository,
-        string imageTag,
-        Dictionary<string, string>? environmentVars = null,
-        Dictionary<string, string>? volumeMounts = null,
-        Dictionary<int, int>? portMappings = null,
-        string? command = null,
-        string? network = null,
-        List<string>? readOnlyVolumes = null,
-        bool gpuPassthrough = false)
-    {
-        var fullImageName = $"{repository}/{imageName}:{imageTag}";
-        
-        // Always stop and remove existing container to ensure settings changes are applied
-        AnsiConsole.MarkupLine($"[dim]Cleaning up existing container if present...[/]");
-        await ExecuteCommandAsync("docker", $"stop --time=10 {containerName}", suppressOutput: true);
-        await ExecuteCommandAsync("docker", $"rm {containerName}", suppressOutput: true);
-
-        // Build docker run command
-        var args = new List<string> { "run", "-dit", "--name", containerName };
-
-        // Add GPU passthrough if enabled (requires nvidia-docker runtime)
-        if (gpuPassthrough)
-        {
-            args.Add("--gpus");
-            args.Add("all");
-        }
-
-        // Add network if specified
-        if (!string.IsNullOrWhiteSpace(network))
-        {
-            args.Add("--network");
-            args.Add(network);
-        }
-
-        // Add environment variables
-        if (environmentVars != null)
-        {
-            foreach (var (key, value) in environmentVars)
-            {
-                args.Add("-e");
-                args.Add($"{key}={value}");
-            }
-        }
-
-        // Add volume mounts
-        if (volumeMounts != null)
-        {
-            foreach (var (hostPath, containerPath) in volumeMounts)
-            {
-                var isReadOnly = readOnlyVolumes?.Contains(hostPath) ?? false;
-                args.Add("-v");
-                args.Add($"{hostPath}:{containerPath}{(isReadOnly ? ":ro" : "")}");
-            }
-        }
-
-        // Add port mappings
-        if (portMappings != null)
-        {
-            foreach (var (hostPort, containerPort) in portMappings)
-            {
-                args.Add("-p");
-                args.Add($"{hostPort}:{containerPort}");
-            }
-        }
-
-        args.Add(fullImageName);
-
-        if (!string.IsNullOrWhiteSpace(command))
-        {
-            args.AddRange(command.Split(' '));
-        }
-
-        AnsiConsole.MarkupLine($"[bold]Starting container:[/] {containerName}");
-        var result = await ExecuteCommandAsync("docker", string.Join(" ", args));
-
-        if (result.exitCode == 0)
-        {
-            // Wait a moment for container to fully start
-            await Task.Delay(ContainerStartupDelayMs);
-            
-            // Verify container is running
-            var status = await GetContainerStatusAsync(containerName);
-            if (status == "running")
-            {
-                AnsiConsole.MarkupLine("[green]√[/] Container started successfully");
-                return true;
-            }
-            else
-            {
-                AnsiConsole.MarkupLine($"[yellow]▲[/] Container created but status is: {Markup.Escape(status)}");
-                return false; // Return false if not running
-            }
-        }
-        else
-        {
-            AnsiConsole.MarkupLine($"[red]Failed to start container:[/] {Markup.Escape(result.output)}");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Stop a Docker container
-    /// </summary>
-    public async Task<bool> StopContainerAsync(string containerName)
-    {
-        ValidateContainerName(containerName);
-        AnsiConsole.MarkupLine($"[bold]Stopping container:[/] {containerName}");
-        
-        var result = await ExecuteCommandAsync("docker", $"stop {containerName}");
-        
-        if (result.exitCode == 0)
-        {
-            // Wait a moment for container to fully stop
-            await Task.Delay(ContainerShutdownDelayMs);
-            AnsiConsole.MarkupLine("[green]√[/] Container stopped successfully");
-            return true;
-        }
-        else
-        {
-            AnsiConsole.MarkupLine($"[yellow]Container may not be running[/]");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Remove a Docker container
-    /// </summary>
-    public async Task<bool> RemoveContainerAsync(string containerName)
-    {
-        ValidateContainerName(containerName);
-        AnsiConsole.MarkupLine($"[bold]Removing container:[/] {containerName}");
-        
-        // Stop first
-        await StopContainerAsync(containerName);
-        
-        var result = await ExecuteCommandAsync("docker", $"rm {containerName}");
-        
-        if (result.exitCode == 0)
-        {
-            AnsiConsole.MarkupLine("[green]√[/] Container removed successfully");
-            return true;
-        }
-        else
-        {
-            AnsiConsole.MarkupLine($"[yellow]Container may not exist[/]");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Get container status
-    /// </summary>
-    public async Task<string> GetContainerStatusAsync(string containerName)
-    {
-        ValidateContainerName(containerName);
-        var result = await ExecuteCommandAsync("docker", $"inspect -f {{{{.State.Status}}}} {containerName}");
-        return result.exitCode == 0 ? result.output.Trim() : "not found";
-    }
-
-    /// <summary>
-    /// Get container logs
-    /// </summary>
-    public async Task<string> GetContainerLogsAsync(string containerName, int tailLines = 50)
-    {
-        ValidateContainerName(containerName);
-        if (tailLines < 1 || tailLines > 10000)
-            throw new ArgumentException("Tail lines must be between 1 and 10000", nameof(tailLines));
-        
-        var result = await ExecuteCommandAsync("docker", $"logs --tail {tailLines} {containerName}");
-        return result.exitCode == 0 ? result.output : $"Failed to get logs: {result.output}";
-    }
-
-    /// <summary>
-    /// Display container logs in a formatted panel
+    /// Display container logs in a formatted panel - CLI-specific with Spectre.Console
     /// </summary>
     public async Task DisplayContainerLogsAsync(string containerName, int tailLines = 50, string title = "Container Logs")
     {
-        ValidateContainerName(containerName);
-        
         var status = await GetContainerStatusAsync(containerName);
         if (status == "not found")
         {
-            AnsiConsole.MarkupLine($"[yellow]Container '{containerName}' is not running[/]");
+            AnsiConsole.MarkupLine($"[yellow]Container '{Markup.Escape(containerName)}' is not running[/]");
             return;
         }
 
@@ -351,13 +146,11 @@ public class DockerServiceManager
 
         var logs = await GetContainerLogsAsync(containerName, tailLines);
         
-        // Limit log display to reasonable size
         if (logs.Length > MaxLogDisplaySize)
         {
             logs = "...\n" + logs.Substring(logs.Length - MaxLogDisplaySize);
         }
 
-        // Escape brackets in logs to prevent markup interpretation
         var escapedLogs = Markup.Escape(logs);
 
         var panel = new Panel(escapedLogs)
@@ -368,175 +161,5 @@ public class DockerServiceManager
         };
         
         AnsiConsole.Write(panel);
-    }
-
-    /// <summary>
-    /// Validate container name to prevent command injection
-    /// </summary>
-    private void ValidateContainerName(string containerName)
-    {
-        if (string.IsNullOrWhiteSpace(containerName))
-            throw new ArgumentException("Container name cannot be empty", nameof(containerName));
-        
-        // Container names can only contain: [a-zA-Z0-9][a-zA-Z0-9_.-]
-        if (!System.Text.RegularExpressions.Regex.IsMatch(containerName, @"^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"))
-            throw new ArgumentException("Invalid container name format", nameof(containerName));
-    }
-
-    /// <summary>
-    /// List all PoCX-related containers
-    /// </summary>
-    public async Task<List<ContainerInfo>> ListContainersAsync()
-    {
-        var containers = new List<ContainerInfo>();
-        
-        var result = await ExecuteCommandAsync("docker", 
-            "ps -a --filter name=pocx-node --filter name=miner --filter name=plotter --filter name=electrs " +
-            "--format {{.Names}}|{{.Status}}|{{.Ports}}");
-
-        if (result.exitCode == 0 && !string.IsNullOrWhiteSpace(result.output))
-        {
-            foreach (var line in result.output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var parts = line.Split('|');
-                if (parts.Length >= 2)
-                {
-                    containers.Add(new ContainerInfo
-                    {
-                        Name = parts[0].Trim(),
-                        Status = parts[1].Trim(),
-                        Ports = parts.Length > 2 ? parts[2].Trim() : ""
-                    });
-                }
-            }
-        }
-
-        return containers;
-    }
-
-    /// <summary>
-    /// Execute a command in a running container
-    /// </summary>
-    public async Task<(int exitCode, string output)> ExecInContainerAsync(
-        string containerName,
-        string command)
-    {
-        ValidateContainerName(containerName);
-        // Split command but respect quoted strings to preserve JSON arguments with spaces
-        var arguments = SplitCommandLineArguments(command);
-        var fullArgs = new string[] { "exec", containerName }.Concat(arguments).ToArray();
-        return await ExecuteCommandAsync("docker", fullArgs);
-    }
-
-    /// <summary>
-    /// Split command line arguments while respecting quoted strings
-    /// This handles cases like: bitcoin-cli importdescriptors '[{"desc": "...", "timestamp": "now"}]'
-    /// Also handles escaped quotes with backslash
-    /// </summary>
-    private static string[] SplitCommandLineArguments(string commandLine)
-    {
-        var args = new List<string>();
-        var inSingleQuote = false;
-        var inDoubleQuote = false;
-        var current = new System.Text.StringBuilder();
-        var escapeNext = false;
-
-        foreach (char c in commandLine)
-        {
-            if (escapeNext)
-            {
-                current.Append(c);
-                escapeNext = false;
-                continue;
-            }
-
-            if (c == '\\')
-            {
-                escapeNext = true;
-                // Don't append the backslash here - let the next iteration decide
-                continue;
-            }
-
-            if (c == '\'' && !inDoubleQuote)
-            {
-                inSingleQuote = !inSingleQuote;
-                // Don't append the quote - ArgumentList will handle escaping
-            }
-            else if (c == '"' && !inSingleQuote)
-            {
-                inDoubleQuote = !inDoubleQuote;
-                // Don't append the quote - ArgumentList will handle escaping
-            }
-            else if (c == ' ' && !inSingleQuote && !inDoubleQuote)
-            {
-                if (current.Length > 0)
-                {
-                    args.Add(current.ToString());
-                    current.Clear();
-                }
-            }
-            else
-            {
-                current.Append(c);
-            }
-        }
-
-        if (current.Length > 0)
-        {
-            args.Add(current.ToString());
-        }
-
-        return args.ToArray();
-    }
-
-    /// <summary>
-    /// Execute a shell command with string[] arguments (preserves arguments with spaces)
-    /// </summary>
-    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string[] arguments, bool suppressOutput = false)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = command,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        foreach (var arg in arguments)
-            psi.ArgumentList.Add(arg);
-
-        using var process = new Process { StartInfo = psi };
-        process.Start();
-
-        // Read stdout and stderr in parallel to avoid potential deadlocks
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask = process.StandardError.ReadToEndAsync();
-        
-        await process.WaitForExitAsync();
-        
-        var output = await outputTask;
-        var error = await errorTask;
-
-        // Combine output and error for better debugging
-        var combinedOutput = string.IsNullOrWhiteSpace(error) ? output : $"{output}\n{error}".Trim();
-
-        return (process.ExitCode, combinedOutput);
-    }
-
-    /// <summary>
-    /// Execute a shell command (legacy overload - splits by space, use string[] overload for complex arguments)
-    /// </summary>
-    private async Task<(int exitCode, string output)> ExecuteCommandAsync(string command, string arguments, bool suppressOutput = false)
-    {
-        // For simple commands, split by space
-        return await ExecuteCommandAsync(command, arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries), suppressOutput);
-    }
-
-    public class ContainerInfo
-    {
-        public string Name { get; set; } = "";
-        public string Status { get; set; } = "";
-        public string Ports { get; set; } = "";
     }
 }

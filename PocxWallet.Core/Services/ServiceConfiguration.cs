@@ -1,6 +1,6 @@
 using YamlDotNet.Serialization;
 
-namespace PocxWallet.Cli.Configuration;
+namespace PocxWallet.Core.Services;
 
 /// <summary>
 /// Execution mode for a service
@@ -88,18 +88,6 @@ public class ServiceDefinition
 
     [YamlMember(Alias = "execution_mode")]
     public string ExecutionModeString { get; set; } = "docker";
-    
-    /// <summary>
-    /// Get the execution mode for this service
-    /// </summary>
-    public ExecutionMode GetExecutionMode()
-    {
-        return ExecutionModeString?.ToLower() switch
-        {
-            "native" => ExecutionMode.Native,
-            _ => ExecutionMode.Docker
-        };
-    }
 
     [YamlMember(Alias = "container")]
     public ContainerConfig? Container { get; set; }
@@ -134,31 +122,91 @@ public class ServiceDefinition
     [YamlMember(Alias = "settings")]
     public List<ServiceSetting>? Settings { get; set; }
 
-    /// <summary>
-    /// User override for container name
-    /// </summary>
     [YamlMember(Alias = "container_name_override")]
     public string? ContainerNameOverride { get; set; }
 
-    /// <summary>
-    /// User override for network
-    /// </summary>
     [YamlMember(Alias = "network_override")]
     public string? NetworkOverride { get; set; }
 
-    /// <summary>
-    /// For native mode: whether to spawn in new console process (true) or redirect to log file (false)
-    /// Default is true
-    /// </summary>
     [YamlMember(Alias = "spawn_new_console")]
     public bool SpawnNewConsole { get; set; } = true;
+    
+    /// <summary>
+    /// Get the execution mode for this service
+    /// </summary>
+    public ExecutionMode GetExecutionMode()
+    {
+        return ExecutionModeString?.ToLower() switch
+        {
+            "native" => ExecutionMode.Native,
+            _ => ExecutionMode.Docker
+        };
+    }
 
     /// <summary>
     /// Get the container name for this service
     /// </summary>
     public string GetContainerName()
     {
-        return Container?.ContainerNameSetting ?? $"pocx-{Id}";
+        return ContainerNameOverride 
+            ?? Container?.ContainerNameDefault 
+            ?? Container?.ContainerNameSetting 
+            ?? $"pocx-{Id}";
+    }
+    
+    /// <summary>
+    /// Get the full Docker image reference (repository/image:tag)
+    /// </summary>
+    public string GetFullDockerImage()
+    {
+        var repository = GetDockerRepository();
+        var image = GetDockerImageName();
+        var tag = GetDockerTag();
+        
+        if (!string.IsNullOrEmpty(repository))
+        {
+            return $"{repository}/{image}:{tag}";
+        }
+        return $"{image}:{tag}";
+    }
+    
+    /// <summary>
+    /// Get the Docker repository (e.g., "ghcr.io/ev1ls33d/pocx-wallet")
+    /// </summary>
+    public string GetDockerRepository()
+    {
+        if (!string.IsNullOrEmpty(Container?.Repository))
+        {
+            return Container.Repository;
+        }
+        return "ghcr.io/ev1ls33d/pocx-wallet";
+    }
+    
+    /// <summary>
+    /// Get the Docker image name (e.g., "bitcoin", "electrs")
+    /// </summary>
+    public string GetDockerImageName()
+    {
+        return Container?.Image ?? Id;
+    }
+    
+    /// <summary>
+    /// Get the Docker image tag (e.g., "latest", "v1.0.0")
+    /// </summary>
+    public string GetDockerTag()
+    {
+        return Container?.DefaultTag ?? "latest";
+    }
+    
+    /// <summary>
+    /// Update the Docker image configuration
+    /// </summary>
+    public void SetDockerImage(string repository, string image, string tag)
+    {
+        Container ??= new ContainerConfig();
+        Container.Repository = repository;
+        Container.Image = image;
+        Container.DefaultTag = tag;
     }
 }
 
@@ -179,9 +227,6 @@ public class ContainerConfig
     [YamlMember(Alias = "container_name_setting")]
     public string? ContainerNameSetting { get; set; }
 
-    /// <summary>
-    /// Default container name (used instead of reading from external settings)
-    /// </summary>
     [YamlMember(Alias = "container_name_default")]
     public string? ContainerNameDefault { get; set; }
 
@@ -194,16 +239,12 @@ public class ContainerConfig
     [YamlMember(Alias = "command")]
     public string? Command { get; set; }
 
-    /// <summary>
-    /// Binary executable to run (e.g., "bitcoind", "electrs")
-    /// This is prepended to the command with user parameters
-    /// </summary>
     [YamlMember(Alias = "binary")]
     public string? Binary { get; set; }
 }
 
 /// <summary>
-/// Service source configuration containing Docker and native options
+/// Service source configuration
 /// </summary>
 public class ServiceSource
 {
@@ -212,8 +253,7 @@ public class ServiceSource
 
     [YamlMember(Alias = "native")]
     public NativeSource? Native { get; set; }
-    
-    // Legacy support - keep for backward compatibility
+
     [YamlMember(Alias = "repository")]
     public string? Repository { get; set; }
 
@@ -234,22 +274,22 @@ public class DynamicSourceConfig
 {
     [YamlMember(Alias = "repository")]
     public string Repository { get; set; } = "";
-    
+
     [YamlMember(Alias = "filter")]
     public string Filter { get; set; } = "";
-    
+
     [YamlMember(Alias = "whitelist")]
     public List<string>? Whitelist { get; set; }
 }
 
 /// <summary>
-/// Docker source configuration with available images
+/// Docker source configuration
 /// </summary>
 public class DockerSource
 {
     [YamlMember(Alias = "dynamic")]
     public DynamicSourceConfig? Dynamic { get; set; }
-    
+
     [YamlMember(Alias = "images")]
     public List<DockerImage>? Images { get; set; }
 }
@@ -273,13 +313,13 @@ public class DockerImage
 }
 
 /// <summary>
-/// Native source configuration with available downloads
+/// Native source configuration
 /// </summary>
 public class NativeSource
 {
     [YamlMember(Alias = "dynamic")]
     public DynamicSourceConfig? Dynamic { get; set; }
-    
+
     [YamlMember(Alias = "downloads")]
     public List<NativeDownload>? Downloads { get; set; }
 }
@@ -319,9 +359,6 @@ public class PortMapping
     [YamlMember(Alias = "host_port_setting")]
     public string? HostPortSetting { get; set; }
 
-    /// <summary>
-    /// Default host port value (used instead of reading from external settings)
-    /// </summary>
     [YamlMember(Alias = "host_port_default")]
     public int? HostPortDefault { get; set; }
 
@@ -334,9 +371,6 @@ public class PortMapping
     [YamlMember(Alias = "optional")]
     public bool Optional { get; set; }
 
-    /// <summary>
-    /// User override for host port
-    /// </summary>
     [YamlMember(Alias = "host_port_override")]
     public int? HostPortOverride { get; set; }
 }
@@ -352,9 +386,6 @@ public class VolumeMapping
     [YamlMember(Alias = "host_path_setting")]
     public string? HostPathSetting { get; set; }
 
-    /// <summary>
-    /// Default host path value (used instead of reading from external settings)
-    /// </summary>
     [YamlMember(Alias = "host_path_default")]
     public string? HostPathDefault { get; set; }
 
@@ -370,9 +401,6 @@ public class VolumeMapping
     [YamlMember(Alias = "is_file")]
     public bool IsFile { get; set; }
 
-    /// <summary>
-    /// User override for host path
-    /// </summary>
     [YamlMember(Alias = "host_path_override")]
     public string? HostPathOverride { get; set; }
 }
@@ -394,9 +422,6 @@ public class EnvironmentVariable
     [YamlMember(Alias = "sensitive")]
     public bool Sensitive { get; set; }
 
-    /// <summary>
-    /// User override for the environment variable value
-    /// </summary>
     [YamlMember(Alias = "value_override")]
     public string? ValueOverride { get; set; }
 }
@@ -445,20 +470,12 @@ public class ServiceParameter
     [YamlMember(Alias = "hidden")]
     public bool Hidden { get; set; }
 
-    /// <summary>
-    /// Whether the CLI flag uses equals sign syntax (e.g., -rpcbind=0.0.0.0)
-    /// If false, boolean flags are just the flag name (e.g., -testnet)
-    /// Default is true for non-boolean types, false for boolean types
-    /// </summary>
     [YamlMember(Alias = "use_equals")]
     public bool? UseEquals { get; set; }
 
-    /// <summary>
-    /// User-set value for this parameter (null if not set by user)
-    /// </summary>
     [YamlMember(Alias = "value")]
     public object? Value { get; set; }
-
+    
     /// <summary>
     /// Check if this parameter has been set by the user
     /// </summary>
@@ -605,47 +622,27 @@ public class SubmenuItem
     [YamlMember(Alias = "handler")]
     public string? Handler { get; set; }
 
-    /// <summary>
-    /// Custom command definition for docker exec actions
-    /// </summary>
     [YamlMember(Alias = "command")]
     public CustomCommand? Command { get; set; }
 }
 
 /// <summary>
-/// Custom command definition for docker exec actions
-/// Allows defining commands with user inputs and macros
+/// Custom command definition
 /// </summary>
 public class CustomCommand
 {
-    /// <summary>
-    /// Binary executable to run (e.g., "bitcoin-cli")
-    /// </summary>
     [YamlMember(Alias = "binary")]
     public string Binary { get; set; } = "";
 
-    /// <summary>
-    /// Arguments to pass to the binary
-    /// Can contain template placeholders like {{input:wallet_name}} or {{macro:HDWallet.GetDescriptor}}
-    /// </summary>
     [YamlMember(Alias = "arguments")]
     public List<string>? Arguments { get; set; }
 
-    /// <summary>
-    /// User input definitions
-    /// </summary>
     [YamlMember(Alias = "inputs")]
     public List<CommandInput>? Inputs { get; set; }
 
-    /// <summary>
-    /// Description of what this command does
-    /// </summary>
     [YamlMember(Alias = "description")]
     public string? Description { get; set; }
 
-    /// <summary>
-    /// Whether to show command output to user
-    /// </summary>
     [YamlMember(Alias = "show_output")]
     public bool ShowOutput { get; set; } = true;
 }
@@ -655,51 +652,30 @@ public class CustomCommand
 /// </summary>
 public class CommandInput
 {
-    /// <summary>
-    /// Input identifier (referenced in arguments as {{input:name}})
-    /// </summary>
     [YamlMember(Alias = "name")]
     public string Name { get; set; } = "";
 
-    /// <summary>
-    /// Prompt shown to user
-    /// </summary>
     [YamlMember(Alias = "prompt")]
     public string Prompt { get; set; } = "";
 
-    /// <summary>
-    /// Input type: string, int, bool, password
-    /// </summary>
     [YamlMember(Alias = "type")]
     public string Type { get; set; } = "string";
 
-    /// <summary>
-    /// Default value if user doesn't provide one
-    /// </summary>
     [YamlMember(Alias = "default")]
     public string? Default { get; set; }
 
-    /// <summary>
-    /// Whether this input is required
-    /// </summary>
     [YamlMember(Alias = "required")]
     public bool Required { get; set; } = true;
 
-    /// <summary>
-    /// Description/help text for the input
-    /// </summary>
     [YamlMember(Alias = "description")]
     public string? Description { get; set; }
 
-    /// <summary>
-    /// Validation regex pattern
-    /// </summary>
     [YamlMember(Alias = "pattern")]
     public string? Pattern { get; set; }
 }
 
 /// <summary>
-/// Service setting configuration (editable in UI)
+/// Service setting configuration
 /// </summary>
 public class ServiceSetting
 {

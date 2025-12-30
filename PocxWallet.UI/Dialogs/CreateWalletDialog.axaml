@@ -1,0 +1,119 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PocxWallet.UI.Dialogs"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
+        x:Class="PocxWallet.UI.Dialogs.CreateWalletDialog"
+        x:DataType="vm:CreateWalletDialogViewModel"
+        Title="Create New Wallet"
+        Width="500" Height="600"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/Theme.axaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+            <TextBlock Text="Create New Wallet" Classes="heading1" />
+            <TextBlock Text="Generate a new HD wallet with a random mnemonic phrase."
+                       Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="15">
+                <!-- Wallet Name -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Wallet Name" Classes="heading3" />
+                    <TextBox Text="{Binding WalletName}" 
+                             Watermark="Enter wallet name..."
+                             MaxLength="50" />
+                    <TextBlock Text="{Binding WalletNameError}" 
+                               Classes="error" 
+                               IsVisible="{Binding HasWalletNameError}" />
+                </StackPanel>
+
+                <!-- Passphrase (optional) -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Passphrase (Optional)" Classes="heading3" />
+                    <TextBox Text="{Binding Passphrase}" 
+                             PasswordChar="•"
+                             Watermark="Enter optional passphrase..." />
+                    <TextBlock Text="A passphrase adds extra security to your wallet."
+                               Classes="secondary" FontSize="12" />
+                </StackPanel>
+
+                <!-- Generated Mnemonic (shown after creation) -->
+                <StackPanel Spacing="5" IsVisible="{Binding IsCreated}">
+                    <TextBlock Text="?? IMPORTANT: Save Your Mnemonic" 
+                               Foreground="{StaticResource PocxWarningBrush}"
+                               FontWeight="Bold" />
+                    
+                    <Border Background="{StaticResource PocxBackgroundDarkBrush}"
+                            BorderBrush="{StaticResource PocxBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="15">
+                        <TextBlock Text="{Binding Mnemonic}" 
+                                   FontFamily="Consolas, Courier New, monospace"
+                                   FontSize="14"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource PocxWarningBrush}" />
+                    </Border>
+                    
+                    <Button Content="Copy Mnemonic" 
+                            Classes="secondary" 
+                            HorizontalAlignment="Left"
+                            Command="{Binding CopyMnemonicCommand}" />
+                    
+                    <TextBlock Text="Write down these words in order and store them safely. Anyone with this phrase can access your wallet!"
+                               Classes="error" 
+                               TextWrapping="Wrap"
+                               FontSize="12" />
+                </StackPanel>
+
+                <!-- Addresses (shown after creation) -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsCreated}">
+                    <TextBlock Text="Wallet Addresses" Classes="heading3" />
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Mainnet Address:" Classes="secondary" />
+                        <TextBox Text="{Binding MainnetAddress}" 
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 FontSize="11" />
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Testnet Address:" Classes="secondary" />
+                        <TextBox Text="{Binding TestnetAddress}" 
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 FontSize="11" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" 
+                    HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Classes="secondary"
+                    Command="{Binding CancelCommand}"
+                    IsVisible="{Binding !IsCreated}" />
+            <Button Content="Create Wallet" 
+                    Classes="primary"
+                    Command="{Binding CreateCommand}"
+                    IsVisible="{Binding !IsCreated}" />
+            <Button Content="Done" 
+                    Classes="primary"
+                    Command="{Binding DoneCommand}"
+                    IsVisible="{Binding IsCreated}" />
+        </StackPanel>
+    </Grid>
+</Window>

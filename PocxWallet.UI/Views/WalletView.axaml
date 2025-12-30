@@ -3,32 +3,85 @@
              xmlns:vm="using:PocxWallet.UI.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="800"
              x:Class="PocxWallet.UI.Views.WalletView"
              x:DataType="vm:WalletViewModel">
 
     <ScrollViewer>
         <StackPanel Spacing="20">
             <!-- Page Title -->
-            <TextBlock Text="Wallet" Classes="heading1" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="Wallet" Classes="heading1" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding NodeStatus, StringFormat='Node: {0}'}" 
+                               VerticalAlignment="Center"
+                               Classes="secondary" />
+                    <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                        <Ellipse.Fill>
+                            <SolidColorBrush Color="{Binding IsNodeRunning, Converter={StaticResource BoolToColorConverter}}" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </StackPanel>
+            </Grid>
+
+            <!-- Status Message -->
+            <Border Classes="card" IsVisible="{Binding HasStatusMessage}" 
+                    Background="{StaticResource PocxBackgroundLightBrush}">
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+            </Border>
 
             <!-- Active Wallet Card -->
             <Border Classes="card">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Active Wallet" Classes="heading2" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Active Wallet" Classes="heading2" />
+                        <Button Grid.Column="1" Content="Select" 
+                                Classes="secondary"
+                                Command="{Binding SelectWalletCommand}" />
+                    </Grid>
                     
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Address:" Classes="secondary" />
-                        <TextBlock Text="{Binding ActiveWalletDisplay}" 
-                                   FontSize="12"
-                                   FontFamily="Consolas, Courier New, monospace" />
+                    <StackPanel Spacing="8" IsVisible="{Binding HasActiveWallet}">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Name:" Classes="secondary" />
+                            <TextBlock Text="{Binding ActiveWalletName}" 
+                                       FontSize="16"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="5">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Classes="secondary">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0}">
+                                            <Binding Path="IsTestnet" Converter="{StaticResource BoolToStringConverter}" ConverterParameter="Testnet Address:|Mainnet Address:" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Grid.Column="0" Text="{Binding ActiveWalletAddress}" 
+                                         IsReadOnly="True"
+                                         FontSize="11"
+                                         FontFamily="Consolas, Courier New, monospace" />
+                                <Button Grid.Column="1" Content="??" 
+                                        Classes="secondary"
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        Command="{Binding CopyAddressCommand}" />
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                     
-                    <StackPanel Spacing="8">
+                    <TextBlock Text="No wallet selected. Create or import a wallet to get started."
+                               Classes="secondary"
+                               IsVisible="{Binding !HasActiveWallet}" />
+                    
+                    <!-- Balance -->
+                    <StackPanel Spacing="8" IsVisible="{Binding HasActiveWallet}">
                         <TextBlock Text="Balance:" Classes="secondary" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="{Binding Balance}" 
-                                       FontSize="24"
+                                       FontSize="28"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource PocxAccentBrush}" />
                             <TextBlock Text="POCX" 
@@ -40,18 +93,21 @@
                     </StackPanel>
                     
                     <!-- Quick Actions -->
-                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0" IsVisible="{Binding HasActiveWallet}">
                         <Button Content="Send" 
                                 Classes="primary"
                                 Command="{Binding SendFundsCommand}"
-                                IsEnabled="{Binding HasActiveWallet}" />
+                                IsEnabled="{Binding IsNodeRunning}" />
                         <Button Content="Receive" 
                                 Classes="primary"
-                                Command="{Binding ReceiveFundsCommand}"
-                                IsEnabled="{Binding HasActiveWallet}" />
+                                Command="{Binding ReceiveFundsCommand}" />
                         <Button Content="Refresh" 
                                 Classes="secondary"
-                                Command="{Binding RefreshBalanceCommand}" />
+                                Command="{Binding RefreshBalanceCommand}"
+                                IsEnabled="{Binding !IsLoading}" />
+                        <Button Content="Details" 
+                                Classes="secondary"
+                                Command="{Binding ViewWalletDetailsCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -61,25 +117,105 @@
                 <StackPanel Spacing="15">
                     <TextBlock Text="Wallet Management" Classes="heading2" />
                     
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Button Content="Create Wallet" 
+                    <WrapPanel Orientation="Horizontal">
+                        <StackPanel Spacing="10" Margin="0,0,20,10">
+                            <TextBlock Text="Create" Classes="heading3" />
+                            <Button Content="New Random Wallet" 
+                                    Classes="secondary"
+                                    Command="{Binding CreateWalletCommand}" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="10" Margin="0,0,20,10">
+                            <TextBlock Text="Import" Classes="heading3" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Content="From Mnemonic" 
+                                        Classes="secondary"
+                                        Command="{Binding ImportFromMnemonicCommand}" />
+                                <Button Content="From Private Key" 
+                                        Classes="secondary"
+                                        Command="{Binding ImportFromPrivateKeyCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="10" Margin="0,0,0,10" IsVisible="{Binding HasActiveWallet}">
+                            <TextBlock Text="Node" Classes="heading3" />
+                            <Button Content="Import to Node" 
+                                    Classes="secondary"
+                                    Command="{Binding ImportToNodeCommand}"
+                                    IsEnabled="{Binding IsNodeRunning}" />
+                        </StackPanel>
+                    </WrapPanel>
+                    
+                    <Separator Height="1" Background="{StaticResource PocxBorderBrush}" />
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasActiveWallet}">
+                        <Button Content="Remove Wallet" 
                                 Classes="secondary"
-                                Command="{Binding CreateWalletCommand}" />
-                        <Button Content="Import Wallet" 
-                                Classes="secondary"
-                                Command="{Binding ImportWalletCommand}" />
+                                Foreground="{StaticResource PocxErrorBrush}"
+                                Command="{Binding RemoveWalletCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- Recent Transactions Card (Placeholder) -->
+            <!-- Wallet Info Card (visible when wallet selected and node running) -->
+            <Border Classes="card" IsVisible="{Binding HasActiveWallet}">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Wallet Info" Classes="heading2" />
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Transaction History" 
+                                Classes="secondary"
+                                Command="{Binding GetTransactionHistoryCommand}"
+                                IsEnabled="{Binding IsNodeRunning}" />
+                        <Button Content="Blockchain Info" 
+                                Classes="secondary"
+                                Command="{Binding GetBlockchainInfoCommand}"
+                                IsEnabled="{Binding IsNodeRunning}" />
+                    </StackPanel>
+                    
+                    <TextBlock Text="Start the Bitcoin node to access wallet information." 
+                               Classes="secondary"
+                               IsVisible="{Binding !IsNodeRunning}" />
+                </StackPanel>
+            </Border>
+
+            <!-- All Wallets List -->
             <Border Classes="card">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Recent Transactions" Classes="heading2" />
-                    <TextBlock Text="No transactions yet" 
+                    <TextBlock Text="{Binding Wallets.Count, StringFormat='All Wallets ({0})'}" Classes="heading2" />
+                    
+                    <ItemsControl ItemsSource="{Binding Wallets}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource PocxBackgroundLightBrush}"
+                                        CornerRadius="4"
+                                        Padding="12"
+                                        Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Spacing="4">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Name}" 
+                                                           FontWeight="SemiBold" />
+                                                <TextBlock Text="(Single-Key)" 
+                                                           Classes="secondary"
+                                                           FontSize="12"
+                                                           IsVisible="{Binding IsSingleKeyWallet}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding MainnetAddress}" 
+                                                       Classes="secondary"
+                                                       FontFamily="Consolas, Courier New, monospace"
+                                                       FontSize="11" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <TextBlock Text="No wallets yet. Create or import your first wallet above."
                                Classes="secondary"
                                HorizontalAlignment="Center"
-                               Margin="0,20" />
+                               IsVisible="{Binding !Wallets.Count}" />
                 </StackPanel>
             </Border>
         </StackPanel>

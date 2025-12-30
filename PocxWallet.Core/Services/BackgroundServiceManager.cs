@@ -1,8 +1,7 @@
-using Spectre.Console;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace PocxWallet.Cli.Services;
+namespace PocxWallet.Core.Services;
 
 /// <summary>
 /// Manages background services like plotting, mining, and the bitcoin node
@@ -44,37 +43,9 @@ public class BackgroundServiceManager
         _services.TryRemove(id, out _);
     }
 
-    public static void DisplayServices()
+    public static IEnumerable<(string Id, ServiceInfo Info)> GetAllServices()
     {
-        if (_services.IsEmpty)
-        {
-            AnsiConsole.MarkupLine("[dim]No background services running[/]");
-            return;
-        }
-
-        var table = new Table();
-        table.Border(TableBorder.Rounded);
-        table.AddColumn("Service");
-        table.AddColumn("Status");
-        table.AddColumn("Runtime");
-
-        foreach (var kvp in _services)
-        {
-            var runtime = kvp.Value.StartTime.HasValue 
-                ? (DateTime.Now - kvp.Value.StartTime.Value).ToString(@"hh\:mm\:ss")
-                : "N/A";
-
-            var statusColor = kvp.Value.Status == "Running" ? "green" : 
-                             kvp.Value.Status == "Stopped" ? "red" : "yellow";
-
-            table.AddRow(
-                kvp.Value.Name,
-                $"[{statusColor}]{kvp.Value.Status}[/]",
-                runtime
-            );
-        }
-
-        AnsiConsole.Write(table);
+        return _services.Select(kvp => (kvp.Key, kvp.Value));
     }
 
     public static void StopService(string id)
@@ -97,11 +68,6 @@ public class BackgroundServiceManager
         {
             StopService(kvp.Key);
         }
-    }
-
-    public static IEnumerable<(string Id, ServiceInfo Info)> GetAllServices()
-    {
-        return _services.Select(kvp => (kvp.Key, kvp.Value));
     }
 
     public static bool HasRunningServices()

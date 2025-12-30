@@ -1,8 +1,17 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="using:PocxWallet.UI.Converters">
     
     <Style>
         <Style.Resources>
+            <!-- Converters -->
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
+            <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+            <converters:BoolToBackgroundConverter x:Key="BoolToBackgroundConverter" />
+            <converters:BoolToBorderConverter x:Key="BoolToBorderConverter" />
+            <converters:BoolToForegroundConverter x:Key="BoolToForegroundConverter" />
+            
             <!-- PoCX Brand Colors - Proof of Capacity Theme -->
             
             <!-- Primary Colors - Deep blue/teal representing storage/data -->

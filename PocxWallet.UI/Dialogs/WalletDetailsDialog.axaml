@@ -1,0 +1,160 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PocxWallet.UI.Dialogs"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="700"
+        x:Class="PocxWallet.UI.Dialogs.WalletDetailsDialog"
+        x:DataType="vm:WalletDetailsDialogViewModel"
+        Title="Wallet Details"
+        Width="550" Height="700"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/Theme.axaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+            <TextBlock Text="{Binding WalletName, StringFormat='Wallet: {0}'}" Classes="heading1" />
+            <TextBlock Text="{Binding WalletType}"
+                       Classes="secondary" />
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="20">
+                <!-- Mnemonic (only for HD wallets) -->
+                <Border Classes="card" IsVisible="{Binding HasMnemonic}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Mnemonic Phrase" Classes="heading2" />
+                            <TextBlock Text="??" Foreground="{StaticResource PocxWarningBrush}" FontSize="20" />
+                        </StackPanel>
+                        
+                        <Border Background="{StaticResource PocxBackgroundDarkBrush}"
+                                BorderBrush="{StaticResource PocxWarningBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="15">
+                            <TextBlock Text="{Binding Mnemonic}" 
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource PocxWarningBrush}" />
+                        </Border>
+                        
+                        <Button Content="Copy Mnemonic" 
+                                Classes="secondary" 
+                                HorizontalAlignment="Left"
+                                Command="{Binding CopyMnemonicCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Addresses -->
+                <Border Classes="card">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Addresses" Classes="heading2" />
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Mainnet Address:" Classes="secondary" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Grid.Column="0" Text="{Binding MainnetAddress}" 
+                                         IsReadOnly="True"
+                                         FontFamily="Consolas, Courier New, monospace"
+                                         FontSize="11" />
+                                <Button Grid.Column="1" Content="??" 
+                                        Classes="secondary"
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        Command="{Binding CopyMainnetAddressCommand}" />
+                            </Grid>
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Testnet Address:" Classes="secondary" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Grid.Column="0" Text="{Binding TestnetAddress}" 
+                                         IsReadOnly="True"
+                                         FontFamily="Consolas, Courier New, monospace"
+                                         FontSize="11" />
+                                <Button Grid.Column="1" Content="??" 
+                                        Classes="secondary"
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        Command="{Binding CopyTestnetAddressCommand}" />
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- WIF -->
+                <Border Classes="card">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Private Keys (WIF)" Classes="heading2" />
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Mainnet WIF:" Classes="secondary" />
+                            <TextBox Text="{Binding WifMainnet}" 
+                                     IsReadOnly="True"
+                                     PasswordChar="•"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="11" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Testnet WIF:" Classes="secondary" />
+                            <TextBox Text="{Binding WifTestnet}" 
+                                     IsReadOnly="True"
+                                     PasswordChar="•"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="11" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Descriptors -->
+                <Border Classes="card">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Descriptors" Classes="heading2" />
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Mainnet Descriptor:" Classes="secondary" />
+                            <TextBox Text="{Binding DescriptorMainnet}" 
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="10"
+                                     TextWrapping="Wrap" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Testnet Descriptor:" Classes="secondary" />
+                            <TextBox Text="{Binding DescriptorTestnet}" 
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="10"
+                                     TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Created Date -->
+                <Border Classes="card">
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Created:" Classes="secondary" />
+                        <TextBlock Text="{Binding Created}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Button Grid.Row="2" Content="Close" 
+                Classes="primary"
+                HorizontalAlignment="Right"
+                Margin="0,20,0,0"
+                Command="{Binding CloseCommand}" />
+    </Grid>
+</Window>

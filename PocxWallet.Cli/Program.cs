@@ -2,6 +2,7 @@
 using PocxWallet.Cli.Configuration;
 using PocxWallet.Cli.Resources;
 using PocxWallet.Cli.Services;
+using PocxWallet.Core.Services;
 using Spectre.Console;
 using System;
 using System.Linq;
@@ -169,7 +170,7 @@ class Program
                 {
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine(Strings.MainMenu.BackgroundServicesHeader);
-                    BackgroundServiceManager.DisplayServices();
+                    CliBackgroundServiceDisplay.DisplayServices();
                 }
 
                 AnsiConsole.Clear();

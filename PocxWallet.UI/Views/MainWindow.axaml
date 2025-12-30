@@ -8,8 +8,8 @@
         x:Class="PocxWallet.UI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
-        Width="1200" Height="700"
-        MinWidth="800" MinHeight="600">
+        Width="1200" Height="750"
+        MinWidth="900" MinHeight="650">
 
     <Window.Styles>
         <StyleInclude Source="/Styles/Theme.axaml" />
@@ -32,7 +32,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="220" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
@@ -41,28 +41,35 @@
                 Background="{StaticResource PocxPanelBrush}"
                 BorderBrush="{StaticResource PocxBorderBrush}"
                 BorderThickness="0,0,1,0">
-            <StackPanel>
+            <Grid RowDefinitions="Auto,*,Auto">
                 <!-- Logo and Title -->
-                <StackPanel Margin="20" Spacing="10">
+                <StackPanel Grid.Row="0" Margin="20" Spacing="10">
                     <TextBlock Text="PoCX" 
-                               FontSize="32" 
+                               FontSize="36" 
                                FontWeight="Bold"
                                Foreground="{StaticResource PocxAccentBrush}"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding Version}" 
-                               FontSize="12"
+                    <TextBlock Text="Wallet" 
+                               FontSize="18"
                                Foreground="{StaticResource PocxTextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,-8,0,0" />
+                    <TextBlock Text="{Binding Version}" 
+                               FontSize="11"
+                               Foreground="{StaticResource PocxTextDisabledBrush}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
 
-                <Separator Height="1" 
+                <Separator Grid.Row="0" Height="1" 
                            Background="{StaticResource PocxBorderBrush}"
-                           Margin="10,0" />
+                           Margin="10,0"
+                           VerticalAlignment="Bottom" />
 
                 <!-- Navigation Items -->
-                <ListBox ItemsSource="{Binding NavigationItems}"
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding NavigationItems}"
                          SelectedIndex="0"
-                         Margin="10,20,10,10"
+                         Margin="8,15,8,8"
                          Name="NavigationList"
                          Background="Transparent"
                          BorderThickness="0"
@@ -71,7 +78,7 @@
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" 
                                         Spacing="12"
-                                        Margin="8">
+                                        Margin="8,6">
                                 <TextBlock Text="{Binding Icon}" 
                                            FontSize="18" 
                                            VerticalAlignment="Center" />
@@ -82,12 +89,22 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-            </StackPanel>
+
+                <!-- Footer -->
+                <StackPanel Grid.Row="2" Margin="15,10" Spacing="5">
+                    <Separator Height="1" Background="{StaticResource PocxBorderBrush}" />
+                    <TextBlock Text="© 2025 EviLSeeD" 
+                               FontSize="10"
+                               Foreground="{StaticResource PocxTextDisabledBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0" />
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Main Content Area -->
         <ContentControl Grid.Column="1" 
                         Content="{Binding CurrentView}"
-                        Margin="20" />
+                        Margin="25" />
     </Grid>
 </Window>

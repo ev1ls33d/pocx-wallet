@@ -1,22 +1,23 @@
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+using PocxWallet.Core.Services;
+using PocxWallet.Cli.Services;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Configuration;
 
 /// <summary>
-/// Loads and parses service definitions from services.yaml
+/// CLI-specific service definition loader with Spectre.Console output
 /// </summary>
 public static class ServiceDefinitionLoader
 {
-    private const string DefaultServicesPath = "services.yaml";
+    private static readonly ServiceConfigurationLoader _coreLoader = 
+        new(Services.SpectreServiceLogger.Instance);
 
     /// <summary>
     /// Load service configuration from the default services.yaml file
     /// </summary>
     public static ServiceConfiguration? LoadServices()
     {
-        return LoadServices(DefaultServicesPath);
+        return _coreLoader.LoadServices();
     }
 
     /// <summary>
@@ -24,28 +25,7 @@ public static class ServiceDefinitionLoader
     /// </summary>
     public static ServiceConfiguration? LoadServices(string servicesPath)
     {
-        if (!File.Exists(servicesPath))
-        {
-            AnsiConsole.MarkupLine($"[dim]Note: services.yaml not found at '{Markup.Escape(servicesPath)}'. Dynamic services will not be available.[/]");
-            return null;
-        }
-
-        try
-        {
-            var yaml = File.ReadAllText(servicesPath);
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                .IgnoreUnmatchedProperties()
-                .Build();
-
-            var config = deserializer.Deserialize<ServiceConfiguration>(yaml);
-            return config;
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[yellow]Warning: Failed to load services.yaml: {Markup.Escape(ex.Message)}[/]");
-            return null;
-        }
+        return _coreLoader.LoadServices(servicesPath);
     }
 
     /// <summary>
@@ -53,7 +33,7 @@ public static class ServiceDefinitionLoader
     /// </summary>
     public static void SaveServices(ServiceConfiguration config)
     {
-        SaveServices(config, DefaultServicesPath);
+        _coreLoader.SaveServices(config);
     }
 
     /// <summary>
@@ -61,21 +41,7 @@ public static class ServiceDefinitionLoader
     /// </summary>
     public static void SaveServices(ServiceConfiguration config, string servicesPath)
     {
-        try
-        {
-            var serializer = new SerializerBuilder()
-                .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
-                .Build();
-
-            var yaml = serializer.Serialize(config);
-            File.WriteAllText(servicesPath, yaml);
-            AnsiConsole.MarkupLine($"[dim]Settings saved to services.yaml[/]");
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error saving services.yaml: {Markup.Escape(ex.Message)}[/]");
-        }
+        _coreLoader.SaveServices(config, servicesPath);
     }
 
     /// <summary>
@@ -83,15 +49,7 @@ public static class ServiceDefinitionLoader
     /// </summary>
     public static List<ServiceDefinition> GetEnabledServices(ServiceConfiguration? config)
     {
-        if (config?.Services == null)
-        {
-            return new List<ServiceDefinition>();
-        }
-
-        return config.Services
-            .Where(s => s.Enabled)
-            .OrderBy(s => s.Menu?.MainMenuOrder ?? int.MaxValue)
-            .ToList();
+        return ServiceConfigurationHelper.GetEnabledServices(config);
     }
 
     /// <summary>
@@ -99,6 +57,6 @@ public static class ServiceDefinitionLoader
     /// </summary>
     public static ServiceDefinition? GetServiceById(ServiceConfiguration? config, string serviceId)
     {
-        return config?.Services?.FirstOrDefault(s => s.Id == serviceId);
+        return ServiceConfigurationHelper.GetServiceById(config, serviceId);
     }
 }

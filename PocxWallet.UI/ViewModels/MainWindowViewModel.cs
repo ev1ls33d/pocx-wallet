@@ -21,7 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _title = "PoCX Wallet";
     
     [ObservableProperty]
-    private string _version = "v0.7.3";
+    private string _version = "v0.8.0";
     
     public ObservableCollection<NavigationItem> NavigationItems { get; }
     
@@ -36,7 +36,7 @@ public partial class MainWindowViewModel : ViewModelBase
         
         NavigationItems = new ObservableCollection<NavigationItem>
         {
-            new() { Icon = "📁", Label = "Wallet", ViewType = NavigationViewType.Wallet },
+            new() { Icon = "💰", Label = "Wallet", ViewType = NavigationViewType.Wallet },
             new() { Icon = "🖥️", Label = "Node", ViewType = NavigationViewType.Node },
             new() { Icon = "📊", Label = "Plot", ViewType = NavigationViewType.Plot },
             new() { Icon = "⛏️", Label = "Mine", ViewType = NavigationViewType.Mine },
@@ -59,12 +59,12 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentView = item.ViewType switch
         {
             NavigationViewType.Wallet => new WalletViewModel(_walletService, _dockerService),
-            NavigationViewType.Node => new ServiceViewModel(_dockerService, _configurationService, "bitcoin-node", "Node"),
-            NavigationViewType.Plot => new ServiceViewModel(_dockerService, _configurationService, "plotter", "Plotter"),
-            NavigationViewType.Mine => new ServiceViewModel(_dockerService, _configurationService, "miner", "Miner"),
-            NavigationViewType.Aggregator => new ServiceViewModel(_dockerService, _configurationService, "aggregator", "Aggregator"),
-            NavigationViewType.Electrs => new ServiceViewModel(_dockerService, _configurationService, "electrs", "Electrs"),
-            NavigationViewType.Settings => new SettingsViewModel(_configurationService),
+            NavigationViewType.Node => new ServiceViewModel(_dockerService, _configurationService, "bitcoin-node", "Bitcoin Node"),
+            NavigationViewType.Plot => new ServiceViewModel(_dockerService, _configurationService, "plotter", "PoCX Plotter"),
+            NavigationViewType.Mine => new ServiceViewModel(_dockerService, _configurationService, "miner", "PoCX Miner"),
+            NavigationViewType.Aggregator => new ServiceViewModel(_dockerService, _configurationService, "aggregator", "PoCX Aggregator"),
+            NavigationViewType.Electrs => new ServiceViewModel(_dockerService, _configurationService, "electrs", "Electrs Server"),
+            NavigationViewType.Settings => new SettingsViewModel(_configurationService, _walletService),
             NavigationViewType.About => new AboutViewModel(),
             _ => CurrentView
         };
