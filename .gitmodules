@@ -9,4 +9,4 @@
 [submodule "bitcoin"]
 	path = bitcoin
 	url = https://github.com/PoC-Consortium/bitcoin.git
-	branch = pocx-v30-RC3
+	branch = pocx-v30-RC4
