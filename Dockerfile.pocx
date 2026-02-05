@@ -28,6 +28,10 @@ COPY --from=builder /build/pocx/target/release/pocx_plotter /usr/local/bin/
 COPY --from=builder /build/pocx/target/release/pocx_address /usr/local/bin/
 COPY --from=builder /build/pocx/target/release/pocx_verifier /usr/local/bin/
 
+# Copy resume-capable plotter wrapper
+COPY scripts/pocx_rplotter /usr/local/bin/pocx_rplotter
+RUN chmod +x /usr/local/bin/pocx_rplotter
+
 # Create working directory for plots and configs
 RUN mkdir -p /plots /config
 

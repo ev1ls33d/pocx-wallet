@@ -42,11 +42,11 @@ PoCX Wallet is a comprehensive CLI HD Wallet implementation for [PoCX](https://g
 - Docker and Native execution modes
 - Dynamic version discovery from GitHub
 - Bitcoin-PoCX node integration
-- Mining and plotting tools
+- Mining and plotting tools (includes `pocx_rplotter` auto-resume wrapper in the PoCX tools image)
 
 **License**: GNU General Public License v3.0
 
 ---
 
-*Last Updated*: 2025-12-25  
+*Last Updated*: 2026-02-05  
 *Version*: 1.0-beta

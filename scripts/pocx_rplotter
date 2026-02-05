@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+original_args=("$@")
+plot_paths=()
+
+# Collect plot paths from args
+arg_index=0
+while [[ $arg_index -lt ${#original_args[@]} ]]; do
+    arg="${original_args[$arg_index]}"
+    case "$arg" in
+        -p|--path)
+            if [[ $((arg_index + 1)) -ge ${#original_args[@]} ]]; then
+                echo "Missing value for $arg" >&2
+                exit 2
+            fi
+            plot_paths+=("${original_args[$((arg_index + 1))]}")
+            arg_index=$((arg_index + 2))
+            ;;
+        --path=*)
+            plot_paths+=("${arg#*=}")
+            arg_index=$((arg_index + 1))
+            ;;
+        *)
+            arg_index=$((arg_index + 1))
+            ;;
+    esac
+done
+
+if [[ ${#plot_paths[@]} -eq 0 ]]; then
+    plot_paths=(".")
+fi
+
+resume_count=0
+
+for path in "${plot_paths[@]}"; do
+    if [[ ! -d "$path" ]]; then
+        continue
+    fi
+
+    while IFS= read -r -d '' tmp_file; do
+        base_name=$(basename "$tmp_file")
+        if [[ "$base_name" =~ ^([0-9A-Fa-f]{40})_([0-9A-Fa-f]{64})_([0-9]+)_X([0-9]+)\.tmp$ ]]; then
+            seed="${BASH_REMATCH[2]}"
+            warps="${BASH_REMATCH[3]}"
+            compression="${BASH_REMATCH[4]}"
+            resume_path=$(dirname "$tmp_file")
+
+            resume_args=()
+            arg_index=0
+            while [[ $arg_index -lt ${#original_args[@]} ]]; do
+                arg="${original_args[$arg_index]}"
+                case "$arg" in
+                    -p|--path)
+                        arg_index=$((arg_index + 2))
+                        ;;
+                    --path=*)
+                        arg_index=$((arg_index + 1))
+                        ;;
+                    -n|--num|-w|--warps|-x|--compression|-s|--seed)
+                        arg_index=$((arg_index + 2))
+                        ;;
+                    --num=*|--warps=*|--compression=*|--seed=*)
+                        arg_index=$((arg_index + 1))
+                        ;;
+                    *)
+                        resume_args+=("$arg")
+                        arg_index=$((arg_index + 1))
+                        ;;
+                esac
+            done
+
+            resume_args+=("-p" "$resume_path" "-n" "1" "-w" "$warps" "-x" "$compression" "-s" "$seed")
+
+            echo "Resuming plot: $base_name"
+            pocx_plotter "${resume_args[@]}"
+            resume_count=$((resume_count + 1))
+        fi
+    done < <(find "$path" -maxdepth 1 -type f -name "*.tmp" -print0)
+done
+done
+
+if [[ $resume_count -gt 0 ]]; then
+    echo "Resume complete. Starting new plotting with original parameters."
+fi
+
+pocx_plotter "${original_args[@]}"

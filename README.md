@@ -265,6 +265,8 @@ Wallet data is stored in `wallet.json`:
 | `miner` | `ghcr.io/ev1ls33d/pocx-wallet/pocx:latest` | Mining client |
 | `aggregator` | `ghcr.io/ev1ls33d/pocx-wallet/pocx:latest` | Mining aggregator |
 
+The PoCX tools image also includes the `pocx_rplotter` wrapper, which resumes any `.tmp` plot files found in the provided `-p` paths before running the original plotting command.
+
 ## Security
 
 > **▲ IMPORTANT SECURITY NOTES**

@@ -27,6 +27,7 @@
 | `PocxWallet.Cli/Configuration/ServiceDefinition.cs` | YAML model classes and data structures |
 | `PocxWallet.Cli/Configuration/DynamicServiceMenuBuilder.cs` | Service menu UI and action routing |
 | `PocxWallet.Cli/Configuration/ServiceDefinitionLoader.cs` | YAML loading and validation |
+| `scripts/pocx_rplotter` | Plotter wrapper that resumes `.tmp` files before normal plotting |
 | `PocxWallet.Core/Wallet/HDWallet.cs` | HD wallet implementation (BIP39/BIP84) |
 | `PocxWallet.Core/Address/Bech32Address.cs` | Bech32 address encoding (pocx1q..., tpocx1q...) |
 
@@ -529,6 +530,6 @@ The wiki is stored in a separate repository but mirrored in `/wiki`:
 
 ---
 
-**Last Updated**: 2025-12-25  
+**Last Updated**: 2026-02-05  
 **Schema Version**: 2.0  
 **Maintainer**: ev1ls33d
