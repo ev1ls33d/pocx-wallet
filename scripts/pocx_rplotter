@@ -78,7 +78,6 @@ for path in "${plot_paths[@]}"; do
         fi
     done < <(find "$path" -maxdepth 1 -type f -name "*.tmp" -print0)
 done
-done
 
 if [[ $resume_count -gt 0 ]]; then
     echo "Resume complete. Starting new plotting with original parameters."
