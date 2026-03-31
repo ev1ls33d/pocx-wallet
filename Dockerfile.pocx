@@ -2,6 +2,11 @@
 # Stage 1: Builder
 FROM rust:slim-trixie AS builder
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Rust nightly
 RUN rustup toolchain install nightly && \
     rustup default nightly
