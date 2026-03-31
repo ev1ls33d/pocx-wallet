@@ -19,12 +19,6 @@ RUN apt-get update && apt-get install -y \
     libboost-test-dev \
     libsqlite3-dev \
     libzmq3-dev \
-    libminiupnpc-dev \
-    libnatpmp-dev \
-    qtbase5-dev \
-    qttools5-dev \
-    qttools5-dev-tools \
-    libqrencode-dev \
     ccache \
     cmake \
     capnproto \
@@ -33,7 +27,7 @@ RUN apt-get update && apt-get install -y \
 
 # Clone the repository
 WORKDIR /build
-RUN git clone -b pocx-v30-RC3 --single-branch https://github.com/PoC-Consortium/bitcoin.git .
+RUN git clone -b pocx-v30.2-RC6 --single-branch https://github.com/PoC-Consortium/bitcoin.git .
 
 # Configure and build with CMake
 RUN cmake -B build \
@@ -63,6 +57,7 @@ RUN apt-get update && apt-get install -y \
     libevent-pthreads-2.1-7 \
     libboost-system1.74.0 \
     libboost-filesystem1.74.0 \
+    libboost-thread1.74.0 \
     libsqlite3-0 \
     libzmq5 \
     && rm -rf /var/lib/apt/lists/*
@@ -97,4 +92,4 @@ EXPOSE 18332 18333
 WORKDIR /root
 
 # Default command
-CMD ["bitcoind", "-printtoconsole", "-rpcport=18332"]
+CMD ["bitcoind", "-printtoconsole", "-rpcport=18332", "-datadir=/root/.bitcoin-pocx"]
