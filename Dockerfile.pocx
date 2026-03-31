@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for PoCX tools (miner, plotter)
 # Stage 1: Builder
-FROM rust:latest AS builder
+FROM rust:slim-trixie AS builder
 
 # Install Rust nightly
 RUN rustup toolchain install nightly && \
