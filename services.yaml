@@ -117,15 +117,6 @@ services:
         description: "Use the signet chain"
         category:  "network"
         
-      # === PoCX-Specific ===
-      - name: "miningserver"
-        cli_flag: "-miningserver"
-        type: "bool"
-        default:  true
-        value: true
-        description: "Enable PoC mining server RPC endpoints"
-        category:  "pocx"
-        
       # === Connection Options ===
       - name: "addnode"
         cli_flag: "-addnode"
@@ -187,6 +178,47 @@ services:
         default: true
         description: "Query for peer addresses via DNS lookup"
         category:  "connection"
+      - name: "v2transport"
+        cli_flag: "-v2transport"
+        type: "bool"
+        default: false
+        description: "Enable BIP324 v2 encrypted P2P transport"
+        category: "connection"
+      - name: "onlynet"
+        cli_flag: "-onlynet"
+        type: "string"
+        default: ""
+        description: "Only connect to nodes on this network (ipv4, ipv6, onion, i2p, cjdns)"
+        use_equals: true
+        category: "connection"
+        enum: ["", "ipv4", "ipv6", "onion", "i2p", "cjdns"]
+      - name: "bantime"
+        cli_flag: "-bantime"
+        type: "int"
+        default: 86400
+        description: "Default ban duration for misbehaving peers in seconds"
+        use_equals: true
+        category: "connection"
+      - name: "externalip"
+        cli_flag: "-externalip"
+        type: "string"
+        default: ""
+        description: "Specify your own public IP address"
+        use_equals: true
+        category: "connection"
+      - name: "maxuploadtarget"
+        cli_flag: "-maxuploadtarget"
+        type: "int"
+        default: 0
+        description: "Target bytes of outbound data per day (0=no limit)"
+        use_equals: true
+        category: "connection"
+      - name: "listenonion"
+        cli_flag: "-listenonion"
+        type: "bool"
+        default: true
+        description: "Automatically create Tor hidden service and listen on it"
+        category: "connection"
         
       # === RPC Options ===
       - name: "rpcport"
@@ -242,6 +274,19 @@ services:
         description: "Number of threads for RPC server"
         use_equals: true
         category:  "rpc"
+      - name: "rpcworkqueue"
+        cli_flag: "-rpcworkqueue"
+        type: "int"
+        default: 16
+        description: "RPC server queue depth for pending requests"
+        use_equals: true
+        category: "rpc"
+      - name: "rest"
+        cli_flag: "-rest"
+        type: "bool"
+        default: false
+        description: "Accept public REST requests (unauthenticated, read-only)"
+        category: "rpc"
         
       # === Wallet Options ===
       - name: "disablewallet"
@@ -293,6 +338,20 @@ services:
         type: "bool"
         default: true
         description: "Prepend debug output with timestamp"
+        category: "debug"
+      - name: "debuglogfile"
+        cli_flag: "-debuglogfile"
+        type: "string"
+        default: ""
+        description: "Specify debug log file location (relative paths prefixed by datadir)"
+        use_equals: true
+        category: "debug"
+      - name: "loglevel"
+        cli_flag: "-loglevel"
+        type: "string"
+        default: ""
+        description: "Set global or per-category log severity level (trace, debug, info, warning, error)"
+        use_equals: true
         category: "debug"
         
       # === Chain Selection/Index ===
@@ -1582,6 +1641,26 @@ services:
         default:  0
         description: "Specific scoop to check (single mode only)"
         category: "mode"
+      - name: "base_target"
+        cli_flag: "-b"
+        cli_alias: "--base_target"
+        type: "int"
+        default: 0
+        description: "Base target value to check against (required in single mode)"
+        category: "mode"
+        required_if:
+          field: "mode"
+          value: "single"
+      - name: "generation_signature"
+        cli_flag: "-g"
+        cli_alias: "--generation_signature"
+        type: "string"
+        default: ""
+        description: "Generation signature hex to check against (required in single mode)"
+        category: "mode"
+        required_if:
+          field: "mode"
+          value: "single"
     
     depends_on: []
     
