@@ -31,6 +31,8 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /build/pocx/target/release/pocx_miner /usr/local/bin/
 COPY --from=builder /build/pocx/target/release/pocx_plotter /usr/local/bin/
 COPY --from=builder /build/pocx/target/release/pocx_verifier /usr/local/bin/
+COPY --from=builder /build/pocx/target/release/pocx_aggregator /usr/local/bin/
+COPY --from=builder /build/pocx/target/release/pocx_plotter_v2 /usr/local/bin/
 
 # Copy resume-capable plotter wrapper
 COPY scripts/pocx_rplotter /usr/local/bin/pocx_rplotter
