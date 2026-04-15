@@ -117,15 +117,6 @@ services:
         description: "Use the signet chain"
         category:  "network"
         
-      # === PoCX-Specific ===
-      - name: "miningserver"
-        cli_flag: "-miningserver"
-        type: "bool"
-        default:  true
-        value: true
-        description: "Enable PoC mining server RPC endpoints"
-        category:  "pocx"
-        
       # === Connection Options ===
       - name: "addnode"
         cli_flag: "-addnode"
@@ -187,6 +178,47 @@ services:
         default: true
         description: "Query for peer addresses via DNS lookup"
         category:  "connection"
+      - name: "v2transport"
+        cli_flag: "-v2transport"
+        type: "bool"
+        default: false
+        description: "Enable BIP324 v2 encrypted P2P transport"
+        category: "connection"
+      - name: "onlynet"
+        cli_flag: "-onlynet"
+        type: "string"
+        default: ""
+        description: "Only connect to nodes on this network (ipv4, ipv6, onion, i2p, cjdns)"
+        use_equals: true
+        category: "connection"
+        enum: ["", "ipv4", "ipv6", "onion", "i2p", "cjdns"]
+      - name: "bantime"
+        cli_flag: "-bantime"
+        type: "int"
+        default: 86400
+        description: "Default ban duration for misbehaving peers in seconds"
+        use_equals: true
+        category: "connection"
+      - name: "externalip"
+        cli_flag: "-externalip"
+        type: "string"
+        default: ""
+        description: "Specify your own public IP address"
+        use_equals: true
+        category: "connection"
+      - name: "maxuploadtarget"
+        cli_flag: "-maxuploadtarget"
+        type: "int"
+        default: 0
+        description: "Target bytes of outbound data per day (0=no limit)"
+        use_equals: true
+        category: "connection"
+      - name: "listenonion"
+        cli_flag: "-listenonion"
+        type: "bool"
+        default: true
+        description: "Automatically create Tor hidden service and listen on it"
+        category: "connection"
         
       # === RPC Options ===
       - name: "rpcport"
@@ -242,6 +274,19 @@ services:
         description: "Number of threads for RPC server"
         use_equals: true
         category:  "rpc"
+      - name: "rpcworkqueue"
+        cli_flag: "-rpcworkqueue"
+        type: "int"
+        default: 16
+        description: "RPC server queue depth for pending requests"
+        use_equals: true
+        category: "rpc"
+      - name: "rest"
+        cli_flag: "-rest"
+        type: "bool"
+        default: false
+        description: "Accept public REST requests (unauthenticated, read-only)"
+        category: "rpc"
         
       # === Wallet Options ===
       - name: "disablewallet"
@@ -293,6 +338,20 @@ services:
         type: "bool"
         default: true
         description: "Prepend debug output with timestamp"
+        category: "debug"
+      - name: "debuglogfile"
+        cli_flag: "-debuglogfile"
+        type: "string"
+        default: ""
+        description: "Specify debug log file location (relative paths prefixed by datadir)"
+        use_equals: true
+        category: "debug"
+      - name: "loglevel"
+        cli_flag: "-loglevel"
+        type: "string"
+        default: ""
+        description: "Set global or per-category log severity level (trace, debug, info, warning, error)"
+        use_equals: true
         category: "debug"
         
       # === Chain Selection/Index ===
@@ -800,12 +859,16 @@ services:
       path_setting: "Aggregator.ConfigPath"
       options:
         # === Server Configuration ===
-        - name: "listen_address"
-          type: "string"
-          default: "0.0.0.0:8080"
-          description: "Address to listen on for miner connections"
+        - name: "server"
+          type: "object"
+          description: "Server configuration for downstream miner connections"
           category: "server"
-          
+          properties:
+            - name: "listen_address"
+              type: "string"
+              default: "0.0.0.0:8080"
+              description: "Address to listen on for miner connections"
+
         # === Upstream Configuration ===
         - name: "upstream"
           type: "object"
@@ -816,28 +879,42 @@ services:
               type:  "string"
               required: true
               description: "Pool/wallet name for identification"
-            - name: "url"
+            - name: "rpc_transport"
+              type:  "string"
+              default: "http"
+              description: "Transport protocol for upstream connection"
+              enum: ["http", "https"]
+            - name: "rpc_host"
               type:  "string"
               required: true
-              description: "Pool/wallet URL (e.g., http://pool.example.com:8080/pocx)"
-            - name: "auth_token"
-              type: "string"
-              default: ""
-              description: "Optional authentication token"
-              sensitive: true
+              description: "Pool/wallet hostname or IP address (e.g., pool.example.com)"
+            - name: "rpc_port"
+              type: "int"
+              required: true
+              description: "Pool/wallet RPC port"
+              validation:
+                min: 1
+                max: 65535
+            - name: "rpc_auth"
+              type: "object"
+              description: "Optional authentication for upstream connection"
+              optional: true
+              properties:
+                - name: "token"
+                  type: "string"
+                  default: ""
+                  description: "Authentication token"
+                  sensitive: true
             - name:  "submission_mode"
               type:  "string"
               default:  "pool"
-              description:  "Submission mode:  pool (per-account best) or wallet (global best)"
+              description:  "Submission mode: pool (per-account best) or wallet (global best)"
               enum: ["pool", "wallet"]
-              
-        # === Timing Configuration ===
-        - name: "block_time_secs"
-          type: "int"
-          default:  120
-          description: "Expected block time in seconds (used for capacity estimation)"
-          category:  "timing"
-          
+            - name: "block_time_secs"
+              type: "int"
+              default: 120
+              description: "Expected block time in seconds (used for capacity estimation)"
+
         # === Cache Configuration ===
         - name: "cache"
           type: "object"
@@ -1012,7 +1089,7 @@ services:
         cli_flag:  "-c"
         cli_alias: "--config"
         type: "string"
-        default: "/config/config.yaml"
+        default: "/config/miner_config.yaml"
         description: "Path to miner configuration file"
         category: "config"
       - name: "line_progress"
@@ -1248,6 +1325,8 @@ services:
           whitelist:
             - "pocx_plotter"
             - "pocx_plotter.exe"
+            - "pocx_plotter_v2"
+            - "pocx_plotter_v2.exe"
         downloads: []
     
     ports: []
@@ -1562,12 +1641,282 @@ services:
         default:  0
         description: "Specific scoop to check (single mode only)"
         category: "mode"
+      - name: "base_target"
+        cli_flag: "-b"
+        cli_alias: "--base_target"
+        type: "int"
+        default: 0
+        description: "Base target value to check against (required in single mode)"
+        category: "mode"
+        required_if:
+          field: "mode"
+          value: "single"
+      - name: "generation_signature"
+        cli_flag: "-g"
+        cli_alias: "--generation_signature"
+        type: "string"
+        default: ""
+        description: "Generation signature hex to check against (required in single mode)"
+        category: "mode"
+        required_if:
+          field: "mode"
+          value: "single"
     
     depends_on: []
     
     menu:
       main_menu_order: 0
       submenu: []
+
+  # ==========================================================================
+  # POCX PLOTTER V2
+  # ==========================================================================
+  - id: "plotter-v2"
+    name:  "PoCX Plotter v2"
+    description: "Next-generation plot file generator with async I/O, GPU support and multi-path plotting"
+    category:  "mining"
+    menu_label: "[Plot v2]"
+    documentation_url: "https://github.com/PoC-Consortium/pocx"
+    execution_mode: "native"
+
+    container:
+      image:  "pocx"
+      container_name_default: "pocx-plotter-v2"
+      working_dir: "/plots"
+      binary: "pocx_plotter_v2"
+
+    source:
+      docker:
+        dynamic:
+          repository: "https://github.com/ev1ls33d/pocx-wallet/pkgs/container/pocx-wallet%2Fpocx"
+          filter: "latest|[0-9]\\.[0-9]\\.[0-9]"
+        images: []
+      native:
+        dynamic:
+          repository: "https://github.com/PoC-Consortium/pocx/releases/"
+          filter: "unknown-linux-gnu-opencl\\.tar\\.gz|windows.*opencl\\.zip"
+          whitelist:
+            - "pocx_plotter_v2"
+            - "pocx_plotter_v2.exe"
+        downloads: []
+
+    ports: []
+
+    volumes:
+      - name:  "plots"
+        host_path_default: "./plots"
+        container_path: "/plots"
+        read_only: false
+        description: "Output directory for generated plot files"
+
+    environment:
+      - name: "TZ"
+        value: "Europe/Berlin"
+        description: "Timezone for the container"
+
+    parameters:
+      # === Required ===
+      - name: "address"
+        cli_flag: "-i"
+        cli_alias: "--id"
+        type:  "string"
+        required: true
+        description: "Your PoCX mining address"
+        category: "identity"
+        value: "<pocx1qYourWalletAddressHere>"
+
+      - name: "warps"
+        cli_flag: "-w"
+        cli_alias: "--warps"
+        type: "int"
+        required: true
+        description: "Number of warps to plot (1 warp = 1 GiB)"
+        category: "size"
+        value: 976
+
+      # === Plot Size ===
+      - name: "number"
+        cli_flag: "-n"
+        cli_alias:  "--num"
+        type:  "int"
+        default: 1
+        description: "Number of plot files to create (0 = fill disk)"
+        category: "size"
+        value: 0
+
+      # === Output ===
+      - name: "path"
+        cli_flag: "-p"
+        cli_alias: "--path"
+        type: "string[]"
+        default:  ["/plots"]
+        description: "Target disk path(s) for plot files (repeatable, e.g. -p /disk1 -p /disk2)"
+        category:  "output"
+        value: ["."]
+
+      # === Compression ===
+      - name: "compression"
+        cli_flag: "-x"
+        cli_alias: "--compression"
+        type:  "int"
+        default:  1
+        description: "Compression level 1-6 (higher = more PoW stored per plot)"
+        category: "compression"
+        validation:
+          min:  1
+          max: 6
+
+      # === Resume ===
+      - name: "seed"
+        cli_flag: "-s"
+        cli_alias: "--seed"
+        type: "string[]"
+        default: []
+        description: "Seed(s) to resume unfinished plot(s), one per -p path"
+        category: "resume"
+
+      # === CPU Settings ===
+      - name: "cpu"
+        cli_flag: "-c"
+        cli_alias:  "--cpu"
+        type: "int"
+        default:  0
+        description: "CPU-only mode with N threads (0 = auto-detect), conflicts with --gpu"
+        category: "cpu"
+        value: 0
+
+      # === GPU Settings (OpenCL feature) ===
+      - name: "gpu"
+        cli_flag: "-g"
+        cli_alias: "--gpu"
+        type: "string"
+        default:  ""
+        description: "GPU to use for plotting (e.g. 0:0 or 0:0:1024), conflicts with --cpu"
+        category: "gpu"
+        feature:  "opencl"
+        value: ""
+      - name: "opencl"
+        cli_flag: "-o"
+        cli_alias: "--opencl"
+        type:  "bool"
+        default:  false
+        description:  "Display OpenCL platforms and devices"
+        category: "gpu"
+        feature: "opencl"
+      - name: "kws_override"
+        cli_flag: "-k"
+        cli_alias: "--kws-override"
+        type: "int"
+        default:  0
+        description: "Override GPU kernel workgroup size (advanced)"
+        category: "gpu"
+        feature: "opencl"
+
+      # === Performance Tweaks ===
+      - name: "escalate"
+        cli_flag: "-e"
+        cli_alias:  "--escalate"
+        type: "int"
+        default:  1
+        description: "Write buffer size multiplier (e.g. -e 5 = 5 GiB buffer)"
+        category: "performance"
+
+      - name: "async_write"
+        cli_flag: "-a"
+        cli_alias: "--async-write"
+        type: "bool"
+        default: false
+        description: "Enable extra write buffer for hashing/writing overlap"
+        category: "performance"
+
+      # === I/O Options ===
+      - name: "disable_direct_io"
+        cli_flag: "-d"
+        cli_alias: "--ddio"
+        type: "bool"
+        default: false
+        description: "Disable direct I/O (use OS caching)"
+        category: "io"
+
+      # === Process Priority ===
+      - name: "low_priority"
+        cli_flag: "-l"
+        cli_alias: "--lowprio"
+        type: "bool"
+        default: false
+        description: "Run plotter with low process priority"
+        category: "process"
+        value: true
+
+      # === Output Mode ===
+      - name: "quiet"
+        cli_flag: "-q"
+        cli_alias: "--quiet"
+        type: "bool"
+        default:  false
+        description:  "Suppress verbose output"
+        category: "output"
+      - name: "benchmark"
+        cli_flag: "-b"
+        cli_alias: "--bench"
+        type:  "bool"
+        default: false
+        description: "Benchmark mode (no disk writes)"
+        category: "debug"
+
+    depends_on:  []
+
+    health_check:
+      command: "pgrep -f pocx_plotter_v2"
+      interval_seconds: 30
+      timeout_seconds: 5
+      retries: 3
+      start_period_seconds: 5
+
+    menu:
+      main_menu_order: 5
+      submenu:
+        - action:  "toggle"
+          label_running: "Stop Plotter v2"
+          label_stopped: "Start Plotter v2"
+        - action: "logs"
+          label: "View Logs"
+        - action: "parameters"
+          label: "Parameters"
+        - action: "settings"
+          label: "Settings"
+
+    settings:
+      - key:  "Repository"
+        setting_path: "PlotterV2.Repository"
+        type:  "string"
+        category: "container"
+      - key:  "Tag"
+        setting_path: "PlotterV2.Tag"
+        type:  "string"
+        category: "container"
+      - key:  "Default Warps"
+        setting_path:  "PlotterV2.DefaultWarps"
+        type: "int"
+        category:  "plotting"
+        validation:
+          min: 1
+          max: 1000000
+      - key:  "CPU Threads"
+        setting_path: "PlotterV2.CpuThreads"
+        type: "int"
+        category: "performance"
+        validation:
+          min: 0
+          max:  128
+      - key: "Use Direct I/O"
+        setting_path: "PlotterV2.UseDirectIO"
+        type: "bool"
+        category: "performance"
+      - key: "Additional Parameters"
+        setting_path: "PlotterV2.AdditionalParams"
+        type:  "string"
+        category: "advanced"
 
 # ============================================================================
 # CATEGORY DEFINITIONS
