@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PocxWallet.Cli.Resources;
 using Spectre.Console;
 
 namespace PocxWallet.Cli.Services;
@@ -43,23 +44,23 @@ public class DockerServiceManager
     {
         if (await IsDockerAvailableAsync())
         {
-            AnsiConsole.MarkupLine("[green]√[/] Docker is installed and running");
+            AnsiConsole.MarkupLine(Strings.DockerService.DockerInstalledRunning);
             return true;
         }
 
-        AnsiConsole.MarkupLine("[yellow]Docker is not installed or not running[/]");
+        AnsiConsole.MarkupLine(Strings.DockerService.DockerNotInstalledRunning);
         AnsiConsole.WriteLine();
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            AnsiConsole.MarkupLine("[bold]To use Docker on Windows:[/]");
+            AnsiConsole.MarkupLine(Strings.DockerService.DockerWindowsInfo);
             AnsiConsole.MarkupLine("1. Install Docker Desktop: https://www.docker.com/products/docker-desktop");
             AnsiConsole.MarkupLine("2. Enable WSL2 integration in Docker Desktop settings");
             AnsiConsole.MarkupLine("3. Ensure Docker Desktop is running");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            AnsiConsole.MarkupLine("[bold]To install Docker on Linux:[/]");
+            AnsiConsole.MarkupLine(Strings.DockerService.DockerLinuxInfo);
             AnsiConsole.MarkupLine("1. Run: curl -fsSL https://get.docker.com -o get-docker.sh");
             AnsiConsole.MarkupLine("2. Run: sudo sh get-docker.sh");
             AnsiConsole.MarkupLine("3. Run: sudo systemctl start docker");
@@ -73,13 +74,13 @@ public class DockerServiceManager
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            AnsiConsole.MarkupLine("[bold]To install Docker on macOS:[/]");
+            AnsiConsole.MarkupLine(Strings.DockerService.DockerMacInfo);
             AnsiConsole.MarkupLine("1. Install Docker Desktop: https://www.docker.com/products/docker-desktop");
             AnsiConsole.MarkupLine("2. Start Docker Desktop application");
         }
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[yellow]Please install Docker and restart this application[/]");
+        AnsiConsole.MarkupLine(Strings.DockerService.DockerInstallRestart);
         return false;
     }
 
@@ -112,8 +113,8 @@ public class DockerServiceManager
 
             if (await IsDockerAvailableAsync())
             {
-                AnsiConsole.MarkupLine("[green]√[/] Docker installed successfully!");
-                AnsiConsole.MarkupLine("[yellow]Note: You may need to log out and back in for group permissions[/]");
+                AnsiConsole.MarkupLine(Strings.DockerService.DockerInstallSuccess);
+                AnsiConsole.MarkupLine(Strings.DockerService.DockerGroupPermissionsNote);
                 return true;
             }
         }
@@ -136,17 +137,17 @@ public class DockerServiceManager
         if (string.IsNullOrWhiteSpace(result.output))
         {
             // Create network
-            AnsiConsole.MarkupLine($"[bold]Creating Docker network:[/] {networkName}");
+            AnsiConsole.MarkupLine(string.Format(Strings.DockerService.CreatingNetworkFormat, networkName));
             var createResult = await ExecuteCommandAsync("docker", $"network create {networkName}");
             
             if (createResult.exitCode == 0)
             {
-                AnsiConsole.MarkupLine("[green]√[/] Network created successfully");
+                AnsiConsole.MarkupLine(Strings.DockerService.NetworkCreatedSuccess);
                 return true;
             }
             else
             {
-                AnsiConsole.MarkupLine($"[red]Failed to create network:[/] {createResult.output}");
+                AnsiConsole.MarkupLine(string.Format(Strings.DockerService.FailedToCreateNetworkFormat, createResult.output));
                 return false;
             }
         }
@@ -173,7 +174,7 @@ public class DockerServiceManager
         var fullImageName = $"{repository}/{imageName}:{imageTag}";
         
         // Always stop and remove existing container to ensure settings changes are applied
-        AnsiConsole.MarkupLine($"[dim]Cleaning up existing container if present...[/]");
+        AnsiConsole.MarkupLine(Strings.DockerService.CleaningUpExisting);
         await ExecuteCommandAsync("docker", $"stop --time=10 {containerName}", suppressOutput: true);
         await ExecuteCommandAsync("docker", $"rm {containerName}", suppressOutput: true);
 
@@ -229,10 +230,10 @@ public class DockerServiceManager
 
         if (!string.IsNullOrWhiteSpace(command))
         {
-            args.AddRange(SplitCommandLineArguments(command));
+            args.AddRange(CommandLineHelper.SplitCommandLineArguments(command));
         }
 
-        AnsiConsole.MarkupLine($"[bold]Starting container:[/] {containerName}");
+        AnsiConsole.MarkupLine(string.Format(Strings.DockerService.StartingContainerFormat, containerName));
         var result = await ExecuteCommandAsync("docker", args.ToArray());
 
         if (result.exitCode == 0)
@@ -244,18 +245,18 @@ public class DockerServiceManager
             var status = await GetContainerStatusAsync(containerName);
             if (status == "running")
             {
-                AnsiConsole.MarkupLine("[green]√[/] Container started successfully");
+                AnsiConsole.MarkupLine(Strings.DockerService.ContainerStartedSuccess);
                 return true;
             }
             else
             {
-                AnsiConsole.MarkupLine($"[yellow]▲[/] Container created but status is: {Markup.Escape(status)}");
+                AnsiConsole.MarkupLine(string.Format(Strings.DockerService.ContainerCreatedStatusFormat, Markup.Escape(status)));
                 return false; // Return false if not running
             }
         }
         else
         {
-            AnsiConsole.MarkupLine($"[red]Failed to start container:[/] {Markup.Escape(result.output)}");
+            AnsiConsole.MarkupLine(string.Format(Strings.DockerService.FailedToStartContainerFormat, Markup.Escape(result.output)));
             return false;
         }
     }
@@ -266,7 +267,7 @@ public class DockerServiceManager
     public async Task<bool> StopContainerAsync(string containerName)
     {
         ValidateContainerName(containerName);
-        AnsiConsole.MarkupLine($"[bold]Stopping container:[/] {containerName}");
+        AnsiConsole.MarkupLine(string.Format(Strings.DockerService.StoppingContainerFormat, containerName));
         
         var result = await ExecuteCommandAsync("docker", $"stop {containerName}");
         
@@ -274,12 +275,12 @@ public class DockerServiceManager
         {
             // Wait a moment for container to fully stop
             await Task.Delay(ContainerShutdownDelayMs);
-            AnsiConsole.MarkupLine("[green]√[/] Container stopped successfully");
+            AnsiConsole.MarkupLine(Strings.DockerService.ContainerStoppedSuccess);
             return true;
         }
         else
         {
-            AnsiConsole.MarkupLine($"[yellow]Container may not be running[/]");
+            AnsiConsole.MarkupLine(Strings.DockerService.ContainerMayNotBeRunning);
             return false;
         }
     }
@@ -290,7 +291,7 @@ public class DockerServiceManager
     public async Task<bool> RemoveContainerAsync(string containerName)
     {
         ValidateContainerName(containerName);
-        AnsiConsole.MarkupLine($"[bold]Removing container:[/] {containerName}");
+        AnsiConsole.MarkupLine(string.Format(Strings.DockerService.RemovingContainerFormat, containerName));
         
         // Stop first
         await StopContainerAsync(containerName);
@@ -299,7 +300,7 @@ public class DockerServiceManager
         
         if (result.exitCode == 0)
         {
-            AnsiConsole.MarkupLine("[green]√[/] Container removed successfully");
+            AnsiConsole.MarkupLine(Strings.DockerService.ContainerRemovedSuccess);
             return true;
         }
         else
@@ -423,70 +424,9 @@ public class DockerServiceManager
     {
         ValidateContainerName(containerName);
         // Split command but respect quoted strings to preserve JSON arguments with spaces
-        var arguments = SplitCommandLineArguments(command);
+        var arguments = CommandLineHelper.SplitCommandLineArguments(command);
         var fullArgs = new string[] { "exec", containerName }.Concat(arguments).ToArray();
         return await ExecuteCommandAsync("docker", fullArgs);
-    }
-
-    /// <summary>
-    /// Split command line arguments while respecting quoted strings
-    /// This handles cases like: bitcoin-cli importdescriptors '[{"desc": "...", "timestamp": "now"}]'
-    /// Also handles escaped quotes with backslash
-    /// </summary>
-    private static string[] SplitCommandLineArguments(string commandLine)
-    {
-        var args = new List<string>();
-        var inSingleQuote = false;
-        var inDoubleQuote = false;
-        var current = new System.Text.StringBuilder();
-        var escapeNext = false;
-
-        foreach (char c in commandLine)
-        {
-            if (escapeNext)
-            {
-                current.Append(c);
-                escapeNext = false;
-                continue;
-            }
-
-            if (c == '\\')
-            {
-                escapeNext = true;
-                // Don't append the backslash here - let the next iteration decide
-                continue;
-            }
-
-            if (c == '\'' && !inDoubleQuote)
-            {
-                inSingleQuote = !inSingleQuote;
-                // Don't append the quote - ArgumentList will handle escaping
-            }
-            else if (c == '"' && !inSingleQuote)
-            {
-                inDoubleQuote = !inDoubleQuote;
-                // Don't append the quote - ArgumentList will handle escaping
-            }
-            else if (c == ' ' && !inSingleQuote && !inDoubleQuote)
-            {
-                if (current.Length > 0)
-                {
-                    args.Add(current.ToString());
-                    current.Clear();
-                }
-            }
-            else
-            {
-                current.Append(c);
-            }
-        }
-
-        if (current.Length > 0)
-        {
-            args.Add(current.ToString());
-        }
-
-        return args.ToArray();
     }
 
     /// <summary>

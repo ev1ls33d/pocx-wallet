@@ -5,6 +5,8 @@ using PocxWallet.Cli.Services;
 using Spectre.Console;
 using System;
 using System.Linq;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -67,13 +69,16 @@ class Program
 
         // Load service definitions from services.yaml (replaces appsettings.json)
         _serviceConfig = ServiceDefinitionLoader.LoadServices();
-        var dynamicMenuBuilder = GetDynamicMenuBuilder();
-        var dynamicServices = dynamicMenuBuilder.GetEnabledServices();
 
         // Main menu loop
         bool exit = false;
         while (!exit)
         {
+            // Reload service configuration to ensure settings (network, RPC, etc.) are always fresh
+            _serviceConfig = ServiceDefinitionLoader.LoadServices();
+            var dynamicMenuBuilder = GetDynamicMenuBuilder();
+            var dynamicServices = dynamicMenuBuilder.GetEnabledServices();
+
             // Build dynamic main menu choices
             var menuChoices = new List<string>();
             
@@ -112,36 +117,109 @@ class Program
                 
                 // Get the Bitcoin node service definition for proper container name and start functionality
                 var bitcoinNodeService = dynamicServices.FirstOrDefault(s => s.Id == "bitcoin-node");
+                var mode = bitcoinNodeService?.GetExecutionMode() ?? ExecutionMode.Docker;
                 var bitcoinContainerName = bitcoinNodeService != null 
                     ? dynamicBuilder.GetContainerName(bitcoinNodeService)
                     : "pocx-node";  // Default fallback
                 
                 Func<Task<bool>> isNodeRunning = async () =>
                 {
+                    if (mode == ExecutionMode.External && bitcoinNodeService != null)
+                    {
+                        // For external node, "running" means RPC is reachable
+                        return await dynamicBuilder.IsServiceRunningAsync(bitcoinNodeService);
+                    }
                     var status = await dockerManager.GetContainerStatusAsync(bitcoinContainerName);
                     return status == "running";
                 };
                 
-                Func<string, Task<(int, string)>> execInContainer = async (command) =>
+                Func<string, Task<(int, string)>> execOnNode = async (command) =>
                 {
+                    // Find bitcoin-cli binary path
+                    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    var nodeBinDir = Path.Combine(baseDir, "bitcoin-node");
+                    var cliName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "bitcoin-cli.exe" : "bitcoin-cli";
+                    var cliPath = Path.Combine(nodeBinDir, cliName);
+
+                    if (!File.Exists(cliPath))
+                    {
+                        // Fallback to searching in PATH if not in local bitcoin-node folder
+                        cliPath = cliName;
+                    }
+
+                    if (mode == ExecutionMode.External && bitcoinNodeService != null)
+                    {
+                        // For external node, execute via local bitcoin-cli with RPC parameters from the service's Parameters
+                        var parameters = bitcoinNodeService.GetActiveParameters();
+                        var host = parameters?.FirstOrDefault(p => p.Name == "rpcconnect")?.Value?.ToString() ?? "127.0.0.1";
+                        var port = parameters?.FirstOrDefault(p => p.Name == "rpcport")?.Value?.ToString() ?? "8332";
+                        var user = parameters?.FirstOrDefault(p => p.Name == "rpcuser")?.Value?.ToString() ?? "";
+                        var password = parameters?.FirstOrDefault(p => p.Name == "rpcpassword")?.Value?.ToString() ?? "";
+
+                        var rpcArgs = $"-rpcconnect={host} -rpcport={port} ";
+                        if (!string.IsNullOrEmpty(user)) rpcArgs += $"-rpcuser={user} ";
+                        if (!string.IsNullOrEmpty(password)) rpcArgs += $"-rpcpassword={password} ";
+
+                        // Command might already start with "bitcoin-cli"
+                        var cleanCommand = command.Trim();
+                        if (cleanCommand.StartsWith("bitcoin-cli ")) 
+                            cleanCommand = cleanCommand.Substring(12);
+
+                        // Execute locally
+                        try
+                        {
+                            var psi = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = cliPath,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            };
+
+                            // Split rpcArgs and cleanCommand but respect quotes
+                            var fullCommandLine = $"{rpcArgs}{cleanCommand}";
+                            var args = PocxWallet.Cli.Services.CommandLineHelper.SplitCommandLineArguments(fullCommandLine);
+                            foreach (var arg in args)
+                            {
+                                psi.ArgumentList.Add(arg);
+                            }
+
+                            var process = new System.Diagnostics.Process { StartInfo = psi };
+                            process.Start();
+                            var output = await process.StandardOutput.ReadToEndAsync();
+                            var error = await process.StandardError.ReadToEndAsync();
+                            await process.WaitForExitAsync();
+                            return (process.ExitCode, string.IsNullOrEmpty(output) ? error : output);
+                        }
+                        catch (Exception ex)
+                        {
+                            return (1, string.Format(Strings.ExternalNode.RpcErrorFormat, ex.Message));
+                        }
+                    }
                     return await dockerManager.ExecInContainerAsync(bitcoinContainerName, command);
                 };
                 
                 Func<Task<bool>> startNodeService = async () =>
                 {
+                    if (mode == ExecutionMode.External)
+                    {
+                        // External nodes cannot be started by the wallet
+                        AnsiConsole.MarkupLine(Strings.ExternalNode.ManualStart);
+                        return await isNodeRunning();
+                    }
                     if (bitcoinNodeService != null)
                     {
                         await dynamicBuilder.StartServiceAsync(bitcoinNodeService);
                         // Wait for the node container to fully start (startup delay)
                         const int NodeStartupDelayMs = 2000;
                         await Task.Delay(NodeStartupDelayMs);
-                        var status = await dockerManager.GetContainerStatusAsync(bitcoinContainerName);
-                        return status == "running";
+                        return await isNodeRunning();
                     }
                     return false;
                 };
                 
-                await WalletCommands.ShowWalletMenuAsync(ShowBanner, bitcoinContainerName, isNodeRunning, execInContainer, startNodeService);
+                await WalletCommands.ShowWalletMenuAsync(ShowBanner, bitcoinContainerName, isNodeRunning, execOnNode, startNodeService);
             }
             else if (choice == MenuExit)
             {

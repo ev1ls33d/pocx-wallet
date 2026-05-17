@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using PocxWallet.Core.Wallet;
 using PocxWallet.Core.VanityAddress;
 using PocxWallet.Cli.Configuration;
@@ -18,51 +18,66 @@ public static class WalletCommands
     private static Func<Task<bool>>? _isNodeRunningAsync;
     private static Func<string, Task<(int, string)>>? _execInContainerAsync;
     private static Func<Task<bool>>? _startNodeAsync;
-    private static ServiceConfiguration? _serviceConfig;
     
     /// <summary>
     /// Check if the node is configured for testnet by checking the parameters in services.yaml
     /// </summary>
     private static bool IsNodeTestnet()
     {
-        // Load service configuration if not already loaded
-        _serviceConfig ??= ServiceDefinitionLoader.LoadServices();
+        var flag = GetNetworkFlag();
+        return flag.Contains("-testnet") || flag.Contains("-regtest") || flag.Contains("-signet");
+    }
+
+    /// <summary>
+    /// Get the network flag for bitcoin-cli based on current configuration
+    /// </summary>
+    private static string GetNetworkFlag()
+    {
+        var serviceConfig = ServiceDefinitionLoader.LoadServices();
         
-        if (_serviceConfig?.Services == null)
-            // Default to testnet for safety - mainnet transactions are irreversible and costly,
-            // so in case of configuration issues, testnet is the safer default to prevent accidental mainnet use
-            return true;
-        
-        // Find the node service
-        var nodeService = _serviceConfig.Services.FirstOrDefault(s => 
-            s.Id?.Equals("node", StringComparison.OrdinalIgnoreCase) == true ||
-            s.Id?.Equals("bitcoin-node", StringComparison.OrdinalIgnoreCase) == true);
-        
-        if (nodeService?.Parameters == null)
-            // Default to testnet for safety - mainnet operations should be explicitly configured
-            return true;
-        
-        // Check if testnet parameter has a value set
-        var testnetParam = nodeService.Parameters.FirstOrDefault(p => 
-            p.Name?.Equals("testnet", StringComparison.OrdinalIgnoreCase) == true);
-        
-        if (testnetParam != null)
+        if (serviceConfig?.Services == null)
+            return "";
+            
+        var nodeService = serviceConfig.Services.FirstOrDefault(s => 
+            s.Id?.Equals("bitcoin-node", StringComparison.OrdinalIgnoreCase) == true ||
+            s.Id?.Equals("node", StringComparison.OrdinalIgnoreCase) == true);
+            
+        if (nodeService == null)
+            return "";
+
+        // Check for network parameter (try multiple common names)
+        var parameters = nodeService.GetActiveParameters();
+        var networkParam = parameters?.FirstOrDefault(p => 
+            p.Name?.Equals("network", StringComparison.OrdinalIgnoreCase) == true ||
+            p.Name?.Equals("blockchain_network", StringComparison.OrdinalIgnoreCase) == true ||
+            p.Name?.Equals("blockchain network", StringComparison.OrdinalIgnoreCase) == true);
+            
+        if (networkParam != null)
         {
-            // If value is explicitly set, use it
-            if (testnetParam.Value != null)
+            var networkValue = networkParam.Value ?? networkParam.Default;
+            if (networkValue != null)
             {
-                if (bool.TryParse(testnetParam.Value.ToString(), out var isTestnet))
-                    return isTestnet;
-            }
-            // Otherwise use the default
-            if (testnetParam.Default != null)
-            {
-                if (bool.TryParse(testnetParam.Default.ToString(), out var defaultTestnet))
-                    return defaultTestnet;
+                var network = networkValue.ToString()?.ToLower();
+                if (network == "mainnet") return "";
+                if (network == "testnet") return "-testnet ";
+                if (network == "regtest") return "-regtest ";
+                if (network == "signet") return "-signet ";
             }
         }
         
-        return true; // Default to testnet for safety
+        return "";
+    }
+    
+    /// <summary>
+    /// Check if the node is configured as an external node
+    /// </summary>
+    private static bool IsNodeExternal()
+    {
+        var serviceConfig = ServiceDefinitionLoader.LoadServices();
+        var nodeService = serviceConfig?.Services.FirstOrDefault(s => 
+            s.Id?.Equals("node", StringComparison.OrdinalIgnoreCase) == true ||
+            s.Id?.Equals("bitcoin-node", StringComparison.OrdinalIgnoreCase) == true);
+        return nodeService?.GetExecutionMode() == ExecutionMode.External;
     }
     
     /// <summary>
@@ -809,7 +824,7 @@ public static class WalletCommands
             
             // Mark active wallet
             if (wallet.Name == walletManager.ActiveWalletEntry?.Name)
-                label = $"[green]●[/] {label}";
+                label = $"[green]?[/] {label}";
             else
                 label = $"  {label}";
             
@@ -945,11 +960,10 @@ public static class WalletCommands
         AnsiConsole.Clear();
         showBanner();
         
-        // Check if testnet is active and build network flag
-        var isTestnet = IsNodeTestnet();
-        var networkFlag = isTestnet ? "-testnet " : "";
+        // Check if network is active and build network flag
+        var networkFlag = GetNetworkFlag();
         
-        // Build command based on selection (all commands are now testnet-aware)
+        // Build command based on selection (all commands are now network-aware)
         string command = choice switch
         {
             var c when c == Strings.WalletMenu.CheckBalance => 
@@ -989,6 +1003,9 @@ public static class WalletCommands
             Strings.WalletMenu.CreateTransaction,
             Strings.WalletMenu.SignTransaction,
             Strings.WalletMenu.BroadcastTransaction,
+            Strings.WalletMenu.ForgingAssignment,
+            Strings.WalletMenu.ForgingRevocation,
+            Strings.WalletMenu.ForgingStatus,
             Strings.WalletMenu.CreatePSBT,
             Strings.WalletMenu.DecodePSBT,
             Strings.ServiceMenu.Back
@@ -1007,18 +1024,22 @@ public static class WalletCommands
         AnsiConsole.Clear();
         showBanner();
         
-        // Check if testnet is active and build network flag
-        var isTestnet = IsNodeTestnet();
-        var networkFlag = isTestnet ? "-testnet " : "";
+        // Check if network is active and build network flag
+        var networkFlag = GetNetworkFlag();
+        var isTestnet = networkFlag == "-testnet ";
+        var isRegtest = networkFlag == "-regtest ";
         
         // Transaction commands require user input - prompt for parameters based on command type
         string command = "";
+        var currentAddress = (isTestnet || isRegtest) ? (activeWallet?.TestnetAddress ?? "") : (activeWallet?.MainnetAddress ?? "");
         
         switch (choice)
         {
             case var c when c == Strings.WalletMenu.SendFunds:
-                var address = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterDestinationAddress);
-                var amount = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterAmount);
+                var address = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterDestinationAddress));
+                if (address == "!") return;
+                var amount = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterAmount));
+                if (amount == "!") return;
                 command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} sendtoaddress \"{address}\" {amount}";
                 break;
                 
@@ -1031,24 +1052,55 @@ public static class WalletCommands
                 return;
                 
             case var c when c == Strings.WalletMenu.SignTransaction:
-                var hexToSign = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterTransactionHex);
+                var hexToSign = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterTransactionHex));
+                if (hexToSign == "!") return;
                 command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} signrawtransactionwithwallet \"{hexToSign}\"";
                 break;
                 
             case var c when c == Strings.WalletMenu.BroadcastTransaction:
-                var hexToBroadcast = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterSignedTransactionHex);
+                var hexToBroadcast = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterSignedTransactionHex));
+                if (hexToBroadcast == "!") return;
                 command = $"bitcoin-cli {networkFlag}sendrawtransaction \"{hexToBroadcast}\"";
                 break;
                 
+            case var c when c == Strings.WalletMenu.ForgingAssignment:
+                var plotAddr = AnsiConsole.Prompt(
+                    new TextPrompt<string>(Strings.WalletMenu.EnterPlotAddress)
+                        .DefaultValue(currentAddress));
+                if (plotAddr == "!") return;
+                var forgeAddr = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterForgingAddress));
+                if (forgeAddr == "!") return;
+                command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} create_assignment \"{plotAddr}\" \"{forgeAddr}\"";
+                break;
+
+            case var c when c == Strings.WalletMenu.ForgingRevocation:
+                var revokePlotAddr = AnsiConsole.Prompt(
+                    new TextPrompt<string>(Strings.WalletMenu.EnterPlotAddress)
+                        .DefaultValue(currentAddress));
+                if (revokePlotAddr == "!") return;
+                command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} revoke_assignment \"{revokePlotAddr}\"";
+                break;
+
+            case var c when c == Strings.WalletMenu.ForgingStatus:
+                var statusPlotAddr = AnsiConsole.Prompt(
+                    new TextPrompt<string>(Strings.WalletMenu.EnterPlotAddress)
+                        .DefaultValue(currentAddress));
+                if (statusPlotAddr == "!") return;
+                command = $"bitcoin-cli {networkFlag}get_assignment \"{statusPlotAddr}\"";
+                break;
+                
             case var c when c == Strings.WalletMenu.CreatePSBT:
-                var psbtAddress = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterDestinationAddress);
-                var psbtAmount = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterAmount);
+                var psbtAddress = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterDestinationAddress));
+                if (psbtAddress == "!") return;
+                var psbtAmount = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterAmount));
+                if (psbtAmount == "!") return;
                 command = $"bitcoin-cli {networkFlag}-rpcwallet={walletName} walletcreatefundedpsbt '[]' '{{" +
                     $"\"{psbtAddress}\":{psbtAmount}}}'";
                 break;
                 
             case var c when c == Strings.WalletMenu.DecodePSBT:
-                var psbtToDecode = AnsiConsole.Ask<string>(Strings.WalletMenu.EnterPSBT);
+                var psbtToDecode = AnsiConsole.Prompt(new TextPrompt<string>(Strings.WalletMenu.EnterPSBT));
+                if (psbtToDecode == "!") return;
                 command = $"bitcoin-cli {networkFlag}decodepsbt \"{psbtToDecode}\"";
                 break;
         }
@@ -1085,6 +1137,40 @@ public static class WalletCommands
     }
     
     /// <summary>
+    /// Gets the appropriate command template based on execution mode
+    /// </summary>
+    private static string GetNodeCommandTemplate(string command)
+    {
+        // Remove duplicate bitcoin-cli if present in command
+        var cleanCommand = command.StartsWith("bitcoin-cli ") ? command.Substring(12) : command;
+
+        if (IsNodeExternal())
+        {
+            var serviceConfig = ServiceDefinitionLoader.LoadServices();
+            var nodeService = serviceConfig?.Services.FirstOrDefault(s => 
+                s.Id?.Equals("node", StringComparison.OrdinalIgnoreCase) == true ||
+                s.Id?.Equals("bitcoin-node", StringComparison.OrdinalIgnoreCase) == true);
+            
+            if (nodeService != null)
+            {
+                var parameters = nodeService.GetActiveParameters();
+                var host = parameters?.FirstOrDefault(p => p.Name == "rpcconnect")?.Value?.ToString() ?? "127.0.0.1";
+                var port = parameters?.FirstOrDefault(p => p.Name == "rpcport")?.Value?.ToString() ?? "8332";
+                var user = parameters?.FirstOrDefault(p => p.Name == "rpcuser")?.Value?.ToString() ?? "";
+                var password = parameters?.FirstOrDefault(p => p.Name == "rpcpassword")?.Value?.ToString() ?? "";
+                
+                var rpcArgs = $"-rpcconnect={host} -rpcport={port}";
+                if (!string.IsNullOrEmpty(user)) rpcArgs += $" -rpcuser={user}";
+                if (!string.IsNullOrEmpty(password)) rpcArgs += " -rpcpassword=***";
+                
+                return $"bitcoin-cli {rpcArgs} {cleanCommand}";
+            }
+        }
+        
+        return $"docker exec {_bitcoinContainerName} {command}";
+    }
+    
+    /// <summary>
     /// Execute a command on the node container if running, otherwise offer to start the node
     /// </summary>
     private static async Task ExecuteNodeCommandAsync(string command)
@@ -1106,11 +1192,18 @@ public static class WalletCommands
             }
             else
             {
-                ShowCommandTemplate("Command", $"docker exec {_bitcoinContainerName} {command}");
+                ShowCommandTemplate("Command", GetNodeCommandTemplate(command));
             }
         }
         else
         {
+            if (IsNodeExternal())
+            {
+                AnsiConsole.MarkupLine(Strings.ExternalNode.Unreachable);
+                ShowCommandTemplate("Command", GetNodeCommandTemplate(command));
+                return;
+            }
+
             // Node is not running - offer to start it
             if (AnsiConsole.Confirm(Strings.WalletMenu.NodeNotRunningStartPrompt, false))
             {
@@ -1141,7 +1234,7 @@ public static class WalletCommands
             }
             else
             {
-                ShowCommandTemplate("Command", string.Format(Strings.WalletMenu.CommandShowFormat, _bitcoinContainerName, command));
+                ShowCommandTemplate("Command", GetNodeCommandTemplate(command));
             }
         }
     }
@@ -1299,12 +1392,10 @@ public static class WalletCommands
         var listDirCmd = $"bitcoin-cli {networkFlag}listwalletdir";
         var (listDirExitCode, listDirOutput) = await _execInContainerAsync(listDirCmd);
         
-        // Parse wallet existence more carefully - look for exact wallet name in JSON format
-        // Match patterns: "name": "walletName" or "name":"walletName" with proper boundary checks
+        // Parse wallet existence more carefully
         bool walletExists = false;
         try
         {
-            // Try to parse as JSON for more robust checking
             using var doc = System.Text.Json.JsonDocument.Parse(listDirOutput);
             if (doc.RootElement.TryGetProperty("wallets", out var walletsArray))
             {
@@ -1321,7 +1412,6 @@ public static class WalletCommands
         }
         catch
         {
-            // Fallback to string matching if JSON parsing fails
             walletExists = listDirOutput.Contains($"\"name\": \"{walletName}\"") || 
                            listDirOutput.Contains($"\"name\":\"{walletName}\"");
         }
@@ -1352,8 +1442,7 @@ public static class WalletCommands
             
             if (createExitCode != 0)
             {
-                AnsiConsole.MarkupLine($"[yellow]▲[/] Create wallet: {Markup.Escape(createOutput)}");
-                // Try to proceed anyway in case wallet was created but with warning
+                AnsiConsole.MarkupLine($"[yellow]?[/] Create wallet: {Markup.Escape(createOutput)}");
             }
             else
             {
@@ -1364,7 +1453,6 @@ public static class WalletCommands
         // Step 3: Import descriptor
         AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingDescriptor);
         var importJson = $"'[{{\"desc\": \"{escapedDescriptor}\", \"timestamp\": \"now\"}}]'";
-        // Note: -rpcwallet flag comes after any network flags, with proper spacing
         var importCmd = $"bitcoin-cli {networkFlag}-rpcwallet=\"{walletName}\" importdescriptors {importJson}";
         var (importExitCode, importOutput) = await _execInContainerAsync(importCmd);
         
@@ -1439,14 +1527,14 @@ public static class WalletCommands
         
         AnsiConsole.MarkupLine(Strings.WalletMenu.ImportingToNode);
         
-        // Check node parameters to determine if testnet is active
-        var isTestnet = IsNodeTestnet();
-        var networkName = isTestnet ? "testnet" : "mainnet";
+        // Check node parameters to determine network
+        var networkFlag = GetNetworkFlag();
+        var isTestnet = networkFlag == "-testnet ";
+        var isRegtest = networkFlag == "-regtest ";
+        var networkName = networkFlag.Trim() != "" ? networkFlag.Trim().Replace("-", "") : "mainnet";
         AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.DetectedNetworkFormat, networkName));
         
-        var networkFlag = isTestnet ? "-testnet " : "";
-        
-        var descriptor = wallet.GetDescriptor(isTestnet);
+        var descriptor = wallet.GetDescriptor(isTestnet || isRegtest);
         
         // Escape descriptor for safe JSON inclusion
         var escapedDescriptor = descriptor.Replace("\\", "\\\\").Replace("\"", "\\\"");
