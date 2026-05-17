@@ -513,8 +513,12 @@ public static class WalletCommands
         if (string.IsNullOrEmpty(passphrase))
             passphrase = null;
         
-        // Generate 24-word mnemonic wallet
-        var wallet = HDWallet.CreateNew(WordCount.TwentyFour, passphrase);
+        // Ask for mnemonic length
+        var use12Words = AnsiConsole.Confirm(Strings.WalletMenu.Use12Words, false);
+        var wordCount = use12Words ? WordCount.Twelve : WordCount.TwentyFour;
+
+        // Generate HD wallet
+        var wallet = HDWallet.CreateNew(wordCount, passphrase);
         
         // Display mnemonic and addresses
         DisplayWalletInfo(wallet);
@@ -591,8 +595,8 @@ public static class WalletCommands
                 return;
             }
             
-            // Validate pattern
-            if (!pattern.All(c => ValidBech32Chars.Contains(char.ToLower(c))))
+            // Validate pattern (allow wildcards * and ?)
+            if (!pattern.All(c => c == '*' || c == '?' || ValidBech32Chars.Contains(char.ToLower(c))))
             {
                 AnsiConsole.MarkupLine(Strings.WalletMenu.VanityInvalidPattern);
                 AnsiConsole.MarkupLine($"[yellow]{validCharsSorted}[/]");
@@ -603,6 +607,7 @@ public static class WalletCommands
         }
         
         var useTestnet = AnsiConsole.Confirm(Strings.WalletMenu.VanityGenerateTestnet, false);
+        var use12Words = AnsiConsole.Confirm(Strings.WalletMenu.Use12Words, false);
         
         // Ask for optional passphrase (hidden with asterisks)
         var passphrase = AnsiConsole.Prompt(
@@ -614,7 +619,8 @@ public static class WalletCommands
             passphrase = null;
         
         // Generate vanity address
-        var generator = new VanityAddressGenerator(pattern, useTestnet);
+        var wordCount = use12Words ? WordCount.Twelve : WordCount.TwentyFour;
+        var generator = new VanityAddressGenerator(pattern, useTestnet, passphrase: passphrase, wordCount: wordCount);
         var cts = new CancellationTokenSource();
         
         (string Mnemonic, string Address) result = default;

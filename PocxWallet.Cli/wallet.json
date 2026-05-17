@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "active_wallet": "66666",
+  "wallets": [
+    {
+      "name": "66666",
+      "mnemonic": "affair spin glass someone achieve easy pass media rent cruise surface latin pyramid gasp eye jealous address group paddle salon damp rotate forget fence",
+      "passphrase": "666",
+      "mainnet_address": "pocx1q9w5aqhl3tq56666697hm28ug4vx0pwygks6ydu",
+      "testnet_address": "tpocx1q54udrwgwdq5ykhszt32ymmjhm8cqqq4zzpqjj5",
+      "created": "2026-05-17T17:05:24.5737505Z",
+      "pattern": "*66666*"
+    }
+  ],
+  "settings": {
+    "auto_save": false,
+    "startup_wallet": null,
+    "auto_import_to_node": false,
+    "github_token": null,
+    "address_seek_gap": 20
+  }
+}

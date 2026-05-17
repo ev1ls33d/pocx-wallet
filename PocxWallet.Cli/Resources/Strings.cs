@@ -159,6 +159,7 @@ public static class Strings
         
         // Create workflow prompts
         public const string EnterPassphrase = "Enter passphrase (optional, leave empty for none):";
+        public const string Use12Words = "Use [green]12 words[/] instead of 24?";
         public const string SaveWalletPrompt = "Save wallet to file?";
         public const string EnterFilePath = "Enter file path:";
         public const string EnterWalletName = "Enter wallet name:";
@@ -179,9 +180,9 @@ public static class Strings
         // Vanity address
         public const string VanityTitle = "[bold green]Generate vanity address wallet[/]";
         public const string VanityNote = "[dim]Note: This may take a long time depending on the pattern complexity[/]";
-        public const string VanityValidCharsFormat = "[dim]Valid characters: {0} (case-insensitive)[/]";
+        public const string VanityValidCharsFormat = "[dim]Valid characters: {0} and wildcards (*, ?) (case-insensitive)[/]";
         public const string VanityEnterPattern = "Enter [green]pattern[/] to search for (or '!' to cancel):";
-        public const string VanityInvalidPattern = "[red]Invalid pattern![/] Only these characters are allowed:";
+        public const string VanityInvalidPattern = "[red]Invalid pattern![/] Only these characters and wildcards ([yellow]*[/], [yellow]?[/]) are allowed:";
         public const string VanityGenerateTestnet = "Generate for [green]testnet[/]?";
         public const string VanitySearching = "[green]Searching for vanity address...[/]";
         public const string VanitySearchingFormat = "[green]Searching... ({0:N0} attempts)[/]";

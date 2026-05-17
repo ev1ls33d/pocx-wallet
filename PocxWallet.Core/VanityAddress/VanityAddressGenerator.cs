@@ -1,7 +1,9 @@
 using NBitcoin;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using PocxWallet.Core.Wallet;
+using PocxWallet.Core.Address;
 
 namespace PocxWallet.Core.VanityAddress;
 
@@ -13,9 +15,12 @@ public class VanityAddressGenerator
     private readonly string _pattern;
     private readonly bool _testnet;
     private readonly int _threadCount;
+    private readonly string? _passphrase;
+    private readonly WordCount _wordCount;
+    private readonly Regex _regex;
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public VanityAddressGenerator(string pattern, bool testnet = false, int? threadCount = null)
+    public VanityAddressGenerator(string pattern, bool testnet = false, int? threadCount = null, string? passphrase = null, WordCount wordCount = WordCount.TwentyFour)
     {
         if (string.IsNullOrWhiteSpace(pattern))
             throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
@@ -23,6 +28,39 @@ public class VanityAddressGenerator
         _pattern = pattern;
         _testnet = testnet;
         _threadCount = threadCount ?? Environment.ProcessorCount;
+        _passphrase = passphrase;
+        _wordCount = wordCount;
+        _regex = CreateRegex(pattern, testnet);
+    }
+
+    /// <summary>
+    /// Translates simple wildcards (*, ?) into a compiled Regex
+    /// </summary>
+    private static Regex CreateRegex(string pattern, bool testnet)
+    {
+        string p = pattern.ToLowerInvariant();
+        bool anywhere = p.StartsWith("*");
+        
+        // Strip leading/trailing stars for processing
+        if (anywhere) p = p.TrimStart('*');
+        p = p.TrimEnd('*');
+
+        // Escape characters and convert wildcards: ? -> . and * -> .*
+        p = Regex.Escape(p).Replace("\\?", ".").Replace("\\*", ".*");
+
+        // Always anchor to the network-specific PoCX address prefix
+        string prefix = testnet ? "^tpocx1q" : "^pocx1q";
+        if (anywhere)
+        {
+            // For "anywhere" matches, we still anchor to the start but allow anything before the pattern
+            p = prefix + ".*" + p;
+        }
+        else
+        {
+            p = prefix + p;
+        }
+
+        return new Regex(p, RegexOptions.Compiled | RegexOptions.CultureInvariant);
     }
 
     /// <summary>
@@ -50,7 +88,7 @@ public class VanityAddressGenerator
         int? overrideThreadCount = null)
     {
         var threadCount = overrideThreadCount ?? _threadCount;
-        var attempts = new ConcurrentBag<long>();
+        long totalAttempts = 0; // Use Interlocked instead of ConcurrentBag
         var resultFound = new TaskCompletionSource<(string Mnemonic, string Address)>();
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -58,7 +96,7 @@ public class VanityAddressGenerator
         var workers = new Task[threadCount];
         for (int i = 0; i < threadCount; i++)
         {
-            workers[i] = Task.Run(() => SearchWorker(attempts, resultFound, cts.Token), cts.Token);
+            workers[i] = Task.Run(() => SearchWorker(ref totalAttempts, resultFound, cts.Token), cts.Token);
         }
 
         // Progress reporting task
@@ -70,10 +108,13 @@ public class VanityAddressGenerator
                 while (!cts.Token.IsCancellationRequested)
                 {
                     await Task.Delay(1000, cts.Token);
-                    if (progress != null && attempts.Count > 0)
+                    if (progress != null)
                     {
-                        var total = attempts.Sum();
-                        progress.Report(total);
+                        var currentTotal = Interlocked.Read(ref totalAttempts);
+                        if (currentTotal > 0)
+                        {
+                            progress.Report(currentTotal);
+                        }
                     }
                 }
             }
@@ -106,25 +147,38 @@ public class VanityAddressGenerator
     }
 
     private void SearchWorker(
-        ConcurrentBag<long> attempts,
+        ref long totalAttempts,
         TaskCompletionSource<(string Mnemonic, string Address)> resultFound,
         CancellationToken cancellationToken)
     {
         long localAttempts = 0;
 
+        // Precompute values for the tight loop
+        var keyPath = new KeyPath(_testnet ? "m/84'/1'/0'/0/0" : "m/84'/0'/0'/0/0");
+        var hrp = _testnet ? "tpocx" : "pocx";
+
         while (!cancellationToken.IsCancellationRequested && !resultFound.Task.IsCompleted)
         {
             localAttempts++;
 
-            // Generate a new HD wallet
-            var wallet = HDWallet.CreateNew(WordCount.TwentyFour);
+            // 1. Generate Mnemonic directly
+            var mnemonic = new Mnemonic(Wordlist.English, _wordCount);
             
-            // Get the pocx1q bech32 address (testnet or mainnet based on _testnet flag)
-            var address = wallet.GetPoCXAddress(0, 0, testnet: _testnet);
+            // 2. Derive Master Key and Child Key using cached path and passphrase
+            var masterKey = mnemonic.DeriveExtKey(_passphrase);
+            var childKey = masterKey.Derive(keyPath);
 
-            // Check if it matches the pattern
-            if (address.Contains(_pattern, StringComparison.OrdinalIgnoreCase))
+            // 3. Fast Hash160 (RIPEMD160(SHA256(PubKey)))
+            var payload = childKey.PrivateKey.PubKey.Hash.ToBytes();
+
+            // 4. Encode Bech32 Address
+            var address = Bech32Encoder.Encode(hrp, 0, payload);
+
+            // 5. Check if it matches the pattern via compiled regex
+            if (_regex.IsMatch(address))
             {
+                // Verify with full HDWallet initialization on match to ensure correctness
+                var wallet = HDWallet.FromMnemonic(mnemonic.ToString(), _passphrase);
                 resultFound.TrySetResult((wallet.MnemonicPhrase, address));
                 return;
             }
@@ -132,7 +186,7 @@ public class VanityAddressGenerator
             // Report attempts every 100 iterations
             if (localAttempts % 100 == 0)
             {
-                attempts.Add(localAttempts);
+                Interlocked.Add(ref totalAttempts, localAttempts);
                 localAttempts = 0;
             }
         }
@@ -140,7 +194,7 @@ public class VanityAddressGenerator
         // Add remaining attempts
         if (localAttempts > 0)
         {
-            attempts.Add(localAttempts);
+            Interlocked.Add(ref totalAttempts, localAttempts);
         }
     }
 
