@@ -1,6 +1,7 @@
 using Spectre.Console;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using PocxWallet.Cli.Resources;
 
 namespace PocxWallet.Cli.Services;
 
@@ -48,7 +49,7 @@ public class BackgroundServiceManager
     {
         if (_services.IsEmpty)
         {
-            AnsiConsole.MarkupLine("[dim]No background services running[/]");
+            AnsiConsole.MarkupLine(Strings.BackgroundServices.NoServicesRunning);
             return;
         }
 

@@ -1,4 +1,4 @@
-using YamlDotNet.Serialization;
+﻿using YamlDotNet.Serialization;
 
 namespace PocxWallet.Cli.Configuration;
 
@@ -15,7 +15,12 @@ public enum ExecutionMode
     /// <summary>
     /// Service runs as a native process on the host
     /// </summary>
-    Native
+    Native,
+    
+    /// <summary>
+    /// Service is an external node accessed via RPC
+    /// </summary>
+    External
 }
 
 /// <summary>
@@ -97,6 +102,7 @@ public class ServiceDefinition
         return ExecutionModeString?.ToLower() switch
         {
             "native" => ExecutionMode.Native,
+            "external" => ExecutionMode.External,
             _ => ExecutionMode.Docker
         };
     }
@@ -118,6 +124,9 @@ public class ServiceDefinition
 
     [YamlMember(Alias = "parameters")]
     public List<ServiceParameter>? Parameters { get; set; }
+
+    [YamlMember(Alias = "external")]
+    public ExternalConfig? External { get; set; }
 
     [YamlMember(Alias = "config_file")]
     public ConfigFileDefinition? ConfigFile { get; set; }
@@ -222,6 +231,18 @@ public class ServiceDefinition
         Container.Repository = repository;
         Container.Image = image;
         Container.DefaultTag = tag;
+    }
+
+    /// <summary>
+    /// Get the parameters for the current execution mode
+    /// </summary>
+    public List<ServiceParameter> GetActiveParameters()
+    {
+        if (GetExecutionMode() == ExecutionMode.External && External?.Parameters != null)
+        {
+            return External.Parameters;
+        }
+        return Parameters ?? new List<ServiceParameter>();
     }
 }
 
@@ -816,4 +837,13 @@ public class ParameterCategoryDefinition
 
     [YamlMember(Alias = "description")]
     public string Description { get; set; } = "";
+}
+
+/// <summary>
+/// Configuration for external nodes
+/// </summary>
+public class ExternalConfig
+{
+    [YamlMember(Alias = "parameters")]
+    public List<ServiceParameter>? Parameters { get; set; }
 }

@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "active_wallet": "default",
+  "wallets": [
+    {
+      "name": "default",
+      "mnemonic": "prison math bundle pole picnic book animal lizard human dwarf common snap sunny pupil oxygen traffic stay glow student destroy since carpet kind nephew",
+      "passphrase": "",
+      "mainnet_address": "pocx1qdtx70jrn59gppmulcc39tenulpy833y77y9ehv",
+      "testnet_address": "tpocx1qxflnj3aq53t298vdwmc7kq896z9ry53wl34cvd",
+      "created": "2026-05-17T20:35:50.0268141Z",
+      "pattern": null
+    }
+  ],
+  "settings": {
+    "auto_save": false,
+    "startup_wallet": null,
+    "auto_import_to_node": false,
+    "github_token": null,
+    "address_seek_gap": 20
+  }
+}

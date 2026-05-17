@@ -46,7 +46,7 @@ public class DynamicServiceMenuBuilder
     public async Task<string> GetServiceStatusIndicatorAsync(ServiceDefinition service)
     {
         var status = await GetServiceStatusAsync(service);
-        return status == "running" ? "[green]●[/]" : "[red]●[/]";
+        return status == "running" ? Strings.Status.Running : Strings.Status.Stopped;
     }
 
     /// <summary>
@@ -68,6 +68,10 @@ public class DynamicServiceMenuBuilder
         if (mode == ExecutionMode.Native)
         {
             return await _nativeManager.GetNativeServiceStatusAsync(service.Id);
+        }
+        else if (mode == ExecutionMode.External)
+        {
+            return await CheckExternalNodeStatusAsync(service) ? "running" : "stopped";
         }
         else
         {
@@ -200,7 +204,7 @@ public class DynamicServiceMenuBuilder
     public string? BuildCommand(ServiceDefinition service)
     {
         var commands = new List<string>();
-        
+
         // Add the binary executable first (e.g., "bitcoind", "electrs")
         if (!string.IsNullOrEmpty(service.Container?.Binary))
         {
@@ -215,10 +219,22 @@ public class DynamicServiceMenuBuilder
 
         // Add user-set parameters in order of appearance
         // Parameters with a 'value' node are passed to the container as CLI flags
-        if (service.Parameters != null)
+        var parameters = service.GetActiveParameters();
+        if (parameters != null)
         {
-            foreach (var param in service.Parameters.Where(p => !p.Hidden && p.HasUserValue))
+            foreach (var param in parameters.Where(p => !p.Hidden && p.HasUserValue))
             {
+                // Special handling for "network" parameter for Bitcoin-PoCX Node
+                if (param.Name == "network" && (service.Id == "bitcoin-node" || service.Id == "node"))
+                {
+                    var network = param.Value?.ToString()?.ToLower();
+                    if (network == "testnet") commands.Add("-testnet");
+                    else if (network == "regtest") commands.Add("-regtest");
+                    else if (network == "signet") commands.Add("-signet");
+                    // mainnet adds no flag
+                    continue;
+                }
+
                 var cliFlag = param.CliFlag;
                 if (string.IsNullOrEmpty(cliFlag)) continue;
 
@@ -304,8 +320,14 @@ public class DynamicServiceMenuBuilder
             {
                 foreach (var item in service.Menu.Submenu)
                 {
-                    // Skip logs in native mode
-                    if (item.Action == "logs" && mode == ExecutionMode.Native)
+                    // Skip logs in native mode OR external mode
+                    if (item.Action == "logs" && (mode == ExecutionMode.Native || mode == ExecutionMode.External))
+                    {
+                        continue;
+                    }
+                    
+                    // Skip toggle in external mode
+                    if (item.Action == "toggle" && mode == ExecutionMode.External)
                     {
                         continue;
                     }
@@ -325,10 +347,13 @@ public class DynamicServiceMenuBuilder
             else
             {
                 // Default menu if not defined
-                choices.Add(isRunning ? Strings.ServiceMenu.StopService : Strings.ServiceMenu.StartService);
+                if (mode != ExecutionMode.External)
+                {
+                    choices.Add(isRunning ? Strings.ServiceMenu.StopService : Strings.ServiceMenu.StartService);
+                }
                 
-                // Skip View Logs in native mode
-                if (mode != ExecutionMode.Native)
+                // Skip View Logs in native mode OR external mode
+                if (mode != ExecutionMode.Native && mode != ExecutionMode.External)
                 {
                     choices.Add(Strings.ServiceMenu.ViewLogs);
                 }
@@ -558,7 +583,7 @@ public class DynamicServiceMenuBuilder
 
         // Show last 5 log lines after starting (both success and failure)
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[dim]Last 5 log lines:[/]");
+        AnsiConsole.MarkupLine(Strings.ServiceMenu.LastLogLines);
         await _dockerManager.DisplayContainerLogsAsync(containerName, 5);
     }
 
@@ -568,7 +593,8 @@ public class DynamicServiceMenuBuilder
     private async Task StartNativeServiceAsync(ServiceDefinition service)
     {
         // Determine binary path
-        var serviceDir = Path.Combine(".", service.Id);
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var serviceDir = Path.Combine(baseDir, service.Id);
         var binaryName = service.Container?.Binary ?? service.Id;
         
         // Add .exe extension on Windows
@@ -578,6 +604,18 @@ public class DynamicServiceMenuBuilder
         }
         
         var binaryPath = Path.Combine(serviceDir, binaryName);
+
+        // Fallback to relative path if not found in base directory
+        if (!File.Exists(binaryPath))
+        {
+            var relativeDir = Path.Combine(".", service.Id);
+            var relativePath = Path.Combine(relativeDir, binaryName);
+            if (File.Exists(relativePath))
+            {
+                serviceDir = relativeDir;
+                binaryPath = relativePath;
+            }
+        }
 
         // Build command arguments
         var command = BuildCommand(service);
@@ -602,7 +640,7 @@ public class DynamicServiceMenuBuilder
         if (!success)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[yellow]Tip: Use 'Manage Versions' to download the binary if it's not already installed[/]");
+            AnsiConsole.MarkupLine(Strings.ExternalNode.DownloadTip);
         }
     }
 
@@ -645,8 +683,8 @@ public class DynamicServiceMenuBuilder
         if (mode == ExecutionMode.Native)
         {
             // Native mode doesn't support log viewing
-            AnsiConsole.MarkupLine("[yellow]Log viewing is not available for native mode services[/]");
-            AnsiConsole.MarkupLine("[dim]Native services run in their own console windows or as background processes[/]");
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.LogViewingNotAvailable);
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.NativeLogInfo);
         }
         else
         {
@@ -661,7 +699,8 @@ public class DynamicServiceMenuBuilder
     /// </summary>
     public void ShowServiceParameters(ServiceDefinition service, Action showBanner)
     {
-        if (service.Parameters == null || service.Parameters.Count == 0)
+        var parameters = service.GetActiveParameters();
+        if (parameters == null || parameters.Count == 0)
         {
             AnsiConsole.MarkupLine(Strings.ParametersMenu.NoParametersAvailable);
             return;
@@ -670,8 +709,11 @@ public class DynamicServiceMenuBuilder
         bool back = false;
         while (!back)
         {
+            // Reload parameters in case mode changed
+            parameters = service.GetActiveParameters();
+            
             // Get parameters with user-set values (not hidden)
-            var setParameters = service.Parameters
+            var setParameters = parameters
                 .Where(p => !p.Hidden && p.HasUserValue)
                 .ToList();
 
@@ -686,7 +728,7 @@ public class DynamicServiceMenuBuilder
             }
             
             // Add option to add new parameters
-            var unsetParameters = service.Parameters
+            var unsetParameters = parameters
                 .Where(p => !p.Hidden && !p.HasUserValue)
                 .ToList();
             
@@ -747,13 +789,18 @@ public class DynamicServiceMenuBuilder
             var mode = service.GetExecutionMode();
             
             // First entry: Execution Mode (always shown)
-            var executionModeValue = mode == ExecutionMode.Docker ? "[cyan]Docker[/]" : "[cyan]Native[/]";
+            var executionModeValue = mode switch {
+                ExecutionMode.Docker => "[cyan]Docker[/]",
+                ExecutionMode.Native => "[cyan]Native[/]",
+                ExecutionMode.External => "[cyan]External[/]",
+                _ => "[cyan]Docker[/]"
+            };
             choices.Add($"{Strings.SettingsMenu.ExecutionMode.PadRight(20)} {executionModeValue}");
             
             // Second entry: Manage Versions (always shown with current version)
             var currentVersion = GetCurrentVersion(service, mode);
             var versionDisplay = !string.IsNullOrEmpty(currentVersion) 
-                ? $" [cyan]{Markup.Escape(currentVersion)}[/]" 
+                ? $" [cyan]{Markup.Escape(currentVersion)}[/] " 
                 : "";
             choices.Add($"{Strings.SettingsMenu.ManageVersions.PadRight(20)}{versionDisplay}");
             
@@ -781,7 +828,7 @@ public class DynamicServiceMenuBuilder
                 var network = GetServiceNetwork(service);
                 choices.Add($"{Strings.SettingsMenu.Network.PadRight(20)} [cyan]{Markup.Escape(network)}[/]");
             }
-            else
+            else if (mode != ExecutionMode.External)
             {
                 // Native mode settings: Spawn in new process
                 var spawnValue = service.SpawnNewConsole ? "[green]true[/]" : "[red]false[/]";
@@ -804,49 +851,31 @@ public class DynamicServiceMenuBuilder
             }
 
             // Find which setting was selected
-            var selectedIndex = choices.IndexOf(choice);
-            
-            if (selectedIndex == 0)
+            if (choice.StartsWith(Strings.SettingsMenu.ExecutionMode))
             {
-                // Execution Mode
                 EditExecutionMode(service);
             }
-            else if (selectedIndex == 1)
+            else if (choice.StartsWith(Strings.SettingsMenu.ManageVersions))
             {
-                // Manage Versions
                 await ShowVersionManagementAsync(service, showBanner);
             }
             else if (mode == ExecutionMode.Docker)
             {
-                // Docker mode settings (indices shifted by 2: execution mode + manage versions)
-                switch (selectedIndex)
-                {
-                    case 2: // Container Name
-                        EditServiceSetting(service, "container_name", Strings.SettingsMenu.ContainerName, showBanner);
-                        break;
-                    case 3: // Environment
-                        ShowEnvironmentMenu(service, showBanner);
-                        break;
-                    case 4: // Volumes
-                        ShowVolumesMenu(service, showBanner);
-                        break;
-                    case 5: // Ports
-                        ShowPortsMenu(service, showBanner);
-                        break;
-                    case 6: // Network
-                        EditServiceSetting(service, "network", Strings.SettingsMenu.Network, showBanner);
-                        break;
-                }
+                if (choice.StartsWith(Strings.SettingsMenu.ContainerName))
+                    EditServiceSetting(service, "container_name", Strings.SettingsMenu.ContainerName, showBanner);
+                else if (choice.StartsWith(Strings.SettingsMenu.Environment))
+                    ShowEnvironmentMenu(service, showBanner);
+                else if (choice.StartsWith(Strings.SettingsMenu.Volumes))
+                    ShowVolumesMenu(service, showBanner);
+                else if (choice.StartsWith(Strings.SettingsMenu.Ports))
+                    ShowPortsMenu(service, showBanner);
+                else if (choice.StartsWith(Strings.SettingsMenu.Network))
+                    EditServiceSetting(service, "network", Strings.SettingsMenu.Network, showBanner);
             }
-            else
+            else if (mode == ExecutionMode.Native)
             {
-                // Native mode settings (indices shifted by 2: execution mode + manage versions)
-                switch (selectedIndex)
-                {
-                    case 2: // Spawn New Console
-                        EditSpawnNewConsole(service);
-                        break;
-                }
+                if (choice.StartsWith(Strings.SettingsMenu.SpawnNewConsole))
+                    EditSpawnNewConsole(service);
             }
             
             AnsiConsole.Clear();
@@ -860,20 +889,34 @@ public class DynamicServiceMenuBuilder
     private void EditExecutionMode(ServiceDefinition service)
     {
         var currentMode = service.GetExecutionMode();
-        var options = new[] { "Docker", "Native" };
+        var options = new[] { "Docker", "Native", "External" };
         
-        var newMode = AnsiConsole.Prompt(
+        var modeDisplay = currentMode switch {
+            ExecutionMode.Docker => "Docker",
+            ExecutionMode.Native => "Native",
+            ExecutionMode.External => "External",
+            _ => "Docker"
+        };
+
+        var newModeStr = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title($"Select execution mode for [bold]{service.Name}[/]:\n[dim]Current: {(currentMode == ExecutionMode.Docker ? "Docker" : "Native")}[/]")
+                .Title($"Select execution mode for [bold]{service.Name}[/]:\n[dim]Current: {modeDisplay}[/]")
                 .AddChoices(options)
                 .HighlightStyle(new Style(Color.Green))
         );
         
-        service.ExecutionModeString = newMode.ToLower();
+        var newMode = newModeStr.ToLower() switch {
+            "native" => ExecutionMode.Native,
+            "external" => ExecutionMode.External,
+            _ => ExecutionMode.Docker
+        };
+
+        service.ExecutionModeString = newModeStr.ToLower();
+
         SaveServicesToYaml();
         
         AnsiConsole.MarkupLine(string.Format(Strings.SettingsMenu.SettingUpdatedFormat, Strings.SettingsMenu.ExecutionMode));
-        AnsiConsole.MarkupLine($"[yellow]Note: You may need to download binaries (Native mode) or pull images (Docker mode) via 'Manage Versions'[/]");
+        AnsiConsole.MarkupLine(Strings.ExternalNode.ExecutionModeNote);
     }
 
     /// <summary>
@@ -929,7 +972,7 @@ public class DynamicServiceMenuBuilder
     {
         if (service.Volumes == null || service.Volumes.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No volumes configured for this service[/]");
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.NoVolumes);
             return;
         }
 
@@ -970,7 +1013,7 @@ public class DynamicServiceMenuBuilder
     {
         if (service.Ports == null || service.Ports.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No ports configured for this service[/]");
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.NoPorts);
             return;
         }
 
@@ -1173,8 +1216,7 @@ public class DynamicServiceMenuBuilder
         }
         else
         {
-            // For Native, try to determine installed version
-            // This is a simple implementation - could be enhanced to read from version files
+            // For Native and External, try to determine installed version
             var serviceDir = Path.Combine(".", service.Id);
             if (Directory.Exists(serviceDir))
             {
@@ -1207,6 +1249,11 @@ public class DynamicServiceMenuBuilder
     private string FormatParameterValue(ServiceParameter param)
     {
         var value = param.Value;
+
+        if (param.Sensitive && value != null)
+        {
+            return "[cyan]********[/]";
+        }
         
         switch (param.Type.ToLower())
         {
@@ -1388,7 +1435,17 @@ public class DynamicServiceMenuBuilder
                 }
                 else
                 {
-                    param.Value = AnsiConsole.Ask(string.Format(Strings.Common.EnterFormat, param.Name), defaultStr);
+                    if (param.Sensitive)
+                    {
+                        param.Value = AnsiConsole.Prompt(
+                            new TextPrompt<string>(string.Format(Strings.Common.EnterFormat, param.Name))
+                                .Secret()
+                        );
+                    }
+                    else
+                    {
+                        param.Value = AnsiConsole.Ask(string.Format(Strings.Common.EnterFormat, param.Name), defaultStr);
+                    }
                 }
                 break;
         }
@@ -1508,6 +1565,78 @@ public class DynamicServiceMenuBuilder
         return false;
     }
     
+    private async Task<bool> CheckExternalNodeStatusAsync(ServiceDefinition service)
+    {
+        // Find bitcoin-cli binary path
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var nodeBinDir = Path.Combine(baseDir, "bitcoin-node");
+        var cliName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "bitcoin-cli.exe" : "bitcoin-cli";
+        var cliPath = Path.Combine(nodeBinDir, cliName);
+
+        if (!File.Exists(cliPath))
+        {
+            // Fallback to searching in PATH if not in local bitcoin-node folder
+            cliPath = cliName;
+        }
+
+        var parameters = service.GetActiveParameters();
+        var host = parameters?.FirstOrDefault(p => p.Name == "rpcconnect")?.Value?.ToString() ?? "127.0.0.1";
+        var port = parameters?.FirstOrDefault(p => p.Name == "rpcport")?.Value?.ToString() ?? "8332";
+        var user = parameters?.FirstOrDefault(p => p.Name == "rpcuser")?.Value?.ToString() ?? "";
+        var password = parameters?.FirstOrDefault(p => p.Name == "rpcpassword")?.Value?.ToString() ?? "";
+
+        var args = $"-rpcconnect={host} -rpcport={port} ";
+        if (!string.IsNullOrEmpty(user)) args += $"-rpcuser={user} ";
+        if (!string.IsNullOrEmpty(password)) args += $"-rpcpassword={password} ";
+        args += "getnetworkinfo";
+
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = cliPath,
+                    Arguments = args,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            
+            process.Start();
+
+            await process.WaitForExitAsync();
+            if (process.StandardError.ReadToEnd() is string errorOutput && !string.IsNullOrWhiteSpace(errorOutput))
+            {
+                AnsiConsole.MarkupLine($"[red]Error output from node:[/] {Markup.Escape(errorOutput)}");
+            }
+            return process.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error checking node status:[/] {Markup.Escape(ex.Message)}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Check if a binary exists in the system PATH
+    /// </summary>
+    private bool IsBinaryInPath(string binaryName)
+    {
+        var values = Environment.GetEnvironmentVariable("PATH");
+        if (values == null) return false;
+
+        foreach (var path in values.Split(Path.PathSeparator))
+        {
+            var fullPath = Path.Combine(path, binaryName);
+            if (File.Exists(fullPath)) return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Show version management menu for downloading/pulling service versions
     /// </summary>
@@ -1522,7 +1651,7 @@ public class DynamicServiceMenuBuilder
         
         var mode = service.GetExecutionMode();
         
-        if (mode == ExecutionMode.Native)
+        if (mode == ExecutionMode.Native || mode == ExecutionMode.External)
         {
             await ShowNativeVersionManagementAsync(service, showBanner);
         }
@@ -1543,7 +1672,7 @@ public class DynamicServiceMenuBuilder
         if (service.Source?.Docker?.Dynamic != null)
         {
             var dynamic = service.Source.Docker.Dynamic;
-            AnsiConsole.MarkupLine("[dim]Discovering versions from dynamic source...[/]");
+            AnsiConsole.MarkupLine(Strings.ExternalNode.DiscoveryVersions);
             
             var crawledImages = await _versionCrawler.CrawlContainerRegistryAsync(
                 dynamic.Repository,
@@ -1560,8 +1689,8 @@ public class DynamicServiceMenuBuilder
         
         if (images.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No Docker images configured for this service[/]");
-            AnsiConsole.MarkupLine("[dim]Add images in services.yaml under source.docker.images or source.docker.dynamic[/]");
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.NoDockerImages);
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.AddDockerImagesInfo);
             return;
         }
         
@@ -1620,7 +1749,7 @@ public class DynamicServiceMenuBuilder
                     if (process.ExitCode == 0)
                     {
                         ctx.Status("[green]Pull complete![/]");
-                        AnsiConsole.MarkupLine("[green]√[/] Image pulled successfully");
+                        AnsiConsole.MarkupLine(Strings.ServiceMenu.PullSuccess);
                         
                         // Update service configuration to use this image
                         if (service.Container != null)
@@ -1629,7 +1758,7 @@ public class DynamicServiceMenuBuilder
                             service.Container.Image = image.Image;
                             service.Container.DefaultTag = image.Tag;
                             SaveServicesToYaml();
-                            AnsiConsole.MarkupLine("[green]√[/] Service configured to use this image");
+                            AnsiConsole.MarkupLine(Strings.ServiceMenu.ConfigSuccess);
                         }
                     }
                     else
@@ -1656,7 +1785,7 @@ public class DynamicServiceMenuBuilder
         if (service.Source?.Native?.Dynamic != null)
         {
             var dynamic = service.Source.Native.Dynamic;
-            AnsiConsole.MarkupLine("[dim]Discovering versions from dynamic source...[/]");
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.DiscoveringVersions);
             
             var crawledDownloads = await _versionCrawler.CrawlGitHubReleasesAsync(
                 dynamic.Repository,
@@ -1675,8 +1804,8 @@ public class DynamicServiceMenuBuilder
         
         if (downloads.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No native downloads configured for this service[/]");
-            AnsiConsole.MarkupLine("[dim]Add downloads in services.yaml under source.native.downloads or source.native.dynamic[/]");
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.NoNativeDownloads);
+            AnsiConsole.MarkupLine(Strings.ServiceMenu.AddNativeDownloadsInfo);
             return;
         }
         
