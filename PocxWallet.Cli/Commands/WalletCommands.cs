@@ -1,4 +1,5 @@
-﻿using PocxWallet.Core.Wallet;
+﻿using System.Text;
+using PocxWallet.Core.Wallet;
 using PocxWallet.Core.VanityAddress;
 using PocxWallet.Cli.Configuration;
 using PocxWallet.Cli.Resources;
@@ -512,8 +513,8 @@ public static class WalletCommands
         if (string.IsNullOrEmpty(passphrase))
             passphrase = null;
         
-        // Generate 12-word mnemonic wallet
-        var wallet = HDWallet.CreateNew(WordCount.Twelve, passphrase);
+        // Generate 24-word mnemonic wallet
+        var wallet = HDWallet.CreateNew(WordCount.TwentyFour, passphrase);
         
         // Display mnemonic and addresses
         DisplayWalletInfo(wallet);
@@ -713,10 +714,35 @@ public static class WalletCommands
     private static void DisplayWalletInfo(HDWallet wallet)
     {
         AnsiConsole.WriteLine();
-        var panel = new Panel(new Markup($"[yellow]{wallet.MnemonicPhrase}[/]"))
+        
+        // Format mnemonic into a grid (6 words per line) with indices
+        var words = wallet.MnemonicPhrase.Split(' ');
+        var formattedMnemonic = new StringBuilder();
+        for (int i = 0; i < words.Length; i++)
+        {
+            // Format as " 1. word      "
+            string index = $"{(i + 1),2}. ";
+            string word = words[i].PadRight(10);
+            
+            formattedMnemonic.Append($"[grey]{index}[/][yellow]{word}[/]");
+            
+            // Move to next line every 6 words
+            if ((i + 1) % 6 == 0)
+            {
+                if (i != words.Length - 1)
+                    formattedMnemonic.AppendLine();
+            }
+            else
+            {
+                formattedMnemonic.Append("  "); // Spacing between columns
+            }
+        }
+
+        var panel = new Panel(new Markup(formattedMnemonic.ToString()))
         {
             Header = new PanelHeader(Strings.WalletMenu.MnemonicPanelHeader),
-            Border = BoxBorder.Double
+            Border = BoxBorder.Double,
+            Padding = new Padding(2, 1, 2, 1)
         };
         AnsiConsole.Write(panel);
         
@@ -1524,6 +1550,7 @@ public static class WalletCommands
                 $"{Strings.WalletMenu.AutoSaveLabel.PadRight(25)} {(settings.AutoSave ? Strings.Status.BoolTrue : Strings.Status.BoolFalse)}",
                 $"{Strings.WalletMenu.StartupWalletLabel.PadRight(25)} [cyan]{Markup.Escape(settings.StartupWallet ?? Strings.WalletMenu.NoneOption)}[/]",
                 $"{Strings.WalletMenu.AutoImportLabel.PadRight(25)} {(settings.AutoImportToNode ? Strings.Status.BoolTrue : Strings.Status.BoolFalse)}",
+                $"{Strings.WalletMenu.AddressSeekGapLabel.PadRight(25)} [cyan]{settings.AddressSeekGap}[/]",
                 Strings.ServiceMenu.Back
             };
             
@@ -1576,6 +1603,12 @@ public static class WalletCommands
                     walletManager.Save();
                     AnsiConsole.MarkupLine(string.Format(Strings.WalletMenu.AutoImportToggled, 
                         settings.AutoImportToNode ? Strings.WalletMenu.EnabledLabel : Strings.WalletMenu.DisabledLabel));
+                    break;
+                    
+                case 3: // Address Seek Gap
+                    settings.AddressSeekGap = AnsiConsole.Ask<int>(Strings.WalletMenu.EnterAddressSeekGap, settings.AddressSeekGap);
+                    walletManager.Save();
+                    AnsiConsole.MarkupLine(Strings.WalletMenu.SettingUpdated);
                     break;
             }
             

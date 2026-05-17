@@ -229,11 +229,11 @@ public class DockerServiceManager
 
         if (!string.IsNullOrWhiteSpace(command))
         {
-            args.AddRange(command.Split(' '));
+            args.AddRange(SplitCommandLineArguments(command));
         }
 
         AnsiConsole.MarkupLine($"[bold]Starting container:[/] {containerName}");
-        var result = await ExecuteCommandAsync("docker", string.Join(" ", args));
+        var result = await ExecuteCommandAsync("docker", args.ToArray());
 
         if (result.exitCode == 0)
         {

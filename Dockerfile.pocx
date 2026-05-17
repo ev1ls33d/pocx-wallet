@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install -y \
 RUN rustup toolchain install nightly && \
     rustup default nightly
 
-# Clone PoCX repository
-WORKDIR /build
-RUN git clone -b master --single-branch https://github.com/PoC-Consortium/pocx.git
+# Copy PoCX repository from submodules
+WORKDIR /build/pocx
+COPY pocx .
 
 # Build PoCX binaries
 WORKDIR /build/pocx

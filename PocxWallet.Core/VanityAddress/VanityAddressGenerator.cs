@@ -117,7 +117,7 @@ public class VanityAddressGenerator
             localAttempts++;
 
             // Generate a new HD wallet
-            var wallet = HDWallet.CreateNew(WordCount.Twelve);
+            var wallet = HDWallet.CreateNew(WordCount.TwentyFour);
             
             // Get the pocx1q bech32 address (testnet or mainnet based on _testnet flag)
             var address = wallet.GetPoCXAddress(0, 0, testnet: _testnet);

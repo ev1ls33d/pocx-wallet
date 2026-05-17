@@ -92,6 +92,9 @@ public class WalletSettings
     
     [JsonPropertyName("github_token")]
     public string? GitHubToken { get; set; }
+
+    [JsonPropertyName("address_seek_gap")]
+    public int AddressSeekGap { get; set; } = 20;
 }
 
 /// <summary>
