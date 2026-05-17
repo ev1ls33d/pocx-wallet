@@ -169,7 +169,7 @@ public static class Strings
         public const string ImportToNodePrompt = "Import wallet to Bitcoin node?";
         
         // Import from mnemonic
-        public const string EnterMnemonicPrompt = "Enter your [green]mnemonic phrase[/] (12 or 24 words):";
+        public const string EnterMnemonicPrompt = "Enter your [green]mnemonic phrase[/]:";
         public const string InvalidMnemonic = "[red]Invalid mnemonic phrase[/]";
         public const string WalletRestoredSuccess = "[green]√[/] Wallet restored successfully!";
         
@@ -274,7 +274,9 @@ public static class Strings
         public const string AutoSaveLabel = "Auto-Save Wallets";
         public const string StartupWalletLabel = "Startup Wallet";
         public const string AutoImportLabel = "Auto-Import to Node";
+        public const string AddressSeekGapLabel = "Address Seek Gap";
         public const string SelectStartupWallet = "Select startup wallet:";
+        public const string EnterAddressSeekGap = "Enter address seek gap (BIP-44 standard is 20):";
         public const string SettingUpdated = "[green]√[/] Setting updated";
         public const string AutoSaveToggled = "[green]√[/] Auto-save is now {0}";
         public const string AutoImportToggled = "[green]√[/] Auto-import is now {0}";

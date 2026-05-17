@@ -24,15 +24,31 @@ public static class ServiceDefinitionLoader
     /// </summary>
     public static ServiceConfiguration? LoadServices(string servicesPath)
     {
-        if (!File.Exists(servicesPath))
+        // Try provided path first
+        string effectivePath = servicesPath;
+        
+        if (!File.Exists(effectivePath))
         {
-            AnsiConsole.MarkupLine($"[dim]Note: services.yaml not found at '{Markup.Escape(servicesPath)}'. Dynamic services will not be available.[/]");
+            // Try relative to entry assembly / base directory
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            effectivePath = Path.Combine(baseDir, servicesPath);
+        }
+
+        if (!File.Exists(effectivePath))
+        {
+            // Try one level up (common in dev/debug)
+            effectivePath = Path.Combine("..", servicesPath);
+        }
+
+        if (!File.Exists(effectivePath))
+        {
+            AnsiConsole.MarkupLine($"[dim]Note: {servicesPath} not found. Dynamic services will not be available.[/]");
             return null;
         }
 
         try
         {
-            var yaml = File.ReadAllText(servicesPath);
+            var yaml = File.ReadAllText(effectivePath);
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()

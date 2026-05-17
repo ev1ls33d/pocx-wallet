@@ -1,0 +1,32 @@
+name: Update Submodules
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Run weekly on Sunday
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update submodules to latest remote branches
+        run: |
+          git submodule update --remote --merge
+      
+      - name: Commit changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update submodules to latest remote branches"
+            git push
+          else
+            echo "No changes to commit"
+          fi

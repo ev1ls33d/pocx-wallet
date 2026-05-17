@@ -307,6 +307,16 @@ services:
         default: true
         description: "Broadcast transactions submitted via RPC"
         category: "wallet"
+      - name: fallbackfee
+        cli_flag: -fallbackfee
+        type: float
+        default: 0.000001
+        description: Use fallback fee
+        category: wallet
+        required: false
+        sensitive: false
+        hidden: false
+        use_equals: true
         
       # === Debugging/Testing Options ===
       - name: "printtoconsole"
@@ -625,6 +635,12 @@ services:
         default: "127.0.0.1:18332"
         description: "Bitcoin daemon JSON-RPC address"
         category:  "connection"
+      - name: "daemon_parallelism"
+        cli_flag: "--daemon-parallelism"
+        type: "int"
+        default: 1
+        description: "Number of parallel connections to the bitcoin daemon"
+        category: "connection"
       - name: "cookie"
         cli_flag: "--cookie"
         type: "string"
@@ -652,6 +668,12 @@ services:
         default:  "127.0.0.1:4224"
         description: "Prometheus monitoring address"
         category:  "server"
+      - name: "zmq_addr"
+        cli_flag: "--zmq-addr"
+        type: "string"
+        default: ""
+        description: "ZMQ address of the bitcoin daemon"
+        category: "connection"
         
       # === Performance Modes ===
       - name: "jsonrpc_import"
@@ -665,6 +687,12 @@ services:
         type: "bool"
         default: false
         description: "Enable light mode for reduced storage requirements"
+        category: "performance"
+      - name: "initial_sync_compaction"
+        cli_flag: "--initial-sync-compaction"
+        type: "bool"
+        default: false
+        description: "Enable compaction during initial sync (requires more disk space but faster)"
         category: "performance"
         
       # === Index Options ===

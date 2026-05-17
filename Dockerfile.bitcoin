@@ -25,9 +25,9 @@ RUN apt-get update && apt-get install -y \
     libcapnp-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone the repository
+# Copy the repository from submodules
 WORKDIR /build
-RUN git clone -b pocx-master --single-branch https://github.com/PoC-Consortium/bitcoin.git .
+COPY bitcoin .
 
 # Configure and build with CMake
 RUN cmake -B build \

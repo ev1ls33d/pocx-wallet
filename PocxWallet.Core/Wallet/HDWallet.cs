@@ -42,7 +42,7 @@ public class HDWallet
     /// <param name="wordCount">Number of words in the mnemonic (12, 15, 18, 21, or 24)</param>
     /// <param name="passphrase">Optional passphrase for additional security</param>
     /// <returns>A new HD wallet instance</returns>
-    public static HDWallet CreateNew(WordCount wordCount = WordCount.Twelve, string? passphrase = null)
+    public static HDWallet CreateNew(WordCount wordCount = WordCount.TwentyFour, string? passphrase = null)
     {
         var mnemonic = new Mnemonic(Wordlist.English, wordCount);
         return new HDWallet(mnemonic, Network.Main, passphrase);
