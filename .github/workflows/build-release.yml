@@ -21,7 +21,7 @@ jobs:
       - name: Get version from csproj
         id: get_version
         run: |
-          VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" PocxWallet.Cli/PocxWallet.Cli.csproj)
+          VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" Directory.Build.props)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 
@@ -64,7 +64,7 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
-          [xml]$csproj = Get-Content PocxWallet.Cli/PocxWallet.Cli.csproj
+          [xml]$csproj = Get-Content Directory.Build.props
           $version = $csproj.Project.PropertyGroup.Version | Where-Object { $_ }
           echo "version=$version" >> $env:GITHUB_OUTPUT
           echo "Detected version: $version"
