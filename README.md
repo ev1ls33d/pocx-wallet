@@ -7,7 +7,7 @@ A comprehensive CLI HD Wallet implementation for [PoCX](https://github.com/PoC-C
 ## Features
 
 ### 💰 HD Wallet Management
-- Generate new HD wallets with BIP39 mnemonic seeds (12-word by default)
+- Generate new HD wallets with BIP39 mnemonic seeds
 - Restore wallets from existing mnemonic phrases
 - BIP84 derivation path for native SegWit (P2WPKH)
 - **Proper `pocx1q...` Bech32 address format** (witness version 0, P2WPKH)
