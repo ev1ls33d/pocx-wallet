@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get version from csproj
+      - name: Get version
         id: get_version
         run: |
           VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" Directory.Build.props)
@@ -60,7 +60,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get version from csproj
+      - name: Get version
         id: get_version
         shell: pwsh
         run: |
