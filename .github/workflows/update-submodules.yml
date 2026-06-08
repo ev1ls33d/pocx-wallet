@@ -8,6 +8,8 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Add this to grant write permissions
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,7 +28,7 @@ jobs:
           git add .
           if ! git diff --cached --quiet; then
             git commit -m "chore: update submodules to latest remote branches"
-            git push
+            git push origin HEAD:${{ github.ref }}
           else
             echo "No changes to commit"
           fi
