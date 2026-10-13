@@ -4,9 +4,9 @@
 	branch = master
 [submodule "electrs"]
 	path = electrs
-	url = https://github.com/PoC-Consortium/electrs-pocx.git
-	branch = pocx
+	url = https://github.com/PoC-Consortium/electrs-btcx.git
+	branch = btcx
 [submodule "bitcoin"]
 	path = bitcoin
 	url = https://github.com/PoC-Consortium/bitcoin.git
-	branch = pocx-master
+	branch = pocx-31.x
