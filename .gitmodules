@@ -10,3 +10,7 @@
 	path = bitcoin
 	url = https://github.com/PoC-Consortium/bitcoin.git
 	branch = pocx-31.x
+[submodule "bindex-btcx"]
+	path = bindex-btcx
+	url = https://github.com/PoC-Consortium/bindex-btcx.git
+	branch = btcx

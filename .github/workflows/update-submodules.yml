@@ -12,7 +12,7 @@ jobs:
       contents: write  # Add this to grant write permissions
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}

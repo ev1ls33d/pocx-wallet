@@ -6,10 +6,14 @@ FROM rust:bookworm AS builder
 RUN apt-get update && apt-get install -y \
     clang \
     cmake \
+    libclang-dev \
     librocksdb-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy electrs-pocx repository from submodules
+# Copy dependencies and electrs-pocx repository from submodules
+WORKDIR /build/bindex-btcx
+COPY bindex-btcx .
+
 WORKDIR /build/electrs-pocx
 COPY electrs .
 
