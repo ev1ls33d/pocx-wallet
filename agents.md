@@ -458,7 +458,7 @@ dotnet publish -c Release -r osx-x64 --self-contained
 ### Docker Images
 GitHub Actions builds and publishes Docker images:
 - `ghcr.io/ev1ls33d/pocx-wallet/bitcoin:latest`
-- `ghcr.io/ev1ls33d/pocx-wallet/electrs:latest`
+- `ghcr.io/ev1ls33d/pocx-wallet/electrs:latest` (built using `electrs-btcx` and `bindex-btcx` submodules)
 - `ghcr.io/ev1ls33d/pocx-wallet/pocx:latest`
 
 ## Security Considerations
@@ -530,6 +530,6 @@ The wiki is stored in a separate repository but mirrored in `/wiki`:
 
 ---
 
-**Last Updated**: 2026-02-05  
+**Last Updated**: 2026-10-13  
 **Schema Version**: 2.0  
 **Maintainer**: ev1ls33d
